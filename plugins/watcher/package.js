@@ -1,7 +1,7 @@
 /* eslint-disable prefer-arrow-callback */
 Package.describe({
     name: 'communitypackages:meteor-desktop-watcher',
-    version: '3.2.0',
+    version: '3.4.0',
     summary: 'Watches .desktop dir and triggers rebuilds on file change.',
     git: 'https://github.com/Meteor-Community-Packages/meteor-desktop',
     documentation: 'README.md',
