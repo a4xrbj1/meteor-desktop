@@ -1,7 +1,6 @@
 /* eslint-disable no-console, no-param-reassign */
 const { fs, path } = Plugin;
 const versionFilePath = './version.desktop';
-const Future = Npm.require('fibers/future');
 const chokidar = Npm.require('chokidar');
 
 function arraysIdentical(a, b) {
@@ -496,7 +495,7 @@ class MeteorDesktopBundler {
 
         this.requireLocal = requireLocal;
 
-        Profile.time('meteor-desktop: preparing desktop.asar', () => {
+        Profile.time('meteor-desktop: preparing desktop.asar', async () => {
             this.watcherEnabled = false;
             this.stampPerformance('whole build');
             const desktopPath = './.desktop';
@@ -658,18 +657,32 @@ class MeteorDesktopBundler {
             );
 
             this.stampPerformance('readdir');
-            const readDirFuture = Future.fromPromise(this.utils.readDir(desktopPath));
-            const readDirResult = readDirFuture.wait();
+            // const readDirFuture = Future.fromPromise(this.utils.readDir(desktopPath));
+            // const readDirResult = readDirFuture.wait();
+            const readDirResult = await this.utils.readDir(desktopPath);
             this.stampPerformance('readdir');
 
             this.stampPerformance('cache check');
-            const cacheGetPromise = Future.fromPromise(cacache.get(this.cachePath, 'last'));
+            // const cacheGetPromise = Future.fromPromise(cacache.get(this.cachePath, 'last'));
+            // const cacheGetPromise = await cacache.get(this.cachePath, 'last');
+            // let lastStats = null;
+            // try {
+            //     lastStats = cacheGetPromise.wait().data.toString('utf8');
+            //     lastStats = JSON.parse(lastStats);
+            // } catch (e) {
+            //     logDebug('[meteor-desktop] no cache found');
+            // }
+
             let lastStats = null;
             try {
-                lastStats = cacheGetPromise.wait().data.toString('utf8');
-                lastStats = JSON.parse(lastStats);
+            const cacheEntry = await cacache.get(this.cachePath, 'last');
+            lastStats = JSON.parse(cacheEntry.data.toString('utf8'));
             } catch (e) {
-                logDebug('[meteor-desktop] no cache found');
+            if (e.code === 'ENOENT') {
+                logDebug('[meteor-desktop] cache not found, skipping cache match');
+            } else {
+                throw e; // re-throw unknown errors
+            }
             }
 
             if (settings.env !== 'prod' &&
@@ -677,11 +690,15 @@ class MeteorDesktopBundler {
                 MeteorDesktopBundler.areStatsEqual(lastStats.stats, readDirResult.stats)
             ) {
                 logDebug('[meteor-desktop] cache match');
-                const cacheAsarGetPromise = Future.fromPromise(cacache.get(this.cachePath, 'lastAsar'));
-                const contents = cacheAsarGetPromise.wait();
+                // const cacheAsarGetPromise = Future.fromPromise(cacache.get(this.cachePath, 'lastAsar'));
+                const cacheAsarGetPromise = await cacache.get(this.cachePath, 'lastAsar');
+                // const contents = cacheAsarGetPromise.wait();
+
+                const contents = await cacache.get(this.cachePath, 'lastAsar');
                 if (contents.integrity === lastStats.asarIntegrity) {
-                    const cacheSettingsGetPromise = Future.fromPromise(cacache.get(this.cachePath, 'lastSettings'));
-                    const lastSettings = JSON.parse(cacheSettingsGetPromise.wait().data.toString('utf8'));
+                    // const cacheSettingsGetPromise = Future.fromPromise(cacache.get(this.cachePath, 'lastSettings'));
+                    const cacheSettingsGetPromise = await cacache.get(this.cachePath, 'lastSettings');
+                    const lastSettings = JSON.parse(cacheSettingsGetPromise.data.toString('utf8'));
                     if (lastSettings.asarIntegrity === lastStats.asarIntegrity) {
                         addFiles(contents.data, lastSettings.settings);
                         endProcess();
@@ -727,16 +744,58 @@ class MeteorDesktopBundler {
             shelljs.config.fatal = true;
             shelljs.config.silent = false;
 
-            const desktopTmpPath = './._desktop';
+            const desktopTmpPath = './.desktop-staging';
             const desktopTmpAsarPath = './.meteor/local';
             const modulesPath = path.join(desktopTmpPath, 'modules');
 
             this.stampPerformance('copy .desktop');
             shelljs.rm('-rf', desktopTmpPath);
-            shelljs.cp('-rf', desktopPath, desktopTmpPath);
+            
+            // Make sure to create the directory structure first
+            shelljs.mkdir('-p', desktopTmpPath);
+            shelljs.mkdir('-p', path.join(desktopTmpPath, 'modules'));
+            shelljs.mkdir('-p', path.join(desktopTmpPath, 'assets'));
+            
+            // Copy files from .desktop to .desktop-staging
+            shelljs.ls('-A', desktopPath).forEach(item => {
+                const source = path.join(desktopPath, item);
+                const target = path.join(desktopTmpPath, item);
+                
+                // For directories, copy them recursively if they don't exist yet
+                if (fs.statSync(source).isDirectory()) {
+                    if (!fs.existsSync(target)) {
+                        shelljs.mkdir('-p', target);
+                    }
+                    shelljs.cp('-rf', path.join(source, '*'), target);
+                } else {
+                    // For files, just copy them directly
+                    shelljs.cp('-f', source, target);
+                }
+            });
+            
+            // Ensure we create empty directories even if they're not in the source
+            if (!fs.existsSync(path.join(desktopTmpPath, 'modules'))) {
+                shelljs.mkdir('-p', path.join(desktopTmpPath, 'modules'));
+            }
+            if (!fs.existsSync(path.join(desktopTmpPath, 'assets'))) {
+                shelljs.mkdir('-p', path.join(desktopTmpPath, 'assets'));
+            }
+            
+            // Delete test files and macOS metadata files
             del.sync([
-                path.join(desktopTmpPath, '**', '*.test.js')
+                path.join(desktopTmpPath, '**', '*.test.js'),
+                path.join(desktopTmpPath, '**', '._*'),
+                path.join(desktopTmpPath, '**', '.DS_Store')
             ]);
+            
+            // Set proper permissions
+            shelljs.chmod('-R', '644', desktopTmpPath);
+            // Make directories executable (necessary for traversal)
+            shelljs.find(desktopTmpPath).forEach(function(file) {
+                if (fs.statSync(file).isDirectory()) {
+                    shelljs.chmod('755', file);
+                }
+            });
             this.stampPerformance('copy .desktop');
 
             this.stampPerformance('compute dependencies');
@@ -748,21 +807,25 @@ class MeteorDesktopBundler {
             this.stampPerformance('compute dependencies');
 
             this.stampPerformance('desktop hash');
-            const hashFuture = new Future();
-            const hashFutureResolve = hashFuture.resolver();
+            // const hashFuture = new Future();
+            // const hashFutureResolve = hashFuture.resolver();
 
-            let desktopHash;
-            let hashes;
-            let fileContents;
+            // let desktopHash;
+            // let hashes;
+            // let fileContents;
 
-            this.utils.readFilesAndComputeHash(desktopPath, file => file.replace('.desktop', ''))
-                .then((result) => {
-                    ({ fileContents, fileHashes: hashes, hash: desktopHash } = result);
-                    hashFutureResolve();
-                })
-                .catch((e) => { hashFuture.throw(e); });
+            // this.utils.readFilesAndComputeHash(desktopPath, file => file.replace('.desktop', ''))
+            //     .then((result) => {
+            //         ({ fileContents, fileHashes: hashes, hash: desktopHash } = result);
+            //         hashFutureResolve();
+            //     })
+            //     .catch((e) => { hashFuture.throw(e); });
 
-            hashFuture.wait();
+            // hashFuture.wait();
+
+            const result = await this.utils.readFilesAndComputeHash(desktopPath, file => file.replace('.desktop', ''));
+            ({ fileContents, fileHashes: hashes, hash: desktopHash } = result);
+
             this.stampPerformance('desktop hash');
 
             const version = `${desktopHash}_${settings.env}`;
@@ -781,6 +844,9 @@ class MeteorDesktopBundler {
                 settings.prodDebug = true;
             }
 
+            if (!fs.existsSync(desktopTmpPath)) {
+                fs.mkdirSync(desktopTmpPath, { recursive: true });
+            }
             fs.writeFileSync(
                 path.join(desktopTmpPath, 'settings.json'), JSON.stringify(settings, null, 4)
             );
@@ -812,14 +878,31 @@ class MeteorDesktopBundler {
             if (babelPresetEnv.default) {
                 babelPresetEnv = babelPresetEnv.default;
             }
-            const preset = babelPresetEnv({
-                version: this.getPackageJsonField('dependencies')['@babel/preset-env'],
-                assertVersion: () => { }
-            }, { targets: { node: '14' } });
+            // const preset = babelPresetEnv({
+            //     version: this.getPackageJsonField('dependencies')['@babel/preset-env'],
+            //     assertVersion: () => { }
+            // }, { targets: { node: '14' } });
+
+            const isProbablyJavaScript = (filename) =>
+                filename.endsWith('.js') || filename.endsWith('.desktop');
+              
+            const safeFileContents = Object.fromEntries(
+                Object.entries(fileContents).filter(([filename, content]) => {
+                    if (!isProbablyJavaScript(filename)) return false;
+                    if (typeof content !== 'string' && !Buffer.isBuffer(content)) return false;
+                    // crude UTF-8 sniff: no binary junk
+                    const str = content.toString('utf8');
+                    return /^[\x00-\x7F]*$/.test(str.slice(0, 32)) || str.includes('function') || str.includes('class');
+                })
+            );
+            
+
+
+            const preset = [require.resolve('@babel/preset-env'), { targets: { node: '14' } }];
 
             this.stampPerformance('babel/uglify');
             const promises = [];
-            Object.keys(fileContents).forEach((file) => {
+            Object.keys(safeFileContents).forEach((file) => {
                 const filePath = path.join(desktopTmpPath, file);
                 const cacheKey = `${file}-${hashes[file]}`;
 
@@ -880,23 +963,62 @@ class MeteorDesktopBundler {
                 }));
             });
 
-            const all = Future.fromPromise(Promise.all(promises));
-            all.wait();
+            // const all = Future.fromPromise(Promise.all(promises));
+            // const all = Future.fromPromise(Promise.all(promises));
+            // all.wait();
+            await Promise.all(promises);
             this.stampPerformance('babel/uglify');
 
             this.stampPerformance('@electron/asar');
 
-            const future = new Future();
-            const resolve = future.resolver();
+            
+            
+
             const asarPath = path.join(desktopTmpAsarPath, 'desktop.asar');
-            electronAsar.createPackage(
+
+            await electronAsar.createPackage(
                 desktopTmpPath,
                 asarPath
-            )
-                .then(() => {
-                    resolve();
+            );
+            
+            // Fix permissions
+            shelljs.exec(`find ${desktopTmpPath} -type d -exec chmod 755 {} \\;`);
+            shelljs.exec(`find ${desktopTmpPath} -type f -exec chmod 644 {} \\;`);
+
+            // Create ASAR using command line
+            try {
+                const result = shelljs.exec(`npx asar pack ${desktopTmpPath} ${asarPath}`);
+                if (result.code !== 0) {
+                    throw new Error(`ASAR creation failed with code ${result.code}: ${result.stderr}`);
+                }
+            } catch (e) {
+                console.error('ASAR creation error:', e);
+                inputFile.error({
+                    message: e.message || e
                 });
-            future.wait();
+                return;
+            }
+
+            // // ASAR was built successfully
+            // console.log('[meteor-desktop] desktop.asar created at', asarPath);
+
+            // // Reconstruct .meteor/desktop-build
+            await scaffold.build(
+            desktopTmpPath,
+            this.cachePath,
+            settings,
+            desktopPath,
+            this.version,
+            this.utils
+            );
+
+            // const buildDir = '.meteor/desktop-build';
+            // if (!fs.existsSync(buildDir)) {
+            //     fs.mkdirSync(buildDir, { recursive: true });
+            // }
+            // shelljs.cp('-f', path.join(desktopTmpAsarPath, 'desktop.asar'), path.join(buildDir, 'desktop.asar'));
+
+
             this.stampPerformance('@electron/asar');
 
             const contents = fs.readFileSync(asarPath);

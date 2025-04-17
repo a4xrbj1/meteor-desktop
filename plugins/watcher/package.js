@@ -13,10 +13,10 @@ Npm.depends({
 });
 
 Package.onUse(function onUse(api) {
-    api.versionsFrom('METEOR@1.4.4.6');
+    api.versionsFrom('METEOR@3.0');
     api.use('ecmascript');
     api.use([
-        'communitypackages:meteor-desktop-bundler@3.2.0',
+        'communitypackages:meteor-desktop-bundler@3.4.0',
     ], ['server'], {
         weak: true
     });
