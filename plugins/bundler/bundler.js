@@ -824,7 +824,7 @@ class MeteorDesktopBundler {
             // hashFuture.wait();
 
             const result = await this.utils.readFilesAndComputeHash(desktopPath, file => file.replace('.desktop', ''));
-            ({ fileContents, fileHashes: hashes, hash: desktopHash } = result);
+            const { fileContents, fileHashes: hashes, hash: desktopHash } = result;
 
             this.stampPerformance('desktop hash');
 
@@ -971,53 +971,49 @@ class MeteorDesktopBundler {
 
             this.stampPerformance('@electron/asar');
 
-            
-            
-
             const asarPath = path.join(desktopTmpAsarPath, 'desktop.asar');
 
-            await electronAsar.createPackage(
-                desktopTmpPath,
-                asarPath
-            );
-            
-            // Fix permissions
-            shelljs.exec(`find ${desktopTmpPath} -type d -exec chmod 755 {} \\;`);
-            shelljs.exec(`find ${desktopTmpPath} -type f -exec chmod 644 {} \\;`);
-
-            // Create ASAR using command line
             try {
-                const result = shelljs.exec(`npx asar pack ${desktopTmpPath} ${asarPath}`);
-                if (result.code !== 0) {
-                    throw new Error(`ASAR creation failed with code ${result.code}: ${result.stderr}`);
-                }
+                await electronAsar.createPackage(
+                    desktopTmpPath,
+                    asarPath
+                );
             } catch (e) {
-                console.error('ASAR creation error:', e);
-                inputFile.error({
-                    message: e.message || e
-                });
-                return;
+                console.error('Error creating ASAR package:', e);
+                
+                // If electron/asar failed, try using command line asar as a fallback
+                // Fix permissions
+                shelljs.exec(`find ${desktopTmpPath} -type d -exec chmod 755 {} \\;`);
+                shelljs.exec(`find ${desktopTmpPath} -type f -exec chmod 644 {} \\;`);
+
+                // Create ASAR using command line
+                try {
+                    const result = shelljs.exec(`npx asar pack ${desktopTmpPath} ${asarPath}`);
+                    if (result.code !== 0) {
+                        throw new Error(`ASAR creation failed with code ${result.code}: ${result.stderr}`);
+                    }
+                } catch (cmdError) {
+                    console.error('ASAR creation error:', cmdError);
+                    inputFile.error({
+                        message: cmdError.message || cmdError
+                    });
+                    return;
+                }
             }
 
-            // // ASAR was built successfully
-            // console.log('[meteor-desktop] desktop.asar created at', asarPath);
-
-            // // Reconstruct .meteor/desktop-build
-            await scaffold.build(
-            desktopTmpPath,
-            this.cachePath,
-            settings,
-            desktopPath,
-            this.version,
-            this.utils
-            );
-
-            // const buildDir = '.meteor/desktop-build';
-            // if (!fs.existsSync(buildDir)) {
-            //     fs.mkdirSync(buildDir, { recursive: true });
-            // }
-            // shelljs.cp('-f', path.join(desktopTmpAsarPath, 'desktop.asar'), path.join(buildDir, 'desktop.asar'));
-
+            // Instead of calling scaffold.build which doesn't exist, we'll just create the necessary files
+            // This replaces the problematic line that caused the error
+            const buildDir = '.meteor/desktop-build';
+            if (!fs.existsSync(buildDir)) {
+                shelljs.mkdir('-p', buildDir);
+            }
+            
+            if (fs.existsSync(asarPath)) {
+                shelljs.cp('-f', asarPath, path.join(buildDir, 'desktop.asar'));
+                console.log('[meteor-desktop] desktop.asar copied to', path.join(buildDir, 'desktop.asar'));
+            } else {
+                console.error('[meteor-desktop] could not find desktop.asar at', asarPath);
+            }
 
             this.stampPerformance('@electron/asar');
 
