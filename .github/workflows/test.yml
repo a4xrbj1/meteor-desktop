@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Get Cache dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: files-cache
         with:
           path: |
@@ -43,7 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Get Cache dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: files-cache
         with:
           path: |
@@ -63,7 +63,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Get Cache dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: files-cache
         with:
           path: |

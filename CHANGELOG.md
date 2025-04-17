@@ -1,3 +1,6 @@
+## v3.3.0
+* Refactored fiber/futures syntax to ES6 async/await syntax [`#43`](https://github.com/Meteor-Community-Packages/meteor-desktop/pull/43) by [@awatson1978](https://github.com/sponsors/awatson1978)
+
 ## v3.2.1
 * Minor version upgrade of NPM dependencies
 * Fix registering custom 'meteor' scheme [`#39`](https://github.com/Meteor-Community-Packages/meteor-desktop/pull/39) by [@ramijarrar](https://github.com/ramijarrar)
