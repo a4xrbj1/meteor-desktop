@@ -29,7 +29,8 @@
     "build-watch": "babel lib --watch --out-dir dist --source-maps inline --copy-files",
     "develop": "npm-run-all --parallel build-watch test-watch",
     "generate-docs": "jsdoc2md skeleton/preload.js > docs/api/desktop.md && jsdoc2md skeleton/modules/module.js > docs/api/module.md",
-    "update-locks": "(rmdir /S /Q node_modules || rm -rf node_modules || echo) && yarn && (rmdir /S /Q node_modules || rm -rf node_modules) && npm i"
+    "update-locks": "(rmdir /S /Q node_modules || rm -rf node_modules || echo) && yarn && (rmdir /S /Q node_modules || rm -rf node_modules) && npm i",
+    "desktop": "meteor-desktop"
   },
   "author": "Bartosz Wojtkowiak <bartosz@wojtkowiak.it>",
   "license": "MIT",
@@ -89,6 +90,7 @@
     "isbinaryfile": "3.0.3",
     "lodash": "4.17.21",
     "md5": "2.3.0",
+    "meteor-desktop": "^2.2.5",
     "node-fetch": "2.7.0",
     "path-exists-cli": "^2.0.0",
     "regenerator-runtime": "0.14.1",

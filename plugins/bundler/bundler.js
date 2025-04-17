@@ -228,7 +228,8 @@ class MeteorDesktopBundler {
                 const moduleDir = path.join(modulesPath, module);
                 if (this.fs.lstatSync(moduleDir).isDirectory()) {
                     const moduleConfig = this.getModuleConfig(moduleDir, file);
-                    moduleConfig.dirName = path.parse(module).name || path.basename(module);
+                    // moduleConfig.dirName = path.parse(module).name || path.basename(module);
+                    moduleConfig.dirName = path.basename(module);
                     configs.push(moduleConfig);
                 }
             });
@@ -861,13 +862,13 @@ class MeteorDesktopBundler {
                 babelPresetEnv = babelPresetEnv.default;
             }
 
-            const preset = babelPresetEnv(
-                {
-                    version: this.getPackageJsonField('dependencies')['@babel/preset-env'],
-                    assertVersion: () => {}
-                },
-                { targets: { node: '14' } }
-            );
+            // const preset = babelPresetEnv(
+            //     {
+            //         version: this.getPackageJsonField('dependencies')['@babel/preset-env'],
+            //         assertVersion: () => {}
+            //     },
+            //     { targets: { node: '14' } }
+            // );
 
             this.stampPerformance('babel/uglify');
             const processingPromises = Object.keys(fileContents).map(file => {
@@ -892,9 +893,12 @@ class MeteorDesktopBundler {
                     } catch (cacheError) {
                         logDebug(`[meteor-desktop] Processing from disk: ${file}`);
                         try {
-                            const transformed = await babelCore.transformAsync(fileContents[file], {
-                                presets: [preset]
-                            });
+                            // const transformed = await babelCore.transformAsync(fileContents[file], {
+                            //     presets: [preset]
+                            // });
+                            const transformed = await babelCore.transformAsync(code, {
+                                presets: [ [babelPresetEnv, { targets: { node: '14' } }] ]
+                              });
 
                             if (!transformed || !transformed.code) {
                                 throw new Error(`Babel transformation failed for file ${file}`);
