@@ -1,7 +1,7 @@
 /* eslint-disable prefer-arrow-callback */
 Package.describe({
     name: 'communitypackages:meteor-desktop-watcher',
-    version: '3.3.0',
+    version: '4.0.0-rc.1',
     summary: 'Watches .desktop dir and triggers rebuilds on file change.',
     git: 'https://github.com/Meteor-Community-Packages/meteor-desktop',
     documentation: 'README.md',
@@ -13,10 +13,10 @@ Npm.depends({
 });
 
 Package.onUse(function onUse(api) {
-    api.versionsFrom('METEOR@1.4.4.6');
+    api.versionsFrom('METEOR@3.0');
     api.use('ecmascript');
     api.use([
-        'communitypackages:meteor-desktop-bundler@3.2.0',
+        'communitypackages:meteor-desktop-bundler@4.0.0-rc.1',
     ], ['server'], {
         weak: true
     });

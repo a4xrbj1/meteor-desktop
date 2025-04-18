@@ -1,7 +1,7 @@
 /* eslint-disable prefer-arrow-callback */
 Package.describe({
     name: 'communitypackages:meteor-desktop-bundler',
-    version: '3.3.0',
+    version: '4.0.0-rc.1',
     summary: 'Bundles .desktop dir into desktop.asar.',
     git: 'https://github.com/Meteor-Community-Packages/meteor-desktop',
     documentation: 'README.md'
@@ -15,7 +15,7 @@ Package.registerBuildPlugin({
 });
 
 Package.onUse(function onUse(api) {
-    api.versionsFrom('1.4.4.6');
+    api.versionsFrom('METEOR@3.0');
     api.use('isobuild:compiler-plugin@1.0.0');
     api.addFiles([
         'version._desktop_.js'
