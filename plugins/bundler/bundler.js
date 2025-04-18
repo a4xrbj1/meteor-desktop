@@ -228,7 +228,8 @@ class MeteorDesktopBundler {
                 const moduleDir = path.join(modulesPath, module);
                 if (this.fs.lstatSync(moduleDir).isDirectory()) {
                     const moduleConfig = this.getModuleConfig(moduleDir, file);
-                    moduleConfig.dirName = path.parse(module).name || path.basename(module);
+                    // moduleConfig.dirName = path.parse(module).name || path.basename(module);
+                    moduleConfig.dirName = path.basename(module);
                     configs.push(moduleConfig);
                 }
             });
@@ -528,7 +529,6 @@ class MeteorDesktopBundler {
 
         this.requireLocal = requireLocal;
 
-        // Profile the build process.
         Profile.time('meteor-desktop: preparing desktop.asar', async () => {
             this.watcherEnabled = false;
             this.stampPerformance('whole build');
@@ -737,15 +737,62 @@ class MeteorDesktopBundler {
             shelljs.config.fatal = true;
             shelljs.config.silent = false;
 
-            const desktopTmpPath = './._desktop';
+            const desktopTmpPath = './.desktop-staging';
             const desktopTmpAsarPath = './.meteor/local';
             const modulesPath = path.join(desktopTmpPath, 'modules');
 
             this.stampPerformance('copy .desktop');
             shelljs.rm('-rf', desktopTmpPath);
+            
+            // Make sure to create the directory structure first
+            shelljs.mkdir('-p', desktopTmpPath);
+            shelljs.mkdir('-p', path.join(desktopTmpPath, 'modules'));
+            shelljs.mkdir('-p', path.join(desktopTmpPath, 'assets'));
+            
+            // Copy files from .desktop to .desktop-staging
+            shelljs.ls('-A', desktopPath).forEach(item => {
+                const source = path.join(desktopPath, item);
+                const target = path.join(desktopTmpPath, item);
+                
+                // For directories, copy them recursively if they don't exist yet
+                if (fs.statSync(source).isDirectory()) {
+                    if (!fs.existsSync(target)) {
+                        shelljs.mkdir('-p', target);
+                    }
+                    shelljs.cp('-rf', path.join(source, '*'), target);
+                } else {
+                    // For files, just copy them directly
+                    shelljs.cp('-f', source, target);
+                }
+            });
+            
+            // Ensure we create empty directories even if they're not in the source
+            if (!fs.existsSync(path.join(desktopTmpPath, 'modules'))) {
+                shelljs.mkdir('-p', path.join(desktopTmpPath, 'modules'));
+            }
+            if (!fs.existsSync(path.join(desktopTmpPath, 'assets'))) {
+                shelljs.mkdir('-p', path.join(desktopTmpPath, 'assets'));
+            }
+            
+            // Delete test files and macOS metadata files
+            del.sync([
+                path.join(desktopTmpPath, '**', '*.test.js'),
+                path.join(desktopTmpPath, '**', '._*'),
+                path.join(desktopTmpPath, '**', '.DS_Store')
+            ]);
+            
+            // Set proper permissions
+            shelljs.chmod('-R', '644', desktopTmpPath);
+            // Make directories executable (necessary for traversal)
+            shelljs.find(desktopTmpPath).forEach(function(file) {
+                if (fs.statSync(file).isDirectory()) {
+                    shelljs.chmod('755', file);
+                }
+            });
             shelljs.cp('-rf', desktopPath, desktopTmpPath);
-            del.sync([path.join(desktopTmpPath, '**', '*.test.js')]);
-            this.stampPerformance('copy .desktop');
+
+            // del.sync([path.join(desktopTmpPath, '**', '*.test.js')]);
+            // this.stampPerformance('copy .desktop');
 
             this.stampPerformance('compute dependencies');
             const configs = this.gatherModuleConfigs(shelljs, modulesPath, inputFile);
@@ -786,6 +833,9 @@ class MeteorDesktopBundler {
                 settings.prodDebug = true;
             }
 
+            if (!fs.existsSync(desktopTmpPath)) {
+                fs.mkdirSync(desktopTmpPath, { recursive: true });
+            }
             fs.writeFileSync(
                 path.join(desktopTmpPath, 'settings.json'),
                 JSON.stringify(settings, null, 4)
@@ -812,13 +862,13 @@ class MeteorDesktopBundler {
                 babelPresetEnv = babelPresetEnv.default;
             }
 
-            const preset = babelPresetEnv(
-                {
-                    version: this.getPackageJsonField('dependencies')['@babel/preset-env'],
-                    assertVersion: () => {}
-                },
-                { targets: { node: '14' } }
-            );
+            // const preset = babelPresetEnv(
+            //     {
+            //         version: this.getPackageJsonField('dependencies')['@babel/preset-env'],
+            //         assertVersion: () => {}
+            //     },
+            //     { targets: { node: '14' } }
+            // );
 
             this.stampPerformance('babel/uglify');
             const processingPromises = Object.keys(fileContents).map(file => {
@@ -843,9 +893,12 @@ class MeteorDesktopBundler {
                     } catch (cacheError) {
                         logDebug(`[meteor-desktop] Processing from disk: ${file}`);
                         try {
-                            const transformed = await babelCore.transformAsync(fileContents[file], {
-                                presets: [preset]
-                            });
+                            // const transformed = await babelCore.transformAsync(fileContents[file], {
+                            //     presets: [preset]
+                            // });
+                            const transformed = await babelCore.transformAsync(code, {
+                                presets: [ [babelPresetEnv, { targets: { node: '14' } }] ]
+                              });
 
                             if (!transformed || !transformed.code) {
                                 throw new Error(`Babel transformation failed for file ${file}`);
