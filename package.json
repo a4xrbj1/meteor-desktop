@@ -79,7 +79,7 @@
   "dependencies": {
     "@babel/core": "7.25.2",
     "@babel/preset-env": "7.25.3",
-    "@babel/runtime": "7.25.0",
+    "@babel/runtime": "7.26.10",
     "@electron/asar": "3.2.10",
     "acorn": "8.12.1",
     "cacache": "17.1.4",
