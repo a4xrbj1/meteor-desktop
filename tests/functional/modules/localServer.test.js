@@ -228,7 +228,8 @@ function localServerTests(useStreams = false) {
     describe('local filesystem', () => {
         it('should send a file using local-filesystem alias', async () => {
             // Lets try to fetch exactly this file :)
-            const response = await fetchFromLocalServer(`/local-filesystem/${path.join(__dirname, 'localServer.test.js')}`);
+            const url = `/local-filesystem/${path.join(__dirname, 'localServer.test.js')}`;
+            const response = await fetchFromLocalServer(url);
             const body = await response.text();
             expect(body).to.contain('should send a file using local-filesystem alias');
         });
@@ -282,7 +283,8 @@ describe('localServer', () => {
         });
 
         it('should set "Access-Control-Allow-Origin" for local file', async () => {
-            const response = await fetchFromLocalServer(`/local-filesystem/${path.join(__dirname, 'localServer.test.js')}`);
+            const url = `/local-filesystem/${path.join(__dirname, 'localServer.test.js')}`;
+            const response = await fetchFromLocalServer(url);
             expect(response.headers.get('Access-Control-Allow-Origin')).to.equal('*');
         });
 

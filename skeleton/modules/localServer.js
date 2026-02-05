@@ -66,10 +66,12 @@ function createStreamProtocolResponse(filePath, res, beforeFinalize) {
     res.setHeader('Last-Modified', modified);
 
     // Determining mime type.
-    const type = mime.getType(filePath);
+    let type = mime.getType(filePath);
     if (type) {
-        const charset = mime.getExtension(type);
-        res.setHeader('Content-Type', type + (charset ? `; charset=${charset}` : ''));
+        if (type === 'application/javascript') {
+            type = 'text/javascript';
+        }
+        res.setHeader('Content-Type', type);
     } else {
         res.setHeader('Content-Type', 'application/octet-stream');
     }
@@ -363,7 +365,7 @@ export default class LocalServer {
             if (fs.existsSync(filePath)) {
                 return local
                     ? createStreamProtocolResponse(filePath, res, () => { })
-                    : send(req, filePath).pipe(res);
+                    : send(req, filePath, { dotfiles: 'allow' }).pipe(res);
             }
             return local ? res.setStatusCode(404) : respondWithCode(res, 404, 'File does not exist.');
         }
@@ -404,7 +406,6 @@ export default class LocalServer {
          * @param {boolean} local - local mode
          */
         function IndexHandler(req, res, next, local = false) {
-            self.log.debug(`IndexHandler: ${req.url}`);
             const parsedUrl = new url.URL(req.url, 'http://localhost');
             if (!parsedUrl.pathname.startsWith(self.localFilesystemUrl)
                 && parsedUrl.pathname !== '/favicon.ico'
