@@ -18,13 +18,15 @@ const { expect } = chai;
 const Electron = {
 };
 
+let RewiredModule;
 let Module;
 
 describe('Module', () => {
     before(() => {
         mockery.registerMock('electron', Electron);
         mockery.enable(mockerySettings);
-        Module = rewire('../../../skeleton/modules/module.js');
+        RewiredModule = rewire('../../../skeleton/modules/module.js');
+        Module = RewiredModule.default;
     });
 
     after(() => {
@@ -40,7 +42,7 @@ describe('Module', () => {
         });
         it('should send ipc when renderer is set', () => {
             const rendererMock = { send: sinon.stub(), isDestroyed: () => false };
-            const revert = Module.__set__('renderer', rendererMock);
+            const revert = RewiredModule.__set__('renderer', rendererMock);
             const arg1 = { some: 'data' };
             const arg2 = 'test';
             Module.sendInternal('event', arg1, arg2);
@@ -49,7 +51,7 @@ describe('Module', () => {
         });
         it('should not send ipc when renderer is destroyed', () => {
             const rendererMock = { send: sinon.stub(), isDestroyed: () => true };
-            const revert = Module.__set__('renderer', rendererMock);
+            const revert = RewiredModule.__set__('renderer', rendererMock);
             Module.sendInternal('event');
             expect(rendererMock.send).to.have.callCount(0);
             revert();

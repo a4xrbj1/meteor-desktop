@@ -32,7 +32,7 @@ import path from 'path';
 import shell from 'shelljs';
 import fs from 'fs-plus';
 import originalFs from 'original-fs';
-import rimraf from 'rimraf';
+import { rimraf } from 'rimraf';
 import url from 'url';
 
 import AssetBundle from './autoupdate/assetBundle';
@@ -148,7 +148,7 @@ export default class HCPClient {
                 // process.noAsar shelljs tried to remove files inside asar instead of just
                 // deleting the archive. `del` also could not delete asar archive. Rimraf is ok
                 // because it accepts custom fs object.
-                rimraf.sync(this.versionsDir, originalFs);
+                rimraf.sync(this.versionsDir, { fs: originalFs });
                 if (fs.existsSync(this.versionsDir)) {
                     this.log.warn('could not remove versions directory');
                 }
@@ -199,7 +199,8 @@ export default class HCPClient {
             } else {
                 this.currentAssetBundle = initialAssetBundle;
                 this.log.verbose(
-                    `will use last downloaded version which is apparently also the initial asset bundle (${lastDownloadedVersion})`
+                    'will use last downloaded version which is apparently also the initial asset bundle '
+                    + `(${lastDownloadedVersion})`
                 );
             }
         } else {

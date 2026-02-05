@@ -31,7 +31,7 @@
 
 import path from 'path';
 import fs from 'fs-plus';
-import rimraf from 'rimraf';
+import { rimraf } from 'rimraf';
 import originalFs from 'original-fs';
 import url from 'url';
 import request from 'request';
@@ -585,7 +585,7 @@ class AssetBundleManager {
                     // process.noAsar shelljs tried to remove files inside asar instead of just
                     // deleting the archive. `del` also could not delete asar archive. Rimraf is ok
                     // because it accepts custom fs object.
-                    rimraf.sync(this.partialDownloadDirectory, originalFs);
+                    rimraf.sync(this.partialDownloadDirectory, { fs: originalFs });
                 } catch (e) {
                     this.log.error('could not delete partial download directory.');
                     return;
@@ -616,4 +616,4 @@ class AssetBundleManager {
         shell.config.fatal = false;
     }
 }
-module.exports = AssetBundleManager;
+export default AssetBundleManager;

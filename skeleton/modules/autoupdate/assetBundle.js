@@ -388,5 +388,3 @@ export default class AssetBundle {
         this.ownAssetsByURLPath[asset.urlPath] = asset;
     }
 }
-
-module.exports = AssetBundle;

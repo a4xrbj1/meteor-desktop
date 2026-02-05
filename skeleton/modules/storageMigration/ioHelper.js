@@ -1,6 +1,6 @@
 import fs from 'fs-plus';
 import shelljs from 'shelljs';
-import rimraf from 'rimraf';
+import { rimraf } from 'rimraf';
 import fsExtra from 'fs-extra';
 
 /**
@@ -26,15 +26,7 @@ export function findNewestFileOrDirectory(path, condition = () => true) {
 }
 
 export function rimrafPromisfied(path) {
-    return new Promise((resolve, reject) => {
-        rimraf(path, {}, (error) => {
-            if (error) {
-                reject(error);
-            } else {
-                resolve();
-            }
-        });
-    });
+    return rimraf(path);
 }
 
 export function removePaths(paths = [], deleteFunction) {

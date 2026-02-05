@@ -58,7 +58,7 @@ export default class AssetBundleDownloader {
         this.injector = new IsDesktopInjector();
         this.httpClient = request;
 
-        this.eTagWithSha1HashPattern = new RegExp('"([0-9a-f]{40})"');
+        this.eTagWithSha1HashPattern = /"([0-9a-f]{40})"/;
 
         this.missingAssets = missingAssets;
         this.assetsDownloading = [];
@@ -348,5 +348,3 @@ export default class AssetBundleDownloader {
         }
     }
 }
-
-module.exports = AssetBundleDownloader;

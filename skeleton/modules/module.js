@@ -211,5 +211,3 @@ export default class Module {
         Module.sendInternal(event, ...data);
     }
 }
-
-module.exports = Module;

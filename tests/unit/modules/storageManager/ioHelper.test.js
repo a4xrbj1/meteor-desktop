@@ -20,11 +20,21 @@ const {
 } = global;
 const { expect } = chai;
 
-const fs = { };
-const fsExtra = { };
-const shelljs = { };
+const fs = {};
+const fsExtra = {};
+const shelljs = {};
 let rimrafResult = true;
-const rimraf = (path, options, callback) => callback(rimrafResult ? undefined : 'error');
+const rimrafMock = (path, options) => {
+    if (rimrafResult) {
+        return Promise.resolve();
+    }
+    return Promise.reject('error');
+};
+rimrafMock.sync = (path, options) => {
+    if (!rimrafResult) {
+        throw new Error('error');
+    }
+};
 
 let ioHelper;
 
@@ -32,7 +42,7 @@ describe('ioHelper', () => {
     before(() => {
         mockery.registerMock('fs-plus', fs);
         mockery.registerMock('shelljs', shelljs);
-        mockery.registerMock('rimraf', rimraf);
+        mockery.registerMock('rimraf', { rimraf: rimrafMock });
         mockery.registerMock('fs-extra', fsExtra);
         mockery.enable(mockerySettings);
         ioHelper = importFresh('../../../../skeleton/modules/storageMigration/ioHelper.js');
