@@ -105,11 +105,17 @@ export async function expectVersionServedToEqual(expectedVersion) {
 }
 
 export function shutdownLocalServer() {
-    if (localServer && localServer.httpServerInstance) {
-        localServer.httpServerInstance.close();
-        localServer.httpServerInstance.destroy();
-    }
-    localServer = null;
+    return new Promise((resolve) => {
+        if (localServer && localServer.httpServerInstance) {
+            localServer.httpServerInstance.destroy(() => {
+                localServer = null;
+                resolve();
+            });
+        } else {
+            localServer = null;
+            resolve();
+        }
+    });
 }
 
 /**

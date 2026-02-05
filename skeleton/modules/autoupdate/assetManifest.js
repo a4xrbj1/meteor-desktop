@@ -128,8 +128,6 @@ export default function AssetManifest(logger, manifestSource) {
     }
 }
 
-
-
 /**
  * @typedef {Object} AssetManifest
  * @property {string} version

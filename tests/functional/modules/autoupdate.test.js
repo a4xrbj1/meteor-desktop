@@ -232,11 +232,16 @@ async function downloadAndServeVersionLocally(versionToDownload, versionToServeO
  * Tries to close and cleanup the fake meteor server.
  */
 function shutdownMeteorServer() {
-    if (meteorServer && meteorServer.httpServerInstance) {
-        meteorServer.httpServerInstance.close();
-        meteorServer.httpServerInstance.destroy();
-        meteorServer.receivedRequests = [];
-    }
+    return new Promise((resolve) => {
+        if (meteorServer && meteorServer.httpServerInstance) {
+            meteorServer.httpServerInstance.destroy(() => {
+                resolve();
+            });
+            meteorServer.receivedRequests = [];
+        } else {
+            resolve();
+        }
+    });
     // meteorServer = null;
 }
 
@@ -257,8 +262,9 @@ describe('autoupdate', () => {
         shell.rm('-rf', paths.autoUpdateVersionsPath);
         shell.mkdir('-p', paths.autoUpdateVersionsPath);
         mockery.registerMock('original-fs', fs);
+        mockery.registerAllowable('node-fetch');
         mockery.enable(mockerySettings);
-        HCPClient = require('../../../skeleton/modules/autoupdate.js').default;
+        HCPClient = require('../../../skeleton/modules/autoupdate').default;
     });
 
     after(() => {
@@ -275,9 +281,9 @@ describe('autoupdate', () => {
             }
             cleanup();
         });
-        afterEach(() => {
+        afterEach(async () => {
             shutdownMeteorServer();
-            shutdownLocalServer();
+            await shutdownLocalServer();
         });
 
         it('should only serve the new version after a page reload', (done) => {
@@ -305,9 +311,9 @@ describe('autoupdate', () => {
         });
 
         it('should remember the new version after a restart', (done) => {
-            runAutoUpdateTests(done, async (autoupdate) => {
-                autoupdate.initializeAssetBundles();
-                autoupdate.onReset();
+            runAutoUpdateTests(done, async (autoupdateInstance) => {
+                autoupdateInstance.initializeAssetBundles();
+                autoupdateInstance.onReset();
                 await expectVersionServedToEqual('version2');
             }, 'version2');
         });
@@ -317,9 +323,9 @@ describe('autoupdate', () => {
         beforeEach((done) => {
             downloadAndServeVersionLocally('version2', 'version3', done);
         });
-        afterEach(() => {
+        afterEach(async () => {
             shutdownMeteorServer();
-            shutdownLocalServer();
+            await shutdownLocalServer();
         });
 
         it('should only serve the new verson after a page reload', (done) => {
@@ -378,9 +384,9 @@ describe('autoupdate', () => {
         beforeEach((done) => {
             downloadAndServeVersionLocally('version2', 'version1', done);
         });
-        afterEach(() => {
+        afterEach(async () => {
             shutdownMeteorServer();
-            shutdownLocalServer();
+            await shutdownLocalServer();
         });
 
         it('should only serve the new verson after a page reload', (done) => {
@@ -445,9 +451,9 @@ describe('autoupdate', () => {
         beforeEach((done) => {
             downloadAndServeVersionLocally('version2', 'version2', done);
         });
-        afterEach(() => {
+        afterEach(async () => {
             shutdownMeteorServer();
-            shutdownLocalServer();
+            await shutdownLocalServer();
         });
 
         it('should not invoke the onNewVersionReady callback', (done) => {
@@ -462,7 +468,7 @@ describe('autoupdate', () => {
             }, 'version2', undefined, showErrors);
             meteorServer.receivedRequests = [];
             autoupdate.checkForUpdates();
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise((resolve) => { setTimeout(resolve, 500); });
             expect(meteorServer.receivedRequests).to.deep.equal([
                 '/__cordova/manifest.json'
             ]);
@@ -478,9 +484,9 @@ describe('autoupdate', () => {
             }
             cleanup();
         });
-        afterEach(() => {
+        afterEach(async () => {
             shutdownMeteorServer();
-            shutdownLocalServer();
+            await shutdownLocalServer();
         });
 
         it('should invoke the onError callback with an error', () => new Promise((resolve, reject) => {
@@ -516,9 +522,9 @@ describe('autoupdate', () => {
             }
             cleanup();
         });
-        afterEach(() => {
+        afterEach(async () => {
             shutdownMeteorServer();
-            shutdownLocalServer();
+            await shutdownLocalServer();
         });
 
         it('should invoke the onError callback with an error', () => new Promise((resolve, reject) => {
@@ -554,9 +560,9 @@ describe('autoupdate', () => {
             }
             cleanup();
         });
-        afterEach(() => {
+        afterEach(async () => {
             shutdownMeteorServer();
-            shutdownLocalServer();
+            await shutdownLocalServer();
         });
 
         it('should invoke the onError callback with an error', () => new Promise((resolve, reject) => {
@@ -592,9 +598,9 @@ describe('autoupdate', () => {
             }
             cleanup();
         });
-        afterEach(() => {
+        afterEach(async () => {
             shutdownMeteorServer();
-            shutdownLocalServer();
+            await shutdownLocalServer();
         });
 
         it('should invoke the onError callback with an error', () => new Promise((resolve, reject) => {
@@ -624,9 +630,9 @@ describe('autoupdate', () => {
         beforeEach((done) => {
             downloadAndServeVersionLocally('127.0.0.1_root_url', 'wrong_root_url', done);
         });
-        afterEach(() => {
+        afterEach(async () => {
             shutdownMeteorServer();
-            shutdownLocalServer();
+            await shutdownLocalServer();
         });
 
         it('should invoke the onError callback with an error', () => new Promise((resolve, reject) => {
@@ -662,9 +668,9 @@ describe('autoupdate', () => {
             }
             cleanup();
         });
-        afterEach(() => {
+        afterEach(async () => {
             shutdownMeteorServer();
-            shutdownLocalServer();
+            await shutdownLocalServer();
         });
 
         it('should invoke the onError callback with an error', () => new Promise((resolve, reject) => {
@@ -699,9 +705,9 @@ describe('autoupdate', () => {
             }
             cleanup();
         });
-        afterEach(() => {
+        afterEach(async () => {
             shutdownMeteorServer();
-            shutdownLocalServer();
+            await shutdownLocalServer();
         });
 
         it('should invoke the onError callback with an error', () => new Promise((resolve, reject) => {
@@ -737,9 +743,9 @@ describe('autoupdate', () => {
             }
             cleanup();
         });
-        afterEach(() => {
+        afterEach(async () => {
             shutdownMeteorServer();
-            shutdownLocalServer();
+            await shutdownLocalServer();
         });
 
         it('should invoke the onError callback with an error', () => new Promise((resolve, reject) => {
@@ -777,7 +783,7 @@ describe('autoupdate', () => {
      }
      cleanup();
      });
-     afterEach(() => {
+     afterEach(async () => {
      closeMeteorServer();
      shutdownLocalServer();
      });
@@ -829,9 +835,9 @@ describe('autoupdate', () => {
                 }
             }).catch(done);
         });
-        afterEach(() => {
+        afterEach(async () => {
             shutdownMeteorServer();
-            shutdownLocalServer();
+            await shutdownLocalServer();
         });
 
         it('should only download the manifest, the index page, and the remaining assets', () => {
@@ -872,16 +878,16 @@ describe('autoupdate', () => {
             await new Promise((resolve, reject) => {
                 setUpAutoupdate(showLogs, async () => {
                     resolve();
-                }, 'version1', undefined, showErrors).then(instance => {
+                }, 'version1', undefined, showErrors).then((instance) => {
                     autoupdate = instance;
                     autoupdate.checkForUpdates();
                 }).catch(reject);
             });
         });
 
-        afterEach(() => {
+        afterEach(async () => {
             shutdownMeteorServer();
-            shutdownLocalServer();
+            await shutdownLocalServer();
         });
 
         it('should only download the manifest, the index page, and the remaining assets', () => {
@@ -913,18 +919,21 @@ describe('autoupdate', () => {
      */
 
     describe('when startupDidComplete is not fired', () => {
-        afterEach(() => {
-            shutdownMeteorServer();
-            shutdownLocalServer();
+        afterEach(async () => {
             cleanup();
+            await shutdownLocalServer();
+            await shutdownMeteorServer();
+            mockery.disable();
+            mockery.deregisterAll();
         });
-
         it('should fallback to last known good version', async () => {
-            await (() => new Promise((resolve) => downloadAndServeVersionLocally('version2', 'version3', resolve)))();
+            await (() => new Promise((resolve) => {
+                downloadAndServeVersionLocally('version2', 'version3', resolve);
+            }))();
 
             await new Promise((resolve, reject) => {
                 runAutoUpdateTests(
-                    (err) => err ? reject(err) : resolve(),
+                    (err) => (err ? reject(err) : resolve()),
                     async (autoupdate) => {
                         await wait(500);
                         expect(autoupdate.getPendingVersion()).to.equal('version2');
@@ -943,7 +952,7 @@ describe('autoupdate', () => {
             meteorServer = await serveVersion('version2');
             await new Promise((resolve, reject) => {
                 runAutoUpdateTests(
-                    (err) => err ? reject(err) : resolve(),
+                    (err) => (err ? reject(err) : resolve()),
                     async (autoupdate) => {
                         await wait(500);
                         expect(autoupdate.getPendingVersion()).to.equal('version1');
@@ -960,13 +969,13 @@ describe('autoupdate', () => {
     });
 
     describe('when version is blacklisted', () => {
-        afterEach(() => {
+        afterEach(async () => {
             shutdownMeteorServer();
-            shutdownLocalServer();
+            await shutdownLocalServer();
         });
 
         it('should not download it', (done) => {
-            serveVersion('version2').then(server => {
+            serveVersion('version2').then((server) => {
                 meteorServer = server;
                 setUpAutoupdate(showLogs, () => {
                 }, 'version1', (error) => {
@@ -976,9 +985,10 @@ describe('autoupdate', () => {
                     } catch (e) {
                         done(e);
                     }
-                }, false).then(autoupdate => {
-                    autoupdate.config.blacklistedVersions = ['version2'];
-                    autoupdate.checkForUpdates();
+                }, false).then((autoupdateInstance) => {
+                    // eslint-disable-next-line no-param-reassign
+                    autoupdateInstance.config.blacklistedVersions = ['version2'];
+                    autoupdateInstance.checkForUpdates();
                 }).catch(done);
             }).catch(done);
         });
@@ -989,9 +999,9 @@ describe('autoupdate', () => {
             meteorServer = await serveVersion('version2');
             cleanup();
         });
-        afterEach(() => {
+        afterEach(async () => {
             shutdownMeteorServer();
-            shutdownLocalServer();
+            await shutdownLocalServer();
         });
 
         it('is set to false then should not emit new version', (done) => {
@@ -1003,7 +1013,9 @@ describe('autoupdate', () => {
         });
 
         it('is set to true then should emit new version', (done) => {
-            runAutoUpdateTests(done, Function.prototype, 'version2', 'version1', false, false, true, { desktopHCP: true });
+            runAutoUpdateTests(done, Function.prototype, 'version2', 'version1', false, false, true, {
+                desktopHCP: true
+            });
         });
     });
 });
