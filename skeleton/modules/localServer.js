@@ -265,29 +265,35 @@ export default class LocalServer {
          * @param {boolean} local - local mode
          */
         function AssetHandler(req, res, next, local = false) {
-            const parsedUrl = url.parse(req.url);
-            // Check if we have an asset for that url defined.
-            /** @type {Asset} */
-            const asset = self.assetBundle.assetForUrlPath(parsedUrl.pathname);
+            try {
+                const parsedUrl = new url.URL(req.url, 'http://localhost');
+                // Check if we have an asset for that url defined.
+                /** @type {Asset} */
+                const asset = self.assetBundle.assetForUrlPath(parsedUrl.pathname);
 
-            if (!asset) return next();
+                if (!asset) return next();
 
-            const processors = () => (
-                addSourceMapHeader(asset, res),
-                addETagHeader(asset, res),
-                addCacheHeader(asset, res, req.url)
-            );
+                const processors = () => (
+                    addSourceMapHeader(asset, res),
+                    addETagHeader(asset, res),
+                    addCacheHeader(asset, res, req.url)
+                );
 
-            if (local) {
-                return createStreamProtocolResponse(asset.getFile(), res, processors);
+                if (local) {
+                    return createStreamProtocolResponse(asset.getFile(), res, processors);
+                }
+                return send(
+                    req,
+                    asset.getFile(),
+                    { etag: false, cacheControl: false, dotfiles: 'allow' }
+                )
+                    .on('file', processors)
+                    .pipe(res);
+            } catch (e) {
+                console.error(`AssetHandler exception: ${e.message} stack: ${e.stack}`);
+                res.statusCode = 500;
+                res.end(e.message);
             }
-            return send(
-                req,
-                encodeURIComponent(asset.getFile()),
-                { etag: false, cacheControl: false }
-            )
-                .on('file', processors)
-                .pipe(res);
         }
 
         /**
@@ -300,7 +306,7 @@ export default class LocalServer {
          * @param {boolean} local - local mode
          */
         function WwwHandler(req, res, next, local = false) {
-            const parsedUrl = url.parse(req.url);
+            const parsedUrl = new url.URL(req.url, 'http://localhost');
 
             if (parsedUrl.pathname !== '/cordova.js') {
                 return next();
@@ -316,8 +322,8 @@ export default class LocalServer {
 
             if (fs.existsSync(filePath)) {
                 return local
-                    ? createStreamProtocolResponse(filePath, res, () => {})
-                    : send(req, encodeURIComponent(filePath)).pipe(res);
+                    ? createStreamProtocolResponse(filePath, res, () => { })
+                    : send(req, filePath).pipe(res);
             }
             return next();
         }
@@ -333,7 +339,7 @@ export default class LocalServer {
          * @param {boolean} local - local mode
          */
         function FilesystemHandler(req, res, next, urlAlias, localPath, local = false) {
-            const parsedUrl = url.parse(req.url);
+            const parsedUrl = new url.URL(req.url, 'http://localhost');
             if (!parsedUrl.pathname.startsWith(urlAlias)) {
                 return next();
             }
@@ -356,8 +362,8 @@ export default class LocalServer {
 
             if (fs.existsSync(filePath)) {
                 return local
-                    ? createStreamProtocolResponse(filePath, res, () => {})
-                    : send(req, encodeURIComponent(filePath)).pipe(res);
+                    ? createStreamProtocolResponse(filePath, res, () => { })
+                    : send(req, filePath).pipe(res);
             }
             return local ? res.setStatusCode(404) : respondWithCode(res, 404, 'File does not exist.');
         }
@@ -398,7 +404,8 @@ export default class LocalServer {
          * @param {boolean} local - local mode
          */
         function IndexHandler(req, res, next, local = false) {
-            const parsedUrl = url.parse(req.url);
+            self.log.debug(`IndexHandler: ${req.url}`);
+            const parsedUrl = new url.URL(req.url, 'http://localhost');
             if (!parsedUrl.pathname.startsWith(self.localFilesystemUrl)
                 && parsedUrl.pathname !== '/favicon.ico'
             ) {
@@ -408,7 +415,13 @@ export default class LocalServer {
                     createStreamProtocolResponse(indexFile.getFile(), res, () => {
                     });
                 } else {
-                    send(req, encodeURIComponent(indexFile.getFile())).pipe(res);
+                    send(req, indexFile.getFile(), { dotfiles: 'allow' })
+                        .on('error', (err) => {
+                            console.error(`IndexHandler error serving ${indexFile.getFile()}: ${err.message}`);
+                            res.statusCode = 500;
+                            res.end(err.message);
+                        })
+                        .pipe(res);
                 }
             } else {
                 next();

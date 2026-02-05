@@ -86,9 +86,12 @@ export default class AssetBundle {
         this.appId = null;
         this.desktopVersion = desktopVersion;
         this.rootUrlString = null;
-        this.matcher = new RegExp(
-            '__meteor_runtime_config__ = JSON.parse\\(decodeURIComponent\\("([^"]*)"\\)\\)'
-        );
+        this.rootUrlString = null;
+        this.matcher = /__meteor_runtime_config__ = JSON.parse\(decodeURIComponent\("([^"]*)"\)\)/;
+
+        if (manifest) {
+            this.log.debug(`manifest has ${manifest.entries.length} entries`);
+        }
 
         this.parentAssetBundle = parentAssetBundle;
 
@@ -113,7 +116,7 @@ export default class AssetBundle {
 
         // Filter assets that are only in this bundle. Rest can be taken from the parent.
         this.manifest.entries.forEach((entry) => {
-            const urlPath = url.parse(entry.urlPath).pathname;
+            const urlPath = new url.URL(entry.urlPath, 'http://localhost').pathname;
 
             if (parentAssetBundle === undefined
                 || parentAssetBundle.cachedAssetForUrlPath(urlPath, entry.hash) === null) {
