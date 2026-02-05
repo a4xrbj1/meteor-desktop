@@ -6,7 +6,9 @@ import fs from 'fs';
 import shell from 'shelljs';
 import asar from '@electron/asar';
 
-import { createTestInstance, StubLog, getModuleJson, saveModuleJson } from '../helpers/meteorDesktop';
+import {
+    createTestInstance, StubLog, getModuleJson, saveModuleJson
+} from '../helpers/meteorDesktop';
 import paths from '../helpers/paths';
 
 chai.use(sinonChai);
@@ -38,7 +40,7 @@ describe('electronApp', () => {
                 const files = asar.listPackage(MeteorDesktop.env.paths.electronApp.desktopAsar);
                 const expected = ['desktop.js', 'settings.json', 'modules', 'assets'];
                 expect(files).to.include.members(
-                    expected.map(expectedPath => path.sep + expectedPath)
+                    expected.map((expectedPath) => path.sep + expectedPath)
                 );
                 done();
             }).catch((e) => { done(e); });
@@ -73,7 +75,6 @@ describe('electronApp', () => {
             expect(packageJson.dependencies).to.have.a.property('dependency', '1.0.1');
             expect(packageJson.dependencies).to.have.a.property('dependency2', '0.0.5');
         });
-
 
         function testUpdateDependenciesError(module, dependency, version, match) {
             logStub.restore();

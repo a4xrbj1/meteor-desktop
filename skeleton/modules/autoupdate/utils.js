@@ -29,4 +29,3 @@ function rimrafWithRetries(...args) {
 export default {
     rimrafWithRetries
 };
-

@@ -22,7 +22,7 @@ export function StubLog(object, methods, stubProcessExit) {
     });
 
     this.restore = () => {
-        Object.keys(stubs).forEach(method => stubs[method].restore());
+        Object.keys(stubs).forEach((method) => stubs[method].restore());
         if (stubProcessExit) {
             process.exit.restore();
         }

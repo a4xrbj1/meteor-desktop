@@ -189,7 +189,6 @@ export default class LocalServer {
         this.onServerRestarted = onServerRestarted;
     }
 
-
     /**
      * Initializes the module. Configures `connect` and searches for free port.
      *
@@ -257,7 +256,6 @@ export default class LocalServer {
             res.setHeader('Cache-Control', shouldCache ? `max-age=${oneYearInSeconds}` : 'no-cache');
         }
 
-
         /**
          * Provides assets defined in the manifest.
          *
@@ -311,16 +309,15 @@ export default class LocalServer {
             // We need to obtain a path for the initial asset bundle which usually is the parent
             // asset bundle, but if there were not HCPs yet, the main asset bundle is the
             // initial one.
-            const initialAssetBundlePath =
-                parentAssetBundle ?
-                    parentAssetBundle.getDirectoryUri() : self.assetBundle.getDirectoryUri();
+            const initialAssetBundlePath = parentAssetBundle
+                ? parentAssetBundle.getDirectoryUri() : self.assetBundle.getDirectoryUri();
 
             const filePath = path.join(initialAssetBundlePath, parsedUrl.pathname);
 
             if (fs.existsSync(filePath)) {
-                return local ?
-                    createStreamProtocolResponse(filePath, res, () => {}) :
-                    send(req, encodeURIComponent(filePath)).pipe(res);
+                return local
+                    ? createStreamProtocolResponse(filePath, res, () => {})
+                    : send(req, encodeURIComponent(filePath)).pipe(res);
             }
             return next();
         }
@@ -358,13 +355,12 @@ export default class LocalServer {
             }
 
             if (fs.existsSync(filePath)) {
-                return local ?
-                    createStreamProtocolResponse(filePath, res, () => {}) :
-                    send(req, encodeURIComponent(filePath)).pipe(res);
+                return local
+                    ? createStreamProtocolResponse(filePath, res, () => {})
+                    : send(req, encodeURIComponent(filePath)).pipe(res);
             }
             return local ? res.setStatusCode(404) : respondWithCode(res, 404, 'File does not exist.');
         }
-
 
         /**
          * Serves files from the entire filesystem if enabled in settings.
@@ -403,8 +399,8 @@ export default class LocalServer {
          */
         function IndexHandler(req, res, next, local = false) {
             const parsedUrl = url.parse(req.url);
-            if (!parsedUrl.pathname.startsWith(self.localFilesystemUrl) &&
-                parsedUrl.pathname !== '/favicon.ico'
+            if (!parsedUrl.pathname.startsWith(self.localFilesystemUrl)
+                && parsedUrl.pathname !== '/favicon.ico'
             ) {
                 /** @type {Asset} */
                 const indexFile = self.assetBundle.getIndexFile();
@@ -418,7 +414,6 @@ export default class LocalServer {
                 next();
             }
         }
-
 
         if (this.assetBundle === null) {
             // `connect` will do the job!

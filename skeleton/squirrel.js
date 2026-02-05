@@ -155,15 +155,15 @@ export default class Squirrel {
             });
 
             if (process.platform === 'darwin' && !context.isProduction()) {
-                context.l.info('disabling autoUpdate because on Mac in development build it' +
-                    ' would not work anyway (app needs to be signed)');
+                context.l.info('disabling autoUpdate because on Mac in development build it'
+                    + ' would not work anyway (app needs to be signed)');
                 return;
             }
 
             autoUpdater.setFeedURL(
                 feed,
-                context.settings.squirrel.autoUpdateFeedHeaders ?
-                    context.settings.squirrel.autoUpdateFeedHeaders : undefined
+                context.settings.squirrel.autoUpdateFeedHeaders
+                    ? context.settings.squirrel.autoUpdateFeedHeaders : undefined
             );
             // Check for updates unless the developer wants to do it himself.
             if (!context.settings.squirrel.autoUpdateCheckOnStart) {
@@ -172,4 +172,3 @@ export default class Squirrel {
         }
     }
 }
-

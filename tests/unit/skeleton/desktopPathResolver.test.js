@@ -62,8 +62,8 @@ describe('DesktopPathResolver', () => {
                 .resolveDesktopPath(__dirname, {
                     info: infoStub
                 });
-            expect(infoStub).to.be.calledWithMatch('will use desktop.asar from' +
-                ' initial version because the initial version of meteor app has changed');
+            expect(infoStub).to.be.calledWithMatch('will use desktop.asar from'
+                + ' initial version because the initial version of meteor app has changed');
             expect(desktopPath.endsWith(`${path.sep}desktop.asar`)).to.be.true();
         });
 
@@ -96,8 +96,8 @@ describe('DesktopPathResolver', () => {
             const desktopPath = DesktopPathResolver
                 .resolveDesktopPath(__dirname, { info: infoStub });
 
-            expect(infoStub.secondCall).to.be.calledWithMatch(sinon.match('will use desktop.asar' +
-                ' from last downloaded version at'));
+            expect(infoStub.secondCall).to.be.calledWithMatch(sinon.match('will use desktop.asar'
+                + ' from last downloaded version at'));
 
             expect(desktopPath.endsWith('897_desktop.asar')).to.be.true();
         });
@@ -118,8 +118,8 @@ describe('DesktopPathResolver', () => {
                 .resolveDesktopPath(__dirname, { info: infoStub });
 
             expect(infoStub.secondCall).to.be.calledWithMatch(sinon.match(
-                'will use desktop.asar from initial version because last downloaded version is ' +
-                'using it'
+                'will use desktop.asar from initial version because last downloaded version is '
+                + 'using it'
             ));
 
             expect(desktopPath.endsWith(`${path.sep}desktop.asar`)).to.be.true();
@@ -141,8 +141,8 @@ describe('DesktopPathResolver', () => {
                 .resolveDesktopPath(__dirname, { info: infoStub });
 
             expect(infoStub.secondCall).to.be.calledWithMatch(sinon.match(
-                'will use desktop.asar from initial version because last downloaded version does ' +
-                'not contain new desktop version'
+                'will use desktop.asar from initial version because last downloaded version does '
+                + 'not contain new desktop version'
             ));
 
             expect(desktopPath.endsWith(`${path.sep}desktop.asar`)).to.be.true();
@@ -164,8 +164,8 @@ describe('DesktopPathResolver', () => {
                 .resolveDesktopPath(__dirname, { info: infoStub });
 
             expect(infoStub.secondCall).to.be.calledWithMatch(sinon.match(
-                'will use desktop.asar from last downloaded version which is ' +
-                'apparently the initial bundle'
+                'will use desktop.asar from last downloaded version which is '
+                + 'apparently the initial bundle'
             ));
 
             expect(desktopPath.endsWith(`${path.sep}desktop.asar`)).to.be.true();
@@ -215,8 +215,8 @@ describe('DesktopPathResolver', () => {
                 .resolveDesktopPath(__dirname, { info: infoStub, warn: warnStub });
 
             expect(warnStub.firstCall).to.be.calledWithMatch(sinon.match(
-                'will use desktop.asar from initial version because ' +
-                'last known good version of meteor app is using it'
+                'will use desktop.asar from initial version because '
+                + 'last known good version of meteor app is using it'
             ));
 
             expect(desktopPath.endsWith(`${path.sep}desktop.asar`)).to.be.true();
@@ -241,9 +241,9 @@ describe('DesktopPathResolver', () => {
                 .resolveDesktopPath(__dirname, { info: infoStub, warn: warnStub });
 
             expect(warnStub.firstCall).to.be.calledWithMatch(sinon.match(
-                'will use desktop.asar from initial version because last ' +
-                'known good version of meteor app does not contain new desktop ' +
-                'version'
+                'will use desktop.asar from initial version because last '
+                + 'known good version of meteor app does not contain new desktop '
+                + 'version'
             ));
 
             expect(desktopPath.endsWith(`${path.sep}desktop.asar`)).to.be.true();
@@ -267,8 +267,8 @@ describe('DesktopPathResolver', () => {
                 .resolveDesktopPath(__dirname, { info: Function.prototype, warn: warnStub });
 
             expect(warnStub.firstCall).to.be.calledWithMatch(sinon.match(
-                'will use desktop.asar from last known good version which is ' +
-                'apparently the initial bundle'
+                'will use desktop.asar from last known good version which is '
+                + 'apparently the initial bundle'
             ));
 
             expect(desktopPath.endsWith(`${path.sep}desktop.asar`)).to.be.true();

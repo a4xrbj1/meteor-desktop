@@ -1,14 +1,6 @@
 /* eslint-disable import/no-unresolved,no-console */
 /* eslint-disable global-require, import/no-dynamic-require */
 
-let electron;
-try {
-    // Attempt built-in module loading via module.constructor._load to bypass NPM shadowing
-    electron = module.constructor._load('electron', undefined, true);
-} catch (e) {
-    electron = require('electron');
-}
-
 import { EventEmitter as Events } from 'events';
 import path from 'path';
 import fs from 'fs-plus';
@@ -19,9 +11,19 @@ import Module from './modules/module';
 import LoggerManager from './loggerManager';
 import DesktopPathResolver from './desktopPathResolver';
 import WindowSettings from './windowSettings';
-import Squirrel from './squirrel'; // DEPRECATED
+import Squirrel from './squirrel';
 
-const { app, BrowserWindow, dialog, protocol } = electron;
+let electron;
+try {
+    // Attempt built-in module loading via module.constructor._load to bypass NPM shadowing
+    electron = module.constructor._load('electron', undefined, true);
+} catch (e) {
+    electron = require('electron');
+} // DEPRECATED
+
+const {
+    app, BrowserWindow, dialog, protocol
+} = electron;
 const { join } = path;
 
 /**
@@ -39,7 +41,12 @@ export default class App {
             electron.protocol.registerStandardSchemes(['meteor'], { secure: true });
         } else {
             electron.protocol.registerSchemesAsPrivileged([
-                { scheme: 'meteor', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }
+                {
+                    scheme: 'meteor',
+                    privileges: {
+                        standard: true, secure: true, supportFetchAPI: true, stream: true
+                    }
+                }
             ]);
         }
 

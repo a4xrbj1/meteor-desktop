@@ -58,7 +58,7 @@ describe('App', () => {
             const stub2 = sinon.stub();
             const app = new App();
             app.eventsBus = {
-                listeners: eventName => ((eventName === 'event') ? [stub1, stub2] : [])
+                listeners: (eventName) => ((eventName === 'event') ? [stub1, stub2] : [])
             };
             return new Promise((resolve, reject) => {
                 app.emitAsync('event', 'test', 12345)
@@ -82,7 +82,7 @@ describe('App', () => {
             const stub2 = sinon.stub();
             stub2.resolves('test2');
             app.eventsBus = {
-                listeners: eventName => ((eventName === 'event') ? [stub, stub2] : [])
+                listeners: (eventName) => ((eventName === 'event') ? [stub, stub2] : [])
             };
             return new Promise((resolve, reject) => {
                 app.emitAsync('event', 'test', 12345)
@@ -105,7 +105,7 @@ describe('App', () => {
             const stub2 = sinon.stub();
             stub2.resolves('test2');
             app.eventsBus = {
-                listeners: eventName => ((eventName === 'event') ? [stub, stub2] : [])
+                listeners: (eventName) => ((eventName === 'event') ? [stub, stub2] : [])
             };
             return new Promise((resolve, reject) => {
                 app.emitAsync('event', 'test', 12345)
@@ -124,7 +124,7 @@ describe('App', () => {
             const stub = sinon.stub();
             stub.throws(new Error('reject'));
             app.eventsBus = {
-                listeners: eventName => ((eventName === 'event') ? [stub] : [])
+                listeners: (eventName) => ((eventName === 'event') ? [stub] : [])
             };
             app.l = { error: Function.prototype };
             return new Promise((resolve, reject) => {
@@ -140,4 +140,3 @@ describe('App', () => {
         });
     });
 });
-

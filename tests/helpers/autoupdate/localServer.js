@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 import chai from 'chai';
 import dirty from 'dirty-chai';
 
-import { getFakeLogger } from '../../helpers/meteorDesktop';
+import { getFakeLogger } from '../meteorDesktop';
 import AssetBundle from '../../../skeleton/modules/autoupdate/assetBundle';
 import LocalServer from '../../../skeleton/modules/localServer';
 
@@ -102,7 +102,6 @@ export async function expectVersionServedToEqual(expectedVersion) {
     expect(version).to.equal(expectedVersion);
 }
 
-
 export function shutdownLocalServer() {
     localServer.httpServerInstance.close();
     localServer.httpServerInstance.destroy();
@@ -149,7 +148,6 @@ export async function expectAssetServedToContain(path, expectedContents) {
     const body = await response.text();
     expect(body).to.contain(expectedContents);
 }
-
 
 module.exports = {
     setUpLocalServer,

@@ -74,7 +74,7 @@ describe('ioHelper', () => {
                 { name: 'file2', mtime: new Date(Date.now() - 5) }
             ];
             expect(
-                ioHelper.findNewestFileOrDirectory('/dummy/path', file => file.name !== 'file1')
+                ioHelper.findNewestFileOrDirectory('/dummy/path', (file) => file.name !== 'file1')
                     .newest
             ).to.equal('file2');
             delete shelljs.ls;
@@ -136,7 +136,7 @@ describe('ioHelper', () => {
             ).to.be.fulfilled()
         );
         it('should reject when any operation rejects', () => {
-            const operation = arg => (arg === 'file1' ? Promise.resolve() : Promise.reject('fail'));
+            const operation = (arg) => (arg === 'file1' ? Promise.resolve() : Promise.reject('fail'));
             return expect(ioHelper.batchIoOperationWithRetries('copy', 3, 1, operation, [['file1'], ['file2']])).to.be.rejectedWith('fail');
         });
         it('should pass correct arguments', () => {

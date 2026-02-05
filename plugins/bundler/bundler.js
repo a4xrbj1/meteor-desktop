@@ -137,7 +137,7 @@ class MeteorDesktopBundler {
         try {
             const result = await this.utils.readFilesAndComputeHash(
                 this.desktopPath,
-                file => file.replace('.desktop', '')
+                (file) => file.replace('.desktop', '')
             );
             const { hash } = result;
             fs.writeFileSync(
@@ -224,7 +224,7 @@ class MeteorDesktopBundler {
 
         if (!this.isEmpty(modulesPath)) {
             const modules = this.fs.readdirSync(modulesPath);
-            modules.forEach(module => {
+            modules.forEach((module) => {
                 const moduleDir = path.join(modulesPath, module);
                 if (this.fs.lstatSync(moduleDir).isDirectory()) {
                     const moduleConfig = this.getModuleConfig(moduleDir, file);
@@ -272,7 +272,7 @@ class MeteorDesktopBundler {
         // Each module can have its own dependencies.
         const moduleDependencies = {};
 
-        configs.forEach(moduleConfig => {
+        configs.forEach((moduleConfig) => {
             if (!('dependencies' in moduleConfig)) {
                 moduleConfig.dependencies = {};
             }
@@ -290,9 +290,7 @@ class MeteorDesktopBundler {
             depsManager.mergeDependencies('settings.json[dependencies]', dependencies.fromSettings);
             depsManager.mergeDependencies('settings.json[plugins]', dependencies.plugins);
 
-            Object.keys(dependencies.modules).forEach(module =>
-                depsManager.mergeDependencies(`module[${module}]`, dependencies.modules[module])
-            );
+            Object.keys(dependencies.modules).forEach((module) => depsManager.mergeDependencies(`module[${module}]`, dependencies.modules[module]));
 
             return depsManager;
         } catch (e) {
@@ -319,15 +317,15 @@ class MeteorDesktopBundler {
         }
 
         let deps = Object.keys(dependencies).sort();
-        deps = deps.map(dependency => `${dependency}:${dependencies[dependency]}`);
+        deps = deps.map((dependency) => `${dependency}:${dependencies[dependency]}`);
         const mainCompatibilityVersion = this.requireLocal('@meteor-community/meteor-desktop/package.json')
             .version
             .split('.');
         const desktopCompatibilityVersion = settings.version.split('.')[0];
         deps.push(`meteor-desktop:${mainCompatibilityVersion[0]}`);
         deps.push(`desktop-app:${desktopCompatibilityVersion}`);
-        if (process.env.METEOR_DESKTOP_DEBUG_DESKTOP_COMPATIBILITY_VERSION ||
-            process.env.METEOR_DESKTOP_DEBUG
+        if (process.env.METEOR_DESKTOP_DEBUG_DESKTOP_COMPATIBILITY_VERSION
+            || process.env.METEOR_DESKTOP_DEBUG
         ) {
             console.log('[meteor-desktop] Compatibility version calculated from', deps);
         }
@@ -416,7 +414,7 @@ class MeteorDesktopBundler {
         // Load the dependencies section from meteor-desktop's package.json to get correct versions.
         const versions = this.getPackageJsonField('dependencies');
 
-        deps.forEach(dependency => {
+        deps.forEach((dependency) => {
             const dependencyCamelCased = toCamelCase(dependency);
 
             this.stampPerformance(`deps get ${dependency}`);
@@ -451,7 +449,7 @@ class MeteorDesktopBundler {
      */
     getPerformanceReport() {
         console.log('[meteor-desktop] Performance summary:');
-        Object.keys(this.performanceStamps).forEach(stampName => {
+        Object.keys(this.performanceStamps).forEach((stampName) => {
             if (typeof this.performanceStamps[stampName] === 'number') {
                 console.log(`\t${stampName}: ${this.performanceStamps[stampName]}ms`);
             }
@@ -472,12 +470,10 @@ class MeteorDesktopBundler {
         if (keys1.length !== keys2.length) return false;
         if (!arraysIdentical(keys1, keys2)) return false;
 
-        return keys1.every(key =>
-            stat1[key].size === stat2[key].size &&
-            stat1[key].dates[0] === stat2[key].dates[0] &&
-            stat1[key].dates[1] === stat2[key].dates[1] &&
-            stat1[key].dates[2] === stat2[key].dates[2]
-        );
+        return keys1.every((key) => stat1[key].size === stat2[key].size
+            && stat1[key].dates[0] === stat2[key].dates[0]
+            && stat1[key].dates[1] === stat2[key].dates[1]
+            && stat1[key].dates[2] === stat2[key].dates[2]);
     }
 
     /**
@@ -492,25 +488,25 @@ class MeteorDesktopBundler {
         let requireLocal = null;
 
         // Identify relevant files.
-        files.forEach(file => {
+        files.forEach((file) => {
             if (file.getArch() === 'web.cordova') {
                 if (
-                    file.getPackageName() === 'communitypackages:meteor-desktop-bundler' &&
-                    file.getPathInPackage() === 'version._desktop_.js'
+                    file.getPackageName() === 'communitypackages:meteor-desktop-bundler'
+                    && file.getPathInPackage() === 'version._desktop_.js'
                 ) {
                     versionFile = file;
                 }
                 if (
-                    file.getPackageName() === null &&
-                    file.getPathInPackage() === 'version.desktop'
+                    file.getPackageName() === null
+                    && file.getPathInPackage() === 'version.desktop'
                 ) {
                     requireLocal = file.require.bind(file);
                     inputFile = file;
                 }
             } else if (
-                file.getArch() !== 'web.browser' &&
-                this.version &&
-                file.getPathInPackage() === 'version._desktop_.js'
+                file.getArch() !== 'web.browser'
+                && this.version
+                && file.getPathInPackage() === 'version._desktop_.js'
             ) {
                 file.addJavaScript({
                     sourcePath: file.getPathInPackage(),
@@ -542,7 +538,8 @@ class MeteorDesktopBundler {
 
             console.time('[meteor-desktop] preparing desktop.asar took');
 
-            let electronAsar, shelljs, babelCore, babelPresetEnv, terser, del, cacache, md5;
+            let electronAsar; let shelljs; let babelCore; let babelPresetEnv; let terser; let del; let cacache; let
+                md5;
 
             /**
              * Explanation regarding String.prototype.to manipulation to prevent conflicts between different shelljs versions.
@@ -550,7 +547,8 @@ class MeteorDesktopBundler {
             const StringPrototypeToOriginal = String.prototype.to;
 
             this.stampPerformance('basic deps lookout');
-            let DependenciesManager, ElectronAppScaffold;
+            let DependenciesManager; let
+                ElectronAppScaffold;
             try {
                 const deps = this.lookForAndRequireDependencies(this.deps);
                 ({ cacache } = deps);
@@ -675,9 +673,9 @@ class MeteorDesktopBundler {
             }
 
             if (
-                settings.env !== 'prod' &&
-                lastStats &&
-                MeteorDesktopBundler.areStatsEqual(lastStats.stats, readDirResult.stats)
+                settings.env !== 'prod'
+                && lastStats
+                && MeteorDesktopBundler.areStatsEqual(lastStats.stats, readDirResult.stats)
             ) {
                 logDebug('[meteor-desktop] Cache match found');
                 try {
@@ -743,17 +741,17 @@ class MeteorDesktopBundler {
 
             this.stampPerformance('copy .desktop');
             shelljs.rm('-rf', desktopTmpPath);
-            
+
             // Make sure to create the directory structure first
             shelljs.mkdir('-p', desktopTmpPath);
             shelljs.mkdir('-p', path.join(desktopTmpPath, 'modules'));
             shelljs.mkdir('-p', path.join(desktopTmpPath, 'assets'));
-            
+
             // Copy files from .desktop to .desktop-staging
-            shelljs.ls('-A', desktopPath).forEach(item => {
+            shelljs.ls('-A', desktopPath).forEach((item) => {
                 const source = path.join(desktopPath, item);
                 const target = path.join(desktopTmpPath, item);
-                
+
                 // For directories, copy them recursively if they don't exist yet
                 if (fs.statSync(source).isDirectory()) {
                     if (!fs.existsSync(target)) {
@@ -765,7 +763,7 @@ class MeteorDesktopBundler {
                     shelljs.cp('-f', source, target);
                 }
             });
-            
+
             // Ensure we create empty directories even if they're not in the source
             if (!fs.existsSync(path.join(desktopTmpPath, 'modules'))) {
                 shelljs.mkdir('-p', path.join(desktopTmpPath, 'modules'));
@@ -773,18 +771,18 @@ class MeteorDesktopBundler {
             if (!fs.existsSync(path.join(desktopTmpPath, 'assets'))) {
                 shelljs.mkdir('-p', path.join(desktopTmpPath, 'assets'));
             }
-            
+
             // Delete test files and macOS metadata files
             del.sync([
                 path.join(desktopTmpPath, '**', '*.test.js'),
                 path.join(desktopTmpPath, '**', '._*'),
                 path.join(desktopTmpPath, '**', '.DS_Store')
             ]);
-            
+
             // Set proper permissions
             shelljs.chmod('-R', '644', desktopTmpPath);
             // Make directories executable (necessary for traversal)
-            shelljs.find(desktopTmpPath).forEach(function(file) {
+            shelljs.find(desktopTmpPath).forEach((file) => {
                 if (fs.statSync(file).isDirectory()) {
                     shelljs.chmod('755', file);
                 }
@@ -803,12 +801,13 @@ class MeteorDesktopBundler {
             this.stampPerformance('compute dependencies');
 
             this.stampPerformance('desktop hash');
-            let desktopHash, hashes, fileContents;
+            let desktopHash; let hashes; let
+                fileContents;
 
             try {
                 const hashResult = await this.utils.readFilesAndComputeHash(
                     desktopPath,
-                    file => file.replace('.desktop', '')
+                    (file) => file.replace('.desktop', '')
                 );
                 ({ fileContents, fileHashes: hashes, hash: desktopHash } = hashResult);
             } catch (e) {
@@ -843,10 +842,10 @@ class MeteorDesktopBundler {
 
             // Remove files that should not be packaged into the ASAR archive.
             this.stampPerformance('extract');
-            configs.forEach(config => {
+            configs.forEach((config) => {
                 if ('extract' in config) {
                     const filesToExtract = Array.isArray(config.extract) ? config.extract : [config.extract];
-                    filesToExtract.forEach(file => {
+                    filesToExtract.forEach((file) => {
                         const filePath = path.join(modulesPath, config.dirName, file);
                         shelljs.rm(filePath);
                     });
@@ -871,7 +870,7 @@ class MeteorDesktopBundler {
             // );
 
             this.stampPerformance('babel/uglify');
-            const processingPromises = Object.keys(fileContents).map(file => {
+            const processingPromises = Object.keys(fileContents).map((file) => {
                 const filePath = path.join(desktopTmpPath, file);
                 const cacheKey = `${file}-${hashes[file]}`;
 
@@ -897,14 +896,14 @@ class MeteorDesktopBundler {
                             //     presets: [preset]
                             // });
                             const transformed = await babelCore.transformAsync(code, {
-                                presets: [ [babelPresetEnv, { targets: { node: '14' } }] ]
-                              });
+                                presets: [[babelPresetEnv, { targets: { node: '14' } }]]
+                            });
 
                             if (!transformed || !transformed.code) {
                                 throw new Error(`Babel transformation failed for file ${file}`);
                             }
 
-                            let code = transformed.code;
+                            let { code } = transformed;
 
                             await cacache.put(this.cachePath, `${file}-${hashes[file]}`, code);
                             logDebug(`[meteor-desktop] Cached: ${file}`);

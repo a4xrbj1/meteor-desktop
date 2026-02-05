@@ -130,8 +130,8 @@ export default class AssetBundle {
             }
 
             if (entry.sourceMapFilePath !== null && entry.sourceMapUrlPath !== null) {
-                if (parentAssetBundle === undefined ||
-                    parentAssetBundle
+                if (parentAssetBundle === undefined
+                    || parentAssetBundle
                         .cachedAssetForUrlPath(entry.sourceMapUrlPath, null) === null) {
                     this.addAsset(new Asset(
                         entry.sourceMapFilePath,
@@ -159,8 +159,7 @@ export default class AssetBundle {
      */
     loadDesktopVersion() {
         const desktopVersionPath = path.join(this.directoryUri, '_desktop.json');
-        const desktopVersionFallbackPath =
-            path.join(this.directoryUri, 'app', 'version.desktop.json');
+        const desktopVersionFallbackPath = path.join(this.directoryUri, 'app', 'version.desktop.json');
         try {
             return JSON.parse(fs.readFileSync(desktopVersionPath, 'UTF-8'));
         } catch (e) {

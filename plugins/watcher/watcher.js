@@ -115,7 +115,7 @@ function getFileList(dir, sort = true) {
 
             if (sort) {
                 const stripLength = (dir.substr(0, 2) === './') ? dir.length - 1 : dir.length + 1;
-                let pathsUnified = files.map((pth => pth.substr(stripLength).replace(/[\\/]/gm, '-')));
+                let pathsUnified = files.map(((pth) => pth.substr(stripLength).replace(/[\\/]/gm, '-')));
                 const temporaryIndex = {};
                 files.forEach((file, i) => {
                     temporaryIndex[pathsUnified[i]] = file;
@@ -212,23 +212,22 @@ const desktopPath = path.resolve(path.join(rootPath, '.desktop'));
 
 const settings = getSettings(desktopPath);
 if (!('desktopHCP' in settings) || !settings.desktopHCP) {
-    console.warn('[meteor-desktop] will not watch for changes is .desktop because there is no ' +
-        '.desktop/settings.json or desktopHCP is set to false.  Remove this plugin if you do ' +
-        'not want to use desktopHCP.');
+    console.warn('[meteor-desktop] will not watch for changes is .desktop because there is no '
+        + '.desktop/settings.json or desktopHCP is set to false.  Remove this plugin if you do '
+        + 'not want to use desktopHCP.');
 } else if ('communitypackages:meteor-desktop-bundler' in Package) {
     const chokidar = Npm.require('chokidar');
     const versionFile = path.join(rootPath, 'version.desktop');
 
-    const version =
-        typeof Package['communitypackages:meteor-desktop-bundler'].METEOR_DESKTOP_VERSION === 'object' ?
-            Package['communitypackages:meteor-desktop-bundler'].METEOR_DESKTOP_VERSION.version : null;
+    const version = typeof Package['communitypackages:meteor-desktop-bundler'].METEOR_DESKTOP_VERSION === 'object'
+        ? Package['communitypackages:meteor-desktop-bundler'].METEOR_DESKTOP_VERSION.version : null;
 
     if (version) {
         try {
             fs.readFileSync(versionFile, 'UTF-8');
         } catch (e) {
-            throw new Error('[meteor-desktop] there is no version.desktop file. Are you sure you ' +
-                'have communitypackages:meteor-desktop-bundler package added to your project?');
+            throw new Error('[meteor-desktop] there is no version.desktop file. Are you sure you '
+                + 'have communitypackages:meteor-desktop-bundler package added to your project?');
         }
 
         readFilesAndComputeDesktopHash(desktopPath)
@@ -236,8 +235,8 @@ if (!('desktopHCP' in settings) || !settings.desktopHCP) {
                 const currentVersion = `${result.hash}_dev`;
                 if (currentVersion !== version) {
                     // TODO: something meteor'ish to print to stdout?
-                    console.info('[meteor-desktop] Initial .desktop version inconsistency found. Files ' +
-                        'have changed during the build, triggering desktop rebuild.');
+                    console.info('[meteor-desktop] Initial .desktop version inconsistency found. Files '
+                        + 'have changed during the build, triggering desktop rebuild.');
                     setTimeout(() => saveNewVersion(currentVersion, versionFile), 3000);
                 } else {
                     const watcher = chokidar.watch(desktopPath, {
@@ -255,8 +254,8 @@ if (!('desktopHCP' in settings) || !settings.desktopHCP) {
                             }
                             // Simple 2s debounce.
                             timeout = setTimeout(() => {
-                                console.log(`[meteor-desktop] ${filePath} have been changed, triggering` +
-                                    ' desktop rebuild.');
+                                console.log(`[meteor-desktop] ${filePath} have been changed, triggering`
+                                    + ' desktop rebuild.');
                                 readFilesAndComputeDesktopHash(desktopPath)
                                     .then((newResult) => {
                                         saveNewVersion(`${newResult.hash}_dev`, versionFile);
@@ -269,11 +268,11 @@ if (!('desktopHCP' in settings) || !settings.desktopHCP) {
             })
             .catch((e) => { throw new Error(`[meteor-desktop] failed to compute .desktop hash: ${e}`); });
     } else {
-        console.info('[meteor-desktop] .desktop HCP will not work because either web.cordova ' +
-            'architecture is missing or the bundler had troubles with creating desktop.asar. Be' +
-            ' sure that you are running mobile target or with --mobile-server.');
+        console.info('[meteor-desktop] .desktop HCP will not work because either web.cordova '
+            + 'architecture is missing or the bundler had troubles with creating desktop.asar. Be'
+            + ' sure that you are running mobile target or with --mobile-server.');
     }
 } else {
-    throw new Error('[meteor-desktop] bundler plugin was not detected. Are you sure you have ' +
-        'communitypackages:meteor-desktop-bundler package added to your project?');
+    throw new Error('[meteor-desktop] bundler plugin was not detected. Are you sure you have '
+        + 'communitypackages:meteor-desktop-bundler package added to your project?');
 }

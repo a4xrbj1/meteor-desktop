@@ -19,8 +19,8 @@ export default class WindowSettings {
     static mergeOsSpecificWindowSettings(settings, os) {
         ['windows', 'linux', 'osx'].forEach((system) => {
             if (
-                os[`is${system[0].toUpperCase()}${system.substring(1)}`] &&
-                (`_${system}`) in settings.window
+                os[`is${system[0].toUpperCase()}${system.substring(1)}`]
+                && (`_${system}`) in settings.window
             ) {
                 assignIn(settings.window, settings.window[`_${system}`]);
             }

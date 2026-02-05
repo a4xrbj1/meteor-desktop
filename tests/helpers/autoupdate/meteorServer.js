@@ -80,8 +80,8 @@ export default class MeteorServer {
          * Listen on `__cordova` path.
          */
         server.use(modRewrite([
-            '^/__cordova/(?!($|manifest.json|app|packages|merged-stylesheets.css|.*meteor_js_' +
-            'resource|cordova.js))(.*) /app/$2',
+            '^/__cordova/(?!($|manifest.json|app|packages|merged-stylesheets.css|.*meteor_js_'
+            + 'resource|cordova.js))(.*) /app/$2',
             '^/__cordova/(.*) /$1'
         ]));
 
@@ -89,9 +89,9 @@ export default class MeteorServer {
             const parsedUrl = url.parse(req.url);
             const ext = path.extname(parsedUrl.pathname);
             if ((ext === '.js' || ext === '.css') && (
-                exists(path.join(serverPath, `${parsedUrl.pathname}.map`)) ||
-                    (parentServerPath &&
-                    exists(path.join(parentServerPath, `${parsedUrl.pathname}.map`)))
+                exists(path.join(serverPath, `${parsedUrl.pathname}.map`))
+                    || (parentServerPath
+                    && exists(path.join(parentServerPath, `${parsedUrl.pathname}.map`)))
             )
             ) {
                 res.setHeader('X-SourceMap', `${parsedUrl.pathname}.map?${parsedUrl.query}`);
@@ -112,8 +112,8 @@ export default class MeteorServer {
             ) {
                 res.setHeader('ETag', `"${sha1File(path.join(serverPath, pathname))}"`);
             }
-            if (parentServerPath &&
-                exists(path.join(parentServerPath, pathname))) {
+            if (parentServerPath
+                && exists(path.join(parentServerPath, pathname))) {
                 res.setHeader('ETag', `"${sha1File(path.join(parentServerPath, pathname))}"`);
             }
             next();
@@ -124,7 +124,7 @@ export default class MeteorServer {
         function versionDesktop(req, res, next) {
             const parsedUrl = url.parse(req.url);
             if (parsedUrl.pathname.endsWith('version.desktop.json')) {
-                const manifest = require(path.join(serverPath, 'manifest.json'))
+                const manifest = require(path.join(serverPath, 'manifest.json'));
                 res.end(JSON.stringify(manifest.version));
             }
             next();

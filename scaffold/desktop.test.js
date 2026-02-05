@@ -56,20 +56,19 @@ function waitFor(functionReturningPromise, ms = 10000) {
     return new Promise((resolve, reject) => {
         let invokerTimeout;
         let timeout;
-        const invokeFunction = () =>
-            functionReturningPromise()
-                .then((result) => {
-                    if (result) {
-                        clearTimeout(invokerTimeout);
-                        clearTimeout(timeout);
-                        resolve();
-                    } else {
-                        invokerTimeout = setTimeout(invokeFunction, 500);
-                    }
-                })
-                .catch(() => {
+        const invokeFunction = () => functionReturningPromise()
+            .then((result) => {
+                if (result) {
+                    clearTimeout(invokerTimeout);
+                    clearTimeout(timeout);
+                    resolve();
+                } else {
                     invokerTimeout = setTimeout(invokeFunction, 500);
-                });
+                }
+            })
+            .catch(() => {
+                invokerTimeout = setTimeout(invokeFunction, 500);
+            });
         invokeFunction();
         timeout = setTimeout(() => {
             clearTimeout(invokerTimeout);

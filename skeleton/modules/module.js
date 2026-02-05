@@ -65,7 +65,8 @@ export default class Module {
                         delete this.fetchTimeoutTimers[fetchId];
                         resolve(...responseArgs);
                     }
-                }, true);
+                },
+                true);
             this.fetchTimeoutTimers[fetchId] = setTimeout(() => {
                 reject('timeout');
             }, timeout);
@@ -95,7 +96,6 @@ export default class Module {
         }
         this.fetchTimeout = timeout;
     }
-
 
     /**
      * Sends and IPC event response for a provided fetch id.

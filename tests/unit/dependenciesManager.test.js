@@ -101,12 +101,12 @@ describe('dependenciesManager', () => {
         it('should return only local dependencies', () => {
             const instance = new DependenciesManager({});
 
-            instance.dependencies = Object.assign({}, testDependencies);
+            instance.dependencies = { ...testDependencies };
             const localDeps = instance.getLocalDependencies();
 
             const depsKeys = Object
                 .keys(localDeps)
-                .map(dep => parseInt(dep.substr(dep.length - 1), 10));
+                .map((dep) => parseInt(dep.substr(dep.length - 1), 10));
             expect(depsKeys).to.be.eql([1, 2, 3, 4, 8]);
         });
     });
@@ -115,12 +115,12 @@ describe('dependenciesManager', () => {
         it('should return only remote dependencies', () => {
             const instance = new DependenciesManager({});
 
-            instance.dependencies = Object.assign({}, testDependencies);
+            instance.dependencies = { ...testDependencies };
             const localDeps = instance.getRemoteDependencies();
 
             const depsKeys = Object
                 .keys(localDeps)
-                .map(dep => parseInt(dep.substr(dep.length - 1), 10));
+                .map((dep) => parseInt(dep.substr(dep.length - 1), 10));
             expect(depsKeys).to.be.eql([5, 6, 7, 9]);
         });
     });
@@ -140,7 +140,7 @@ describe('dependenciesManager', () => {
                 'file:../dyl',
                 '2.0.1'
             ];
-            files = files.map(filePath => instance.detectDependencyVersionType(filePath));
+            files = files.map((filePath) => instance.detectDependencyVersionType(filePath));
 
             expect(files.slice(0, 4)).to.be.eql(new Array(4).fill('local'));
             expect(files.slice(4)).to.not.include('local');
@@ -162,7 +162,7 @@ describe('dependenciesManager', () => {
                 'file:../dyl',
                 '2.0.1'
             ];
-            files = files.map(filePath => instance.detectDependencyVersionType(filePath));
+            files = files.map((filePath) => instance.detectDependencyVersionType(filePath));
 
             expect(files.slice(0, 5)).to.be.eql(new Array(5).fill('git'));
             expect(files.slice(5)).to.not.include('git');
@@ -181,7 +181,7 @@ describe('dependenciesManager', () => {
                 'file:../dyl',
                 '2.0.1'
             ];
-            files = files.map(filePath => instance.detectDependencyVersionType(filePath));
+            files = files.map((filePath) => instance.detectDependencyVersionType(filePath));
 
             expect(files.slice(0, 2)).to.be.eql(new Array(2).fill('github'));
             expect(files.slice(2)).to.not.include('github');
@@ -200,7 +200,7 @@ describe('dependenciesManager', () => {
                 'file:../dyl',
                 '2.0.1'
             ];
-            files = files.map(filePath => instance.detectDependencyVersionType(filePath));
+            files = files.map((filePath) => instance.detectDependencyVersionType(filePath));
 
             expect(files.slice(0, 2)).to.be.eql(new Array(2).fill('http'));
             expect(files.slice(2)).to.not.include('http');
@@ -218,7 +218,7 @@ describe('dependenciesManager', () => {
                 '/foo/bar',
                 '2.0.1'
             ];
-            files = files.map(filePath => instance.detectDependencyVersionType(filePath));
+            files = files.map((filePath) => instance.detectDependencyVersionType(filePath));
 
             expect(files.slice(0, 1)).to.be.eql(new Array(1).fill('file'));
             expect(files.slice(1)).to.not.include('file');
@@ -245,7 +245,7 @@ describe('dependenciesManager', () => {
                 '../foo/bar',
                 '/foo/bar',
             ];
-            files = files.map(filePath => instance.detectDependencyVersionType(filePath));
+            files = files.map((filePath) => instance.detectDependencyVersionType(filePath));
             expect(files.slice(0, 11)).to.be.eql(new Array(11).fill('version'));
             expect(files.slice(11)).to.not.include('version');
         });

@@ -17,13 +17,13 @@ const appDir = path.join(testsTmpPath, 'test-desktop');
 shell.rm('-rf', testsTmpPath);
 
 if (!fs.existsSync(testsTmpPath) || !fs.existsSync(path.join(appDir, 'package.json'))) {
-    console.log('creating test dir in ' + testsTmpPath);
+    console.log(`creating test dir in ${testsTmpPath}`);
     shell.mkdir('-p', testsTmpPath);
-    console.log('creating test meteor app with meteor version=' + meteorVersion);
+    console.log(`creating test meteor app with meteor version=${meteorVersion}`);
     shell.exec(`meteor create test-desktop --release=METEOR@${meteorVersion}`, { cwd: testsTmpPath });
     console.log('created test meteor app');
     const packageJson = JSON.parse(fs.readFileSync(path.join(appDir, 'package.json'), 'utf8'));
-    packageJson.dependencies['meteor-desktop'] = path.resolve(path.join(__dirname, '..', '..' ));
+    packageJson.dependencies['meteor-desktop'] = path.resolve(path.join(__dirname, '..', '..'));
     if (process.env.APPVEYOR) {
         const versions = require('../../lib/defaultDependencies');
         packageJson.dependencies.electron = versions.electron;
@@ -33,7 +33,7 @@ if (!fs.existsSync(testsTmpPath) || !fs.existsSync(path.join(appDir, 'package.js
 } else {
     const currentVersion = fs.readFileSync(path.join(appDir, '.meteor', 'release'), 'utf-8').split('@')[1].replace(/[\r\n]/gm, '');
     if (currentVersion !== meteorVersion) {
-        console.log('updating meteor version in app dir ' + appDir);
+        console.log(`updating meteor version in app dir ${appDir}`);
         shell.exec(`meteor update --release=METEOR@${meteorVersion} --all-packages`, { cwd: appDir });
     }
     console.log('meteor npm prune');

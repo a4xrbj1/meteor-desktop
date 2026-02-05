@@ -119,8 +119,7 @@ export default class HCPClient {
 
         this.config.appId = this.currentAssetBundle.getAppId();
         this.config.rootUrlString = this.currentAssetBundle.getRootUrlString();
-        this.config.cordovaCompatibilityVersion =
-            this.currentAssetBundle.cordovaCompatibilityVersion;
+        this.config.cordovaCompatibilityVersion = this.currentAssetBundle.cordovaCompatibilityVersion;
 
         this.saveConfig();
     }
@@ -225,8 +224,8 @@ export default class HCPClient {
             this.log.info(`will use last known good version: ${assetBundle.getVersion()}`);
             this.currentAssetBundle = assetBundle;
         } else {
-            this.log.verbose('using initial asset bundle because last know good version' +
-                'does not exist');
+            this.log.verbose('using initial asset bundle because last know good version'
+                + 'does not exist');
             this.currentAssetBundle = this.assetBundleManager.initialAssetBundle;
         }
     }
@@ -237,11 +236,11 @@ export default class HCPClient {
      */
     checkForUpdates() {
         if (('desktopHCP' in this.appSettings) && !this.appSettings.desktopHCP) {
-            this.log.verbose(`Skipping checking for updates because desktopHCP is disabled`);
+            this.log.verbose('Skipping checking for updates because desktopHCP is disabled');
             return;
         }
-        const rootUrl = this.settings.customHCPUrl ?
-            this.settings.customHCPUrl : this.currentAssetBundle.getRootUrlString();
+        const rootUrl = this.settings.customHCPUrl
+            ? this.settings.customHCPUrl : this.currentAssetBundle.getRootUrlString();
 
         this.log.verbose(`checking for updates on ${rootUrl}`);
         if (!rootUrl) {
@@ -267,7 +266,6 @@ export default class HCPClient {
         return null;
     }
 
-
     /**
      * Returns the currently used asset bundle.
      *
@@ -290,8 +288,8 @@ export default class HCPClient {
      * @returns {string|null}
      */
     getParentDirectory() {
-        return this.currentAssetBundle.getParentAssetBundle() ?
-            this.currentAssetBundle.getParentAssetBundle().getDirectoryUri() : null;
+        return this.currentAssetBundle.getParentAssetBundle()
+            ? this.currentAssetBundle.getParentAssetBundle().getDirectoryUri() : null;
     }
 
     /**
@@ -321,9 +319,9 @@ export default class HCPClient {
         this.log.warn('startup timer expired, reverting to another version');
 
         // If this is the initial version, we will not get anything from blacklisting it.
-        if (this.currentAssetBundle.getVersion() !==
-            this.assetBundleManager.initialAssetBundle.getVersion() &&
-            !~this.config.blacklistedVersions.indexOf(this.currentAssetBundle.getVersion())
+        if (this.currentAssetBundle.getVersion()
+            !== this.assetBundleManager.initialAssetBundle.getVersion()
+            && !~this.config.blacklistedVersions.indexOf(this.currentAssetBundle.getVersion())
         ) {
             this.log.debug(`blacklisted version ${this.currentAssetBundle.getVersion()}`);
             this.config.blacklistedVersions.push(this.currentAssetBundle.getVersion());
@@ -341,8 +339,8 @@ export default class HCPClient {
                 this.log.info(`reverting to last known good version: ${assetBundle.getVersion()}`);
                 this.pendingAssetBundle = assetBundle;
             }
-        } else if (this.currentAssetBundle.getVersion() !==
-            this.assetBundleManager.initialAssetBundle.getVersion()) {
+        } else if (this.currentAssetBundle.getVersion()
+            !== this.assetBundleManager.initialAssetBundle.getVersion()) {
             // Else, revert to the initial asset bundle, unless that is what we are currently
             // serving.
             this.log.info('reverting to initial bundle');
@@ -376,8 +374,8 @@ export default class HCPClient {
      * @private
      */
     startupDidComplete(onVersionsCleanedUp = Function.prototype) {
-        this.log.verbose('startup did complete, stopping startup timer (startup took ' +
-            `${Date.now() - this.startupTimerStartTimestamp}ms)`);
+        this.log.verbose('startup did complete, stopping startup timer (startup took '
+            + `${Date.now() - this.startupTimerStartTimestamp}ms)`);
 
         // Remove this version from blacklisted.
         if (~this.config.blacklistedVersions.indexOf(this.currentAssetBundle.getVersion())) {
@@ -425,8 +423,7 @@ export default class HCPClient {
 
         this.config.appId = this.currentAssetBundle.getAppId();
         this.config.rootUrlString = this.currentAssetBundle.getRootUrlString();
-        this.config.cordovaCompatibilityVersion =
-            this.currentAssetBundle.cordovaCompatibilityVersion;
+        this.config.cordovaCompatibilityVersion = this.currentAssetBundle.cordovaCompatibilityVersion;
 
         this.saveConfig();
 
@@ -519,7 +516,8 @@ export default class HCPClient {
         this.eventsBus.emit('newVersionReady', version, desktopVersion.version);
         this.module.send(
             'onNewVersionReady',
-            version, desktopVersion.version
+            version,
+            desktopVersion.version
         );
     }
 
@@ -540,8 +538,8 @@ export default class HCPClient {
         }
 
         // No need to redownload the pending version.
-        if (this.pendingAssetBundle &&
-            this.pendingAssetBundle.getVersion() === version) {
+        if (this.pendingAssetBundle
+            && this.pendingAssetBundle.getVersion() === version) {
             this.log.info(`skipping downloading pending version: ${version}`);
             return false;
         }
@@ -565,32 +563,31 @@ export default class HCPClient {
          */
 
         if (desktopVersion) {
-            this.log.debug(`got desktop version information: ${desktopVersion.version} ` +
-                `(compatibility: ${desktopVersion.compatibilityVersion})`);
+            this.log.debug(`got desktop version information: ${desktopVersion.version} `
+                + `(compatibility: ${desktopVersion.compatibilityVersion})`);
 
             let ignoreCompatibilityVersion = false;
 
             if ('desktopHCPIgnoreCompatibilityVersion' in this.appSettings) {
-                ignoreCompatibilityVersion =
-                    this.appSettings.desktopHCPIgnoreCompatibilityVersion;
+                ignoreCompatibilityVersion = this.appSettings.desktopHCPIgnoreCompatibilityVersion;
             }
 
             if (this.appSettings.compatibilityVersion !== desktopVersion.compatibilityVersion) {
                 if (!ignoreCompatibilityVersion) {
-                    this.log.warn('Skipping downloading new version because the .desktop ' +
-                        'compatibility version have changed and is potentially incompatible.');
-                    this.notifyError('Skipping downloading new version because the .desktop ' +
-                        'compatibility version have changed and is potentially incompatible ' +
-                        `(${this.appSettings.compatibilityVersion} != ` +
-                        `${desktopVersion.compatibilityVersion})`);
+                    this.log.warn('Skipping downloading new version because the .desktop '
+                        + 'compatibility version have changed and is potentially incompatible.');
+                    this.notifyError('Skipping downloading new version because the .desktop '
+                        + 'compatibility version have changed and is potentially incompatible '
+                        + `(${this.appSettings.compatibilityVersion} != `
+                        + `${desktopVersion.compatibilityVersion})`);
                     return false;
                 }
-                this.log.warn('Allowing download of new meteor app version with ' +
-                    'potentially incompatible .desktop. (ignoreCompatibilityVersion)');
-                this.notifyWarning('Allowing download of new meteor app version with ' +
-                    'potentially incompatible .desktop. (ignoreCompatibilityVersion)' +
-                    `(${this.appSettings.compatibilityVersion} != ` +
-                    `${desktopVersion.compatibilityVersion})`);
+                this.log.warn('Allowing download of new meteor app version with '
+                    + 'potentially incompatible .desktop. (ignoreCompatibilityVersion)');
+                this.notifyWarning('Allowing download of new meteor app version with '
+                    + 'potentially incompatible .desktop. (ignoreCompatibilityVersion)'
+                    + `(${this.appSettings.compatibilityVersion} != `
+                    + `${desktopVersion.compatibilityVersion})`);
             }
         }
         return true;

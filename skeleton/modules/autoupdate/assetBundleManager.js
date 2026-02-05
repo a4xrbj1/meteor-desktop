@@ -170,8 +170,8 @@ class AssetBundleManager {
             this.log.debug(`downloaded asset manifest for version: ${version}`);
 
             if (
-                this.assetBundleDownloader !== null &&
-                this.assetBundleDownloader.getAssetBundle().getVersion() === version
+                this.assetBundleDownloader !== null
+                && this.assetBundleDownloader.getAssetBundle().getVersion() === version
             ) {
                 this.log.info(`already downloading asset bundle version: ${version}`);
                 return;
@@ -181,8 +181,8 @@ class AssetBundleManager {
             this.getDesktopVersion(desktopVersionUrl, (desktopVersion) => {
                 // Give the callback a chance to decide whether the version should be downloaded.
                 if (
-                    this.callback !== null &&
-                    !this.callback.shouldDownloadBundleForManifest(manifest, desktopVersion)
+                    this.callback !== null
+                    && !this.callback.shouldDownloadBundleForManifest(manifest, desktopVersion)
                 ) {
                     return;
                 }
@@ -263,8 +263,8 @@ class AssetBundleManager {
                 const version = assetBundle.getVersion();
                 if (version !== assetBundleToKeep.getVersion()) {
                     const { desktopVersion } = assetBundle;
-                    if (desktopVersion.version && desktopVersionToKeep.version &&
-                        desktopVersion.version !== desktopVersionToKeep.version) {
+                    if (desktopVersion.version && desktopVersionToKeep.version
+                        && desktopVersion.version !== desktopVersionToKeep.version) {
                         this.log.info(`pruned old ${desktopVersion.version}_desktop.asar`);
 
                         try {
@@ -398,8 +398,8 @@ class AssetBundleManager {
             if (!isInitialAssetBundle) {
                 assetBundle.writeDesktopVersion();
             } else {
-                this.log.debug('skipping writing desktop version into' +
-                    ' initial version');
+                this.log.debug('skipping writing desktop version into'
+                    + ' initial version');
             }
             // If there is a new version of desktop.asar copy it to desktop bundle path.
             const desktopPath = path.join(
@@ -428,8 +428,8 @@ class AssetBundleManager {
                     });
                 }
             } else {
-                this.log.debug('skipping copying desktop.asar because the version is already' +
-                    ' downloaded');
+                this.log.debug('skipping copying desktop.asar because the version is already'
+                    + ' downloaded');
             }
         }
     }
@@ -460,9 +460,8 @@ class AssetBundleManager {
         }
 
         if (this.partiallyDownloadedAssetBundle !== null) {
-            cachedAsset =
-                this.partiallyDownloadedAssetBundle
-                    .cachedAssetForUrlPath(asset.urlPath, asset.hash);
+            cachedAsset = this.partiallyDownloadedAssetBundle
+                .cachedAssetForUrlPath(asset.urlPath, asset.hash);
 
             // Make sure the asset has been downloaded.
             try {
@@ -550,7 +549,7 @@ class AssetBundleManager {
                     this.didFail(e);
                 }
             },
-            cause => this.didFail(cause)
+            (cause) => this.didFail(cause)
         );
         assetBundleDownloader.resume();
     }
@@ -604,13 +603,12 @@ class AssetBundleManager {
             }
 
             try {
-                this.partiallyDownloadedAssetBundle =
-                    new AssetBundle(
-                        this.log,
-                        this.partialDownloadDirectory,
-                        undefined,
-                        this.initialAssetBundle
-                    );
+                this.partiallyDownloadedAssetBundle = new AssetBundle(
+                    this.log,
+                    this.partialDownloadDirectory,
+                    undefined,
+                    this.initialAssetBundle
+                );
             } catch (e) {
                 this.log.warn('could not load partially downloaded asset bundle.');
             }

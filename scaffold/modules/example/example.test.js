@@ -88,7 +88,7 @@ test.afterEach.always(async (t) => {
     }
 });
 
-test('the test app', async t => getApp(t));
+test('the test app', async (t) => getApp(t));
 
 test.serial('if testEvent returns true for 1', async (t) => {
     const app = await getApp(t);

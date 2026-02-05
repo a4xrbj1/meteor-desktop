@@ -113,6 +113,7 @@ async function setUpAutoupdate(printLogs = false, onNewVersionReady, expectedVer
                 this.on = () => {
                 };
             }
+
             send(event, message) { // eslint-disable-line class-methods-use-this
                 if (printLogs) {
                     console.log('module event sent from hcp:', event, message);
@@ -226,7 +227,6 @@ async function downloadAndServeVersionLocally(versionToDownload, versionToServeO
         }
     }, versionToDownload);
 }
-
 
 /**
  * Tries to close and cleanup the fake meteor server.
@@ -486,8 +486,8 @@ describe('autoupdate', () => {
         it('should invoke the onError callback with an error', async (done) => {
             const autoupdate = await setUpAutoupdate(showLogs, () => {
             }, 'version1', (error) => {
-                expect(error).to.include('non-success status code 404 for asset:' +
-                    ' app/template.mobileapp.js');
+                expect(error).to.include('non-success status code 404 for asset:'
+                    + ' app/template.mobileapp.js');
                 done();
             }, false);
             autoupdate.checkForUpdates();
@@ -518,8 +518,8 @@ describe('autoupdate', () => {
         it('should invoke the onError callback with an error', async (done) => {
             const autoupdate = await setUpAutoupdate(showLogs, () => {
             }, 'version1', (error) => {
-                expect(error).to.include('hash mismatch for asset: ' +
-                    'app/template.mobileapp.js');
+                expect(error).to.include('hash mismatch for asset: '
+                    + 'app/template.mobileapp.js');
                 done();
             }, false);
             autoupdate.checkForUpdates();
@@ -550,8 +550,8 @@ describe('autoupdate', () => {
         it('should invoke the onError callback with an error', async (done) => {
             const autoupdate = await setUpAutoupdate(showLogs, () => {
             }, 'version1', (error) => {
-                expect(error).to.include('version mismatch for index page, expected: version2,' +
-                    ' actual: version3');
+                expect(error).to.include('version mismatch for index page, expected: version2,'
+                    + ' actual: version3');
                 done();
             }, false);
             autoupdate.checkForUpdates();
@@ -608,8 +608,8 @@ describe('autoupdate', () => {
         it('should invoke the onError callback with an error', async (done) => {
             const autoupdate = await setUpAutoupdate(showLogs, () => {
             }, '127.0.0.1_root_url', (error) => {
-                expect(error).to.include('ROOT_URL in downloaded asset bundle would change ' +
-                    'current ROOT_URL to localhost.');
+                expect(error).to.include('ROOT_URL in downloaded asset bundle would change '
+                    + 'current ROOT_URL to localhost.');
                 done();
             }, false);
             autoupdate.checkForUpdates();
@@ -671,8 +671,8 @@ describe('autoupdate', () => {
         it('should invoke the onError callback with an error', async (done) => {
             const autoupdate = await setUpAutoupdate(showLogs, () => {
             }, 'version1', (error) => {
-                expect(error).to.include('appId in downloaded asset bundle does not match ' +
-                    'current appId');
+                expect(error).to.include('appId in downloaded asset bundle does not match '
+                    + 'current appId');
                 done();
             }, false);
             autoupdate.checkForUpdates();
@@ -703,8 +703,8 @@ describe('autoupdate', () => {
         it('should invoke the onError callback with an error', async (done) => {
             const autoupdate = await setUpAutoupdate(showLogs, () => {
             }, 'version1', (error) => {
-                expect(error).to.include('Asset manifest does not have a ' +
-                    'cordovaCompatibilityVersion');
+                expect(error).to.include('Asset manifest does not have a '
+                    + 'cordovaCompatibilityVersion');
                 done();
             }, false);
             autoupdate.checkForUpdates();
@@ -901,9 +901,7 @@ describe('autoupdate', () => {
         });
 
         it('should fallback to last known good version', async (done) => {
-            await (() =>
-                new Promise(resolve =>
-                    downloadAndServeVersionLocally('version2', 'version3', resolve)))();
+            await (() => new Promise((resolve) => downloadAndServeVersionLocally('version2', 'version3', resolve)))();
 
             await runAutoUpdateTests(
                 done,
@@ -913,7 +911,11 @@ describe('autoupdate', () => {
                     expect(autoupdate.config.blacklistedVersions).to.contain('version3');
                     done();
                 },
-                'version3', 'version2', true, undefined, false
+                'version3',
+                'version2',
+                true,
+                undefined,
+                false
             );
         });
 
@@ -927,7 +929,11 @@ describe('autoupdate', () => {
                     expect(autoupdate.config.blacklistedVersions).to.contain('version2');
                     done();
                 },
-                'version2', 'version1', true, undefined, false
+                'version2',
+                'version1',
+                true,
+                undefined,
+                false
             );
         });
     });

@@ -1,5 +1,3 @@
-
-
 /**
  * Until we would have a `web.desktop` arch in Meteor we need to provide a way to distinguish
  * the desktop specific code. The easiest approach is to have a Meteor.isDesktop. Since we do not
@@ -9,18 +7,15 @@
 
 class IsDesktopInjector {
     constructor() {
-        this.startupDidCompleteRegEx =
-            new RegExp('\\.isCordova\\)[\\S\\s]*?startupDidComplete\\(', 'gm');
+        this.startupDidCompleteRegEx = new RegExp('\\.isCordova\\)[\\S\\s]*?startupDidComplete\\(', 'gm');
 
-        this.startupDidCompleteRegExReplace =
-            new RegExp('(\\(\\w+\\.)(?:isCordova)(\\)[\\S\\s]*?startupDidComplete\\()', 'gm');
+        this.startupDidCompleteRegExReplace = new RegExp('(\\(\\w+\\.)(?:isCordova)(\\)[\\S\\s]*?startupDidComplete\\()', 'gm');
 
-        this.startupDidCompleteProductionRegEx =
-            new RegExp('\\.isCordova&&\\w*\\.startupDidComplete', 'gm');
+        this.startupDidCompleteProductionRegEx = new RegExp('\\.isCordova&&\\w*\\.startupDidComplete', 'gm');
 
-        this.startupDidCompleteProductionRegExReplace =
-            new RegExp('(\\w+\\.)(?:isCordova)(&&\\w*\\.startupDidComplete\\()', 'gm');
+        this.startupDidCompleteProductionRegExReplace = new RegExp('(\\w+\\.)(?:isCordova)(&&\\w*\\.startupDidComplete\\()', 'gm');
     }
+
     /**
      * Searches for and replaces two places in Meteor app:
      *  - where `isCordova` is set to true
@@ -56,8 +51,8 @@ class IsDesktopInjector {
             injectedStartupDidComplete = true;
         }
 
-        if (~fileContents.indexOf('.isDesktop=!0') ||
-            ~fileContents.indexOf('.isDesktop = true')) {
+        if (~fileContents.indexOf('.isDesktop=!0')
+            || ~fileContents.indexOf('.isDesktop = true')) {
             injected = true;
         }
 

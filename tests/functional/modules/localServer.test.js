@@ -73,7 +73,7 @@ class FakeFetchResponse {
         // Readable stream to utf8 string conversion.
         return new Promise((resolve) => {
             const chunks = [];
-            this.response.data.on('data', chunk => chunks.push(chunk));
+            this.response.data.on('data', (chunk) => chunks.push(chunk));
             this.response.data.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
         });
     }
@@ -96,8 +96,7 @@ async function expectIndexPageToBeServed(response) {
 function localServerTests(useStreams = false) {
     before(async () => {
         useReadableStreams = useStreams;
-        localServer =
-            await getLocalServer(paths.fixtures.bundledWww, { localFilesystem: true });
+        localServer = await getLocalServer(paths.fixtures.bundledWww, { localFilesystem: true });
     });
 
     after(() => {
@@ -216,8 +215,7 @@ function localServerTests(useStreams = false) {
     it(
         'should set the Cache-Control header with a max-age of one year for a request with a cache buster',
         async () => {
-            const response =
-                await fetchFromLocalServer('/packages/meteor.js?9418708e9519b747d9d631d85ea85b90c0b5c70c');
+            const response = await fetchFromLocalServer('/packages/meteor.js?9418708e9519b747d9d631d85ea85b90c0b5c70c');
             expect(response.headers.get('Cache-Control')).to.contain(`max-age=${oneYearInSeconds}`);
         }
     );
@@ -230,31 +228,27 @@ function localServerTests(useStreams = false) {
     describe('local filesystem', () => {
         it('should send a file using local-filesystem alias', async () => {
             // Lets try to fetch exactly this file :)
-            const response =
-                await fetchFromLocalServer(`/local-filesystem/${path.join(__dirname, 'localServer.test.js')}`);
+            const response = await fetchFromLocalServer(`/local-filesystem/${path.join(__dirname, 'localServer.test.js')}`);
             const body = await response.text();
             expect(body).to.contain('should send a file using local-filesystem alias');
         });
 
         it('should not send not existing file', async () => {
-            const response =
-                await fetchFromLocalServer(`/local-filesystem/${path.join(__dirname, 'not.existing.js')}`);
+            const response = await fetchFromLocalServer(`/local-filesystem/${path.join(__dirname, 'not.existing.js')}`);
             expect(response.status).to.equal(404);
         });
     });
 
     describe('desktop assets', () => {
         it('should send a desktop asset using ___desktop alias', async () => {
-            const response =
-                await fetchFromLocalServer('/___desktop/loading.gif');
+            const response = await fetchFromLocalServer('/___desktop/loading.gif');
             expect(response.headers.get('Content-Type')).to.contain('image/gif');
         });
     });
 
     describe('when expose local filesystem is disabled', () => {
         before(async () => {
-            localServer =
-                await getLocalServer(paths.fixtures.bundledWww, { localFilesystem: false });
+            localServer = await getLocalServer(paths.fixtures.bundledWww, { localFilesystem: false });
         });
 
         after(() => {
@@ -263,10 +257,9 @@ function localServerTests(useStreams = false) {
 
         it('should not send a file using local-filesystem alias', async () => {
             // Lets try to fetch exactly this file :)
-            const response =
-                await fetchFromLocalServer(
-                    `/local-filesystem/${path.join(__dirname, 'localServer.test.js')}`
-                );
+            const response = await fetchFromLocalServer(
+                `/local-filesystem/${path.join(__dirname, 'localServer.test.js')}`
+            );
             expect(response.status).to.equal(404);
         });
     });
@@ -278,11 +271,10 @@ describe('localServer', () => {
     describe('the local server through http with Allow-Origin', () => {
         before(async () => {
             useReadableStreams = false;
-            localServer =
-                await getLocalServer(paths.fixtures.bundledWww, {
-                    localFilesystem: true,
-                    allowOriginLocalServer: true
-                });
+            localServer = await getLocalServer(paths.fixtures.bundledWww, {
+                localFilesystem: true,
+                allowOriginLocalServer: true
+            });
         });
 
         after(() => {
@@ -290,14 +282,12 @@ describe('localServer', () => {
         });
 
         it('should set "Access-Control-Allow-Origin" for local file', async () => {
-            const response =
-                await fetchFromLocalServer(`/local-filesystem/${path.join(__dirname, 'localServer.test.js')}`);
+            const response = await fetchFromLocalServer(`/local-filesystem/${path.join(__dirname, 'localServer.test.js')}`);
             expect(response.headers.get('Access-Control-Allow-Origin')).to.equal('*');
         });
 
         it('should server cordova.js file', async () => {
-            const response =
-                await fetchFromLocalServer('/cordova.js');
+            const response = await fetchFromLocalServer('/cordova.js');
             const body = await response.text();
             expect(body).to.contain('window.cordova');
             expect(body).to.contain('module.exports = cordova;');
