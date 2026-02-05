@@ -90,7 +90,6 @@
     "isbinaryfile": "3.0.3",
     "lodash": "4.17.23",
     "md5": "2.3.0",
-    "meteor-desktop": "^2.2.5",
     "node-fetch": "2.7.0",
     "path-exists-cli": "^2.0.0",
     "regenerator-runtime": "0.14.1",
