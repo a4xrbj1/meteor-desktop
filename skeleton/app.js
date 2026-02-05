@@ -1,7 +1,14 @@
 /* eslint-disable import/no-unresolved,no-console */
 /* eslint-disable global-require, import/no-dynamic-require */
 
-import electron from 'electron';
+let electron;
+try {
+    // Attempt built-in module loading via module.constructor._load to bypass NPM shadowing
+    electron = module.constructor._load('electron', undefined, true);
+} catch (e) {
+    electron = require('electron');
+}
+
 import { EventEmitter as Events } from 'events';
 import path from 'path';
 import fs from 'fs-plus';
@@ -14,7 +21,7 @@ import DesktopPathResolver from './desktopPathResolver';
 import WindowSettings from './windowSettings';
 import Squirrel from './squirrel'; // DEPRECATED
 
-const { app, BrowserWindow, dialog } = electron;
+const { app, BrowserWindow, dialog, protocol } = electron;
 const { join } = path;
 
 /**
