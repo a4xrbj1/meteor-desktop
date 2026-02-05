@@ -232,9 +232,11 @@ async function downloadAndServeVersionLocally(versionToDownload, versionToServeO
  * Tries to close and cleanup the fake meteor server.
  */
 function shutdownMeteorServer() {
-    meteorServer.httpServerInstance.close();
-    meteorServer.httpServerInstance.destroy();
-    meteorServer.receivedRequests = [];
+    if (meteorServer && meteorServer.httpServerInstance) {
+        meteorServer.httpServerInstance.close();
+        meteorServer.httpServerInstance.destroy();
+        meteorServer.receivedRequests = [];
+    }
     // meteorServer = null;
 }
 

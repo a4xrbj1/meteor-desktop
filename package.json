@@ -51,7 +51,7 @@
     "eslint": "8.57.0",
     "eslint-config-airbnb-base": "15.0.0",
     "eslint-plugin-import": "2.32.0",
-    "find-port": "^3.0.0",
+    "find-port": "^2.0.1",
     "fs-extra": "11.3.3",
     "fs-plus": "2.10.1",
     "import-fresh": "^3.3.1",
