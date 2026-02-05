@@ -37,7 +37,7 @@
   "devDependencies": {
     "@babel/cli": "7.28.6",
     "@babel/register": "7.28.6",
-    "@meteorjs/reify": "0.25.3",
+    "@meteorjs/reify": "^0.25.4",
     "@types/fs-extra": "11.0.4",
     "babel-plugin-istanbul": "5.2.0",
     "chai": "^4.5.0",
@@ -51,12 +51,12 @@
     "eslint": "8.57.0",
     "eslint-config-airbnb-base": "15.0.0",
     "eslint-plugin-import": "2.32.0",
-    "find-port": "2.0.1",
+    "find-port": "^3.0.0",
     "fs-extra": "11.3.3",
     "fs-plus": "2.10.1",
-    "import-fresh": "2.0.0",
+    "import-fresh": "^3.3.1",
     "jsdoc-to-markdown": "5.0.3",
-    "mime": "2.6.0",
+    "mime": "^2.6.0",
     "mocha": "^11.7.5",
     "mockery": "2.1.0",
     "npm-run-all": "4.1.5",
@@ -74,7 +74,7 @@
     "sinon": "^21.0.1",
     "sinon-chai": "^3.7.0",
     "spectron": "19.0.0",
-    "temp-dir": "2.0.0",
+    "temp-dir": "^2.0.0",
     "watch": "1.0.2"
   },
   "dependencies": {
