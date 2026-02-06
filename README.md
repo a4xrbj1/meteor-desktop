@@ -4,7 +4,7 @@
 ###### aka Meteor Electron Desktop Client
 > Build desktop apps with Meteor & Electron. Full integration with hot code push implementation.
 
-[![npm version](https://img.shields.io/npm/v/@meteor-community/meteor-desktop.svg)](https://npmjs.org/package/@meteor-community/meteor-desktop)
+
 
 ![Demo](docs/demo.gif)
 
@@ -15,19 +15,11 @@ To make it clear from the start, this is a **desktop client** - it is just like 
 clients with `Cordova` - but this is for desktops with `Electron`. It also features a full hot code
 push implementation - which means you can release updates the same way you are used to.
 
-## Migrating from `meteor-desktop` to `@meteor-community/meteor-desktop`
-This package was created by [wojtkowiak](https://github.com/wojtkowiak/) and was published under the name `meteor-desktop` up until version 2.2.5. After 2.2.6 it transitioned to being owned and published under the [Meteor-Community-Packages](https://github.com/Meteor-Community-Packages) GitHub and npm org.
 
-To migrate from the original `meteor-desktop`:
-1. Replace the npm package
-   * Replace your package.json "devDependencies" entry for `"meteor-desktop"` to `"@meteor-community/meteor-desktop"`
-2. Replace the two Meteor Atmosphere packages
-   * Run `meteor remove omega:meteor-desktop-bundler` and `meteor add communitypackages:meteor-desktop-bundler`
-   * Run `meteor remove omega:meteor-desktop-watcher` and `meteor add communitypackages:meteor-desktop-watcher`
 
 ## Prerequisites
 
- - Meteor >= `1.12.1`
+ - Meteor >= `3.0`
  - at least basic [Electron](http://electron.atom.io/) framework knowledge
  - mobile platform added to project<sup>__*1__</sup>  
 
@@ -600,7 +592,7 @@ This script assumes you have `npm`, `git` and `meteor` available from the comman
 
 ```bash
 mkdir meteor-desktop-dev && cd meteor-desktop-dev
-git clone https://github.com/Meteor-Community-Packages/meteor-desktop.git
+git clone https://github.com/a4xrbj1/meteor-desktop.git
 cd meteor-desktop
 npm install
 node devEnvSetup.js

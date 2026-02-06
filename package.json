@@ -32,7 +32,7 @@
     "update-locks": "(rmdir /S /Q node_modules || rm -rf node_modules || echo) && yarn && (rmdir /S /Q node_modules || rm -rf node_modules) && npm i",
     "desktop": "meteor-desktop"
   },
-  "author": "Bartosz Wojtkowiak <bartosz@wojtkowiak.it>",
+  "author": "Andreas West <andreas@interactivethings.io>",
   "license": "MIT",
   "devDependencies": {
     "@babel/cli": "7.28.6",
@@ -106,7 +106,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Meteor-Community-Packages/meteor-desktop"
+    "url": "https://github.com/a4xrbj1/meteor-desktop.git"
   },
   "keywords": [
     "electron",
@@ -133,7 +133,7 @@
     "all": true
   },
   "bugs": {
-    "url": "https://github.com/Meteor-Community-Packages/meteor-desktop/issues"
+    "url": "https://github.com/a4xrbj1/meteor-desktop/issues"
   },
-  "homepage": "https://github.com/Meteor-Community-Packages/meteor-desktop"
+  "homepage": "https://github.com/a4xrbj1/meteor-desktop"
 }
