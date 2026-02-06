@@ -505,8 +505,6 @@ If you made a plugin, please let us know so that it can be listed here.
 [`meteor-desktop-splashscreen`](https://github.com/a4xrbj1/meteor-desktop-splash-screen)  
 [`meteor-desktop-localstorage`](https://github.com/a4xrbj1/meteor-desktop-localstorage) (deprecated, do not use from `1.0.0`)  
 
-
-
 ## Native modules support
 
 This integration fully supports rebuilding native modules (npm packages with native node modules)
