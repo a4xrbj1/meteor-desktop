@@ -229,19 +229,19 @@ field|description
 `version`|version of the desktop app
 `projectName`|this will be used as a `name` in the generated app's package.json
 `devTools`|whether to install and open `devTools`, set automatically to false when building with `--production`
-`singleInstance`|sets the single instance mode - [more](https://github.com/electron/electron/blob/master/docs/api/app.md#appmakesingleinstancecallback)
+`singleInstance`|sets the single instance mode - [more](https://www.electronjs.org/docs/latest/api/app#apprequestsingleinstancelockadditionaldata)
 `desktopHCP`|whether to use `.desktop` hot code push module - [more](#desktophcp---desktop-hot-code-push)
 <sup>`desktopHCPIgnoreCompatibilityVersion`</sup>|ignore the `.desktop` compatibility version and install new versions even if they can be incompatible
 `desktopHCPCompatibilityVersion`|allows to override `.desktop` compatibility version
-`squirrel.autoUpdateFeedUrl`| <sup>DEPRECATED</sup> url passed to [`autoUpdater.setFeedUrl`](https://github.com/electron/electron/blob/master/docs/api/auto-updater.md#autoupdatersetfeedurlurl-requestheaders), [more](#squirrel-autoupdate-support)
-`squirrel.autoUpdateFeedHeaders`| <sup>DEPRECATED</sup> http headers passed to [`autoUpdater.setFeedUrl`](https://github.com/electron/electron/blob/master/docs/api/auto-updater.md#autoupdatersetfeedurlurl-requestheaders)
+`squirrel.autoUpdateFeedUrl`| <sup>DEPRECATED</sup> url passed to [`autoUpdater.setFeedUrl`](https://www.electronjs.org/docs/latest/api/auto-updater#autoupdatersetfeedurloptions), [more](#squirrel-autoupdate-support)
+`squirrel.autoUpdateFeedHeaders`| <sup>DEPRECATED</sup> http headers passed to [`autoUpdater.setFeedUrl`](https://www.electronjs.org/docs/latest/api/auto-updater#autoupdatersetfeedurloptions)
 `squirrel.autoUpdateCheckOnStart`| <sup>DEPRECATED</sup> whether to check for updates on app start
 `rebuildNativeNodeModules`|turn on or off recompiling native modules, [more](#native-modules-support)
 `webAppStartupTimeout`|amount of time after which the downloaded version is considered faulty if Meteor app did not start - [more](#hot-code-push-support)
 `exposeLocalFilesystem`|turns on or off local filesystem exposure over url alias, [more](#accessing-local-filesystem-in-meteor)
 `exposedModules`|array of module names, exposes any renderer modules in `Desktop.electron` space, i.e. list `webFrame` here to acess it via `Desktop.electron.webFrame` in Meteor project code
 `showWindowOnStartupDidComplete`|normally, main window appears after Chromes `did-stop-loading` event, set this to `true` if you want to depened on Meteor's `startupDidComplete` event
-`window`|production options for the main window - see [here](https://github.com/electron/electron/blob/master/docs/api/browser-window.md#new-browserwindowoptions)
+`window`|production options for the main window - see [here](https://www.electronjs.org/docs/latest/api/browser-window#new-browserwindowoptions)
 `windowDev`|development options for the main window, applied on top of production options
 `uglify`|whether to process the production build with uglify
 `plugins`|meteor-desktop plugins list
@@ -310,8 +310,8 @@ event name|payload|description
 `startupFailed`| |emitted when the `Skeleton App` could not start you `Meteor` app  
 `beforeLoadFinish`| |emitted when the `Meteor` app finished loading, but just before the window is shown  
 `loadingFinished`| |emitted when the `Meteor` app finished loading (also after HCP reload)  
-`windowSettings`|`(windowSettings)`|emitted with the settings that will be passed to [`BrowserWindow`](https://github.com/electron/electron/blob/master/docs/api/browser-window.md) constructor - if needed the object can be modified in the event handler to override window settings from `settings.json`  
-`windowCreated`|`(window)`|emitted when the [`BrowserWindow`](https://github.com/electron/electron/blob/master/docs/api/browser-window.md) (`Chrome` window with `Meteor` app) is  created, passes a reference to this window
+`windowSettings`|`(windowSettings)`|emitted with the settings that will be passed to [`BrowserWindow`](https://www.electronjs.org/docs/latest/api/browser-window) constructor - if needed the object can be modified in the event handler to override window settings from `settings.json`  
+`windowCreated`|`(window)`|emitted when the [`BrowserWindow`](https://www.electronjs.org/docs/latest/api/browser-window) (`Chrome` window with `Meteor` app) is  created, passes a reference to this window
 `newVersionReady`|`(version, desktopVersion)`|emitted when a new `Meteor` bundle was downloaded and is ready to be applied  
 `revertVersionReady`|`(version)`|emitted just before the `Meteor` app version will be reverted (due to faulty version fallback mechanism) be applied  
 `beforfeLoadUrl`|`(port, lastPort)`|emitted before `webContents.loadURL` is invoked, in other words just before loading the Meteor app; `port` - the port on which the app is served, `lastPort` - the port on which the app was served previously (when HCP is applied)
@@ -374,7 +374,7 @@ mechanism.
 The faulty version recovery is also in place - [more about it here](https://guide.meteor.com/mobile.html#recovering-from-faulty-versions). You can configure the timeout via
 `webAppStartupTimeout` field in `settings.json`.  
 
-Versions are downloaded and served from [`userData`](https://github.com/electron/electron/blob/master/docs/api/app.md#appgetpathname) directory.
+Versions are downloaded and served from [`userData`](https://www.electronjs.org/docs/latest/api/app#appgetpathname) directory.
 There you can find `autoupdate.json` and `versions` dir. If you want to return to first
 bundled version just delete them.
 
@@ -414,17 +414,17 @@ Use it to declare your API on the desktop side which you can later call from Met
 ```javascript
     this.module = new Module('myModuleName');
 ```
-[Documentation of the Module API](docs/api/module.md) - basically, it reflects [`ipcMain`](https://github.com/electron/electron/blob/master/docs/api/ipc-main.md).  
+[Documentation of the Module API](docs/api/module.md) - basically, it reflects [`ipcMain`](https://www.electronjs.org/docs/latest/api/ipc-main).  
 
 The only two additions are the `fetch` and `respond` methods:
  - **fetch```(event, timeout = 2000, ...args)```** - like send but returns a `Promise` that resolves to a response, timeouts after 2000ms by default
  - **call```(module, ...args)```** - `fetch` but without the need specify timeout
  - **setDefaultFetchTimeout```(timeout)```** - set the default timeout for `fetch` within this module
  - **respond```(event, fetchId, ...data)```** is a convenient method of sending response to `Desktop.fetch`. The `fetchId` is always the second argument received in `on`.  
-Here is an [usage example](https://github.com/wojtkowiak/meteor-desktop-localstorage/blob/master/src/index.js#L31).
+Here is an [usage example](https://github.com/a4xrbj1/meteor-desktop-localstorage/blob/master/src/index.js#L31).
 
 ### `Desktop` - Meteor side
-[Documentation of the Desktop API](docs/api/desktop.md) - reflects partially [`ipcRenderer`](https://github.com/electron/electron/blob/master/docs/api/ipc-renderer.md)<sup>*</sup>.    
+[Documentation of the Desktop API](docs/api/desktop.md) - reflects partially [`ipcRenderer`](https://www.electronjs.org/docs/latest/api/ipc-renderer)<sup>*</sup>.    
 
 <sup>* `sendSync` and `sendToHost` are not available</sup>
 
@@ -438,7 +438,7 @@ There are two extra methods:
 - **respond```(module, event, fetchId, ...data)```** is a convenient method of sending response to `Module.fetch`. The `fetchId` is always the second argument received in `on`.  
 - **sendGlobal** - alias for `ipcRenderer.send` - if you need to send an IPC that is not namespaced
 
-Example of `send` and `fetch` usage - [here](https://github.com/wojtkowiak/meteor-desktop-localstorage/blob/master/plugins/localstorage/localstorage.js#L9).  
+Example of `send` and `fetch` usage - [here](https://github.com/a4xrbj1/meteor-desktop-localstorage/blob/master/plugins/localstorage/localstorage.js#L9).  
 
 ## desktopHCP - `.desktop` hot code push
 > #### experimental!
@@ -496,7 +496,7 @@ Plugin is basically a module exported to a npm package. `module.json` is not nee
  verifying whether the plugin does what it should.
 #### `meteorDependencies` in `package.json`
 One extra feature is that you can also depend on Meteor packages through `meteorDependencies`
-field in `package.json`. Check out [`meteor-desktop-localstorage`](https://github.com/wojtkowiak/meteor-desktop-localstorage/blob/master/package.json#L52) for example.  
+field in `package.json`. Check out [`meteor-desktop-localstorage`](https://github.com/a4xrbj1/meteor-desktop-localstorage/blob/master/package.json#L52) for example.  
 A good practice when your plugin contains a meteor plugin is to publish both at the same version.
 You can then use `@version` in the `meteorDependecies` to indicate that the Meteor plugin's
 version should be equal to npm package version.
@@ -504,20 +504,20 @@ version should be equal to npm package version.
 If you made a plugin, please let us know so that it can be listed here.
 ##### List of known plugins:
 [`meteor-desktop-system-notifications`](https://github.com/tzapu/meteor-desktop-system-notifications)  
-[`meteor-desktop-splashscreen`](https://github.com/wojtkowiak/meteor-desktop-splash-screen)  
-[`meteor-desktop-localstorage`](https://github.com/wojtkowiak/meteor-desktop-localstorage) (deprecated, do not use from `1.0.0`)  
+[`meteor-desktop-splashscreen`](https://github.com/a4xrbj1/meteor-desktop-splash-screen)  
+[`meteor-desktop-localstorage`](https://github.com/a4xrbj1/meteor-desktop-localstorage) (deprecated, do not use from `1.0.0`)  
 
 ## Squirrel autoupdate support (DEPRECATED)
 
 Squirrel Window and OSX autoupdates are supported. So far the only tested server is
-[`electron-release-server`](https://github.com/ArekSredzki/electron-release-server) and the
+[`electron-release-server`](https://github.com/ArekSredzki/electron-release-server) (Legacy/Unmaintained) and the
 default url `http://127.0.0.1/update/:platform/:version` provided in `settings.json` assumes you
 will be using it.  
 The `:platform` and `:version` tags are automatically replaced by correct values.   
 You can hook into Squirrel Windows events in `squirrelEvents.js` in `.desktop`.
 
 More:  
-https://github.com/electron/electron/blob/master/docs/api/auto-updater.md  
+https://www.electronjs.org/docs/latest/api/auto-updater  
 https://github.com/ArekSredzki/electron-release-server
 
 ## Native modules support
@@ -528,7 +528,7 @@ This integration fully supports rebuilding native modules (npm packages with nat
 ## Testing desktop app and modules
 
 For unit tests you should not have problems with using [electron-mocha](https://github.com/jprichardson/electron-mocha).  
-For functional testing [Spectron](http://electron.atom.io/spectron) should be used.
+For functional testing, we recommend using [Playwright](https://playwright.dev/docs/intro) or [WebdriverIO](https://webdriver.io/docs/electron-testing.html). Note that [Spectron](http://electron.atom.io/spectron) is deprecated.
 
 There are two exemplary tests present in the default scaffold. Check them out as they have some
 comments in them.  
@@ -539,7 +539,7 @@ npm run desktop -- init-tests-support
 Two tasks should be added to your `scripts` section: `test-desktop` and `test-desktop-watch`.
 Feel free to run the tests with: `npm run test-desktop`.
 
-For testing modules there is a [test suite](https://github.com/wojtkowiak/meteor-desktop-test-suite) available.
+For testing modules there is a [test suite](https://github.com/a4xrbj1/meteor-desktop-test-suite) available.
 It is used extensively in the plugins (splash screen & localstorage) tests so you can check there
 for more examples.
 
