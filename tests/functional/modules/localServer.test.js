@@ -37,8 +37,8 @@ function getLocalServer(bundlePath, settings) {
                 userDataDir: __dirname
             }
         });
-        function onStartupFailed() {
-            reject();
+        function onStartupFailed(code) {
+            reject(new Error(`Startup failed with code ${code}`));
         }
         function onServerReady(port) {
             localPort = port;
@@ -99,8 +99,8 @@ function localServerTests(useStreams = false) {
         localServer = await getLocalServer(paths.fixtures.bundledWww, { localFilesystem: true });
     });
 
-    after(() => {
-        localServer.httpServerInstance.destroy();
+    after(async () => {
+        await new Promise((resolve) => { localServer.httpServerInstance.destroy(resolve); });
     });
 
     it('should serve index.html for /', async () => {
@@ -249,11 +249,15 @@ function localServerTests(useStreams = false) {
 
     describe('when expose local filesystem is disabled', () => {
         before(async () => {
+            if (localServer && localServer.httpServerInstance) {
+                await new Promise((resolve) => { localServer.httpServerInstance.destroy(resolve); });
+            }
+            localPort = undefined;
             localServer = await getLocalServer(paths.fixtures.bundledWww, { localFilesystem: false });
         });
 
-        after(() => {
-            localServer.httpServerInstance.destroy();
+        after(async () => {
+            await new Promise((resolve) => { localServer.httpServerInstance.destroy(resolve); });
         });
 
         it('should not send a file using local-filesystem alias', async () => {
@@ -271,6 +275,10 @@ describe('localServer', () => {
     describe('the local server through readable streams', localServerTests.bind(undefined, true));
     describe('the local server through http with Allow-Origin', () => {
         before(async () => {
+            if (localServer && localServer.httpServerInstance) {
+                await new Promise((resolve) => { localServer.httpServerInstance.destroy(resolve); });
+            }
+            localPort = undefined;
             useReadableStreams = false;
             localServer = await getLocalServer(paths.fixtures.bundledWww, {
                 localFilesystem: true,
@@ -278,8 +286,8 @@ describe('localServer', () => {
             });
         });
 
-        after(() => {
-            localServer.httpServerInstance.destroy();
+        after(async () => {
+            await new Promise((resolve) => { localServer.httpServerInstance.destroy(resolve); });
         });
 
         it('should set "Access-Control-Allow-Origin" for local file', async () => {

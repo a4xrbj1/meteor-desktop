@@ -394,7 +394,7 @@ export default class LocalServer {
          * @param {boolean} local - local mode
          */
         function DesktopAssetsHandler(req, res, next, local = false) {
-            return FilesystemHandler(req, res, next, self.desktopAssetsUrl, path.join(desktopPath, 'assets'), local);
+            return FilesystemHandler(req, res, next, self.desktopAssetsUrl, path.join(self.desktopPath, 'assets'), local);
         }
 
         /**
@@ -429,41 +429,46 @@ export default class LocalServer {
             }
         }
 
-        if (this.assetBundle === null) {
-            // `connect` will do the job!
-            const server = connect();
+        this.desktopPath = desktopPath;
 
-            if (restart) {
-                if (this.httpServerInstance) {
-                    this.httpServerInstance.destroy();
-                }
+        const start = () => {
+            if (self.assetBundle === null) {
+                // `connect` will do the job!
+                const server = connect();
+
+                this.log.info('will serve from: ', assetBundle.getDirectoryUri());
+
+                server.use(AssetHandler);
+                server.use(WwwHandler);
+                server.use(LocalFilesystemHandler);
+                server.use(DesktopAssetsHandler);
+                server.use(IndexHandler);
+
+                this.use(AssetHandler);
+                this.use(WwwHandler);
+                this.use(LocalFilesystemHandler);
+                this.use(DesktopAssetsHandler);
+                this.use(IndexHandler);
+
+                this.server = server;
             }
-            this.log.info('will serve from: ', assetBundle.getDirectoryUri());
+            this.assetBundle = assetBundle;
 
-            server.use(AssetHandler);
-            server.use(WwwHandler);
-            server.use(LocalFilesystemHandler);
-            server.use(DesktopAssetsHandler);
-            server.use(IndexHandler);
+            this.findPort()
+                .then(() => {
+                    this.startHttpServer(restart);
+                })
+                .catch(() => {
+                    this.log.error('could not find free port');
+                    this.onStartupFailed(0);
+                });
+        };
 
-            this.use(AssetHandler);
-            this.use(WwwHandler);
-            this.use(LocalFilesystemHandler);
-            this.use(DesktopAssetsHandler);
-            this.use(IndexHandler);
-
-            this.server = server;
+        if (restart && this.httpServerInstance) {
+            this.httpServerInstance.destroy(() => start());
+        } else {
+            start();
         }
-        this.assetBundle = assetBundle;
-
-        this.findPort()
-            .then(() => {
-                this.startHttpServer(restart);
-            })
-            .catch(() => {
-                this.log.error('could not find free port');
-                this.onStartupFailed(0);
-            });
     }
 
     /**
@@ -580,7 +585,7 @@ export default class LocalServer {
                 this.log.error(e);
                 this.retries += 1;
                 if (this.retries < this.maxRetries) {
-                    this.init(this.serverPath, this.parentServerPath, true);
+                    this.init(this.assetBundle, this.desktopPath, true);
                 } else {
                     this.onStartupFailed(1);
                 }
