@@ -233,9 +233,7 @@ field|description
 `desktopHCP`|whether to use `.desktop` hot code push module - [more](#desktophcp---desktop-hot-code-push)
 <sup>`desktopHCPIgnoreCompatibilityVersion`</sup>|ignore the `.desktop` compatibility version and install new versions even if they can be incompatible
 `desktopHCPCompatibilityVersion`|allows to override `.desktop` compatibility version
-`squirrel.autoUpdateFeedUrl`| <sup>DEPRECATED</sup> url passed to [`autoUpdater.setFeedUrl`](https://www.electronjs.org/docs/latest/api/auto-updater#autoupdatersetfeedurloptions), [more](#squirrel-autoupdate-support)
-`squirrel.autoUpdateFeedHeaders`| <sup>DEPRECATED</sup> http headers passed to [`autoUpdater.setFeedUrl`](https://www.electronjs.org/docs/latest/api/auto-updater#autoupdatersetfeedurloptions)
-`squirrel.autoUpdateCheckOnStart`| <sup>DEPRECATED</sup> whether to check for updates on app start
+
 `rebuildNativeNodeModules`|turn on or off recompiling native modules, [more](#native-modules-support)
 `webAppStartupTimeout`|amount of time after which the downloaded version is considered faulty if Meteor app did not start - [more](#hot-code-push-support)
 `exposeLocalFilesystem`|turns on or off local filesystem exposure over url alias, [more](#accessing-local-filesystem-in-meteor)
@@ -507,18 +505,7 @@ If you made a plugin, please let us know so that it can be listed here.
 [`meteor-desktop-splashscreen`](https://github.com/a4xrbj1/meteor-desktop-splash-screen)  
 [`meteor-desktop-localstorage`](https://github.com/a4xrbj1/meteor-desktop-localstorage) (deprecated, do not use from `1.0.0`)  
 
-## Squirrel autoupdate support (DEPRECATED)
 
-Squirrel Window and OSX autoupdates are supported. So far the only tested server is
-[`electron-release-server`](https://github.com/ArekSredzki/electron-release-server) (Legacy/Unmaintained) and the
-default url `http://127.0.0.1/update/:platform/:version` provided in `settings.json` assumes you
-will be using it.  
-The `:platform` and `:version` tags are automatically replaced by correct values.   
-You can hook into Squirrel Windows events in `squirrelEvents.js` in `.desktop`.
-
-More:  
-https://www.electronjs.org/docs/latest/api/auto-updater  
-https://github.com/ArekSredzki/electron-release-server
 
 ## Native modules support
 
@@ -622,6 +609,31 @@ Built an app using meteor-desktop? File an issue or PR to list it here.
 > How to disable `zip` building when using `build-installer` on OSX.
 
 Add `target: ["dmg"]` to `mac` section of `builderOptions`.
+
+## Legacy / Deprecated Features
+
+### Squirrel autoupdate support (DEPRECATED)
+
+Squirrel Window and OSX autoupdates are supported. So far the only tested server is
+[`electron-release-server`](https://github.com/ArekSredzki/electron-release-server) (Legacy/Unmaintained) and the
+default url `http://127.0.0.1/update/:platform/:version` provided in `settings.json` assumes you
+will be using it.  
+The `:platform` and `:version` tags are automatically replaced by correct values.   
+You can hook into Squirrel Windows events in `squirrelEvents.js` in `.desktop`.
+
+More:  
+https://www.electronjs.org/docs/latest/api/auto-updater  
+https://github.com/ArekSredzki/electron-release-server
+
+### Deprecated Settings (settings.json)
+
+These settings are deprecated and may be removed in future versions.
+
+field|description
+-----|-----------
+`squirrel.autoUpdateFeedUrl`| <sup>DEPRECATED</sup> url passed to [`autoUpdater.setFeedUrl`](https://www.electronjs.org/docs/latest/api/auto-updater#autoupdatersetfeedurloptions), [more](#squirrel-autoupdate-support)
+`squirrel.autoUpdateFeedHeaders`| <sup>DEPRECATED</sup> http headers passed to [`autoUpdater.setFeedUrl`](https://www.electronjs.org/docs/latest/api/auto-updater#autoupdatersetfeedurloptions)
+`squirrel.autoUpdateCheckOnStart`| <sup>DEPRECATED</sup> whether to check for updates on app start
 
 ## Changelog
 
