@@ -15,7 +15,7 @@
         "__METEOR_DESKTOP_BUNDLER": true
     },
     "parserOptions": {
-        "ecmaVersion": 9,
+        "ecmaVersion": "latest",
         "sourceType": "module"
     },
     "settings": {
