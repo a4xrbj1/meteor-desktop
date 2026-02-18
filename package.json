@@ -1,5 +1,5 @@
 {
-  "name": "@meteor-community/meteor-desktop",
+  "name": "@a4xrbj1/meteor-desktop",
   "version": "4.0.2",
   "bin": {
     "meteor-desktop": "dist/bin/cli.js"
