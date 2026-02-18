@@ -17,3 +17,4 @@ port.cfg
 tests/.__tmp/autoupdate/Downloading
 tests/.__tmp/autoupdate/autoupdate.json
 tests/.__tmp/meteorProject
+.codacy/
