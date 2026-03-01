@@ -1,3 +1,7 @@
+## v4.1.2 <sup>01.03.2026</sup>
+* Fix CLI macOS target option parsing by using the correct `--mac` long flag.
+* Modernize protocol registration in the skeleton app to remove deprecation warnings on newer Electron versions.
+
 ## v3.3.0
 * Refactored fiber/futures syntax to ES6 async/await syntax [`#43`](https://github.com/Meteor-Community-Packages/meteor-desktop/pull/43) by [@awatson1978](https://github.com/sponsors/awatson1978)
 
