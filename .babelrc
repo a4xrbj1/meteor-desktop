@@ -3,7 +3,8 @@
         ["@babel/env", {
             "targets": {
                 "node": "14"
-            }
+            },
+            "modules": false
         }]
     ],
     "sourceMaps": true,
