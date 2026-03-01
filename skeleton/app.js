@@ -679,8 +679,8 @@ export default class App {
 
         const urlStripLength = 'meteor://desktop'.length;
 
-        this.webContents.session.protocol
-            .registerStreamProtocol(
+        try {
+            this.webContents.session.protocol.registerStreamProtocol(
                 'meteor',
                 (request, callback) => {
                     const url = request.url.substr(urlStripLength);
@@ -690,21 +690,20 @@ export default class App {
                             callback(this.modules.localServer.getServerErrorResponse());
                             this.log.error(`error while trying to fetch ${url}: ${e.toString()}`);
                         });
-                },
-                (e) => {
-                    if (e) {
-                        this.l.error(`error while registering meteor:// protocol: ${e.toString()}`);
-                        this.uncaughtExceptionHandler();
-                        return;
-                    }
-                    this.l.debug('protocol meteor:// registered');
-
-                    this.l.debug('opening meteor://desktop');
-                    setTimeout(() => {
-                        this.webContents.loadURL('meteor://desktop');
-                    }, 100);
                 }
             );
+        } catch (e) {
+            this.l.error(`error while registering meteor:// protocol: ${e.toString()}`);
+            this.uncaughtExceptionHandler();
+            return;
+        }
+
+        this.l.debug('protocol meteor:// registered');
+
+        this.l.debug('opening meteor://desktop');
+        setTimeout(() => {
+            this.webContents.loadURL('meteor://desktop');
+        }, 100);
     }
 
     handleAppStartup(startupDidCompleteEvent) {
