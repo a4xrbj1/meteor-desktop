@@ -1,0 +1,71 @@
+name: Publish to npm and GitHub
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      # Build the project to ensure dist/ is populated
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # Publish to the global npm registry
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Publish to GitHub Packages
+      - name: Setup Node.js for GitHub Packages
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@a4xrbj1'
+
+      - name: Publish to GitHub Packages
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Create a GitHub Release
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body: |
+            ## Release Notes
+
+            ### Highlights
+            - Dependency updates for improved stability and security.
+            - Enhanced publish workflow for better package distribution.
+            - Resolved engine compatibility issues.
+
+            ### Changes
+            - Updated major dependencies: `electron-builder`, `@electron/packager`, `eslint`, and `acorn`.
+            - Fixed node engine compatibility for `isbinaryfile`.
+            - Refined npm publish scripts to handle scoped namespace properly.
+            - Added automated GitHub Actions for publishing to both npm and GitHub Packages.
+
+            For more details, see the [CHANGELOG.md](https://github.com/a4xrbj1/meteor-desktop/blob/master/CHANGELOG.md).
+          generate_release_notes: true
+          draft: false
+          prerelease: false
