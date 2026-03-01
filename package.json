@@ -9,6 +9,14 @@
   },
   "description": "Build a Meteor's desktop client with hot code push.",
   "main": "dist/index.js",
+  "files": [
+    "dist",
+    "scaffold",
+    "skeleton",
+    "CHANGELOG.md",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "test": "cross-env NODE_ENV=test nyc mocha -t 10000 -r ./tests/helpers/clear.js \"tests/+(unit|functional)/**/*.test.js\"",
     "test-integration": "mocha -t 10000 -r @meteorjs/reify \"tests/+(integration)/**/*.test.js\"",
@@ -34,7 +42,7 @@
     "update-locks": "(rmdir /S /Q node_modules || rm -rf node_modules || echo) && yarn && (rmdir /S /Q node_modules || rm -rf node_modules) && npm i",
     "desktop": "meteor-desktop"
   },
-  "author": "Andreas West <andreas@interactivethings.io>",
+  "author": "Andreas West <a4xrbj1@gmail.com>",
   "license": "MIT",
   "devDependencies": {
     "@babel/cli": "7.28.6",
