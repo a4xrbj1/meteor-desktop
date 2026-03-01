@@ -97,12 +97,16 @@ export default class LoggerManager {
 
         const logger = winston.loggers.get(entityName);
         if (entityName !== 'main') {
-            logger.add(winston.transports.File, {
+            logger.add(new (winston.transports.File)({
                 level: 'debug',
                 name: entityName,
                 handleExceptions: false,
                 filename: join(this.$.userDataDir, `${entityName}.log`)
-            });
+            }));
+        }
+
+        if (!Array.isArray(logger.filters)) {
+            logger.filters = [];
         }
 
         logger.filters.push((level, msg) => `[${entityName}] ${msg}`);
@@ -112,6 +116,11 @@ export default class LoggerManager {
             if (!winston.loggers.loggers[`${logger.entityName}__${subEntityName}`]) {
                 winston.loggers.add(`${logger.entityName}__${subEntityName}`, {});
                 const newLogger = winston.loggers.get(`${logger.entityName}__${subEntityName}`);
+
+                if (!Array.isArray(newLogger.filters)) {
+                    newLogger.filters = [];
+                }
+
                 newLogger.filters.push((level, msg) => `[${logger.entityName}] [${subEntityName}] ${msg}`);
                 newLogger.getLoggerFor = logger.getLoggerFor;
                 return newLogger;

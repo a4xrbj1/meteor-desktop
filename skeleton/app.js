@@ -18,7 +18,7 @@ const require = createRequire(import.meta.url);
 
 let electron = {
     app: {},
-    BrowserWindow: class BrowserWindow {},
+    BrowserWindow: class BrowserWindow { },
     dialog: {},
     protocol: {
         registerStandardSchemes: Function.prototype,
@@ -622,6 +622,7 @@ export default class App {
         });
 
         this.webContents = this.window.webContents;
+        Module.setRenderer(this.webContents);
 
         if (!this.isProduction()) {
             this.webContents.on('did-finish-load', () => {

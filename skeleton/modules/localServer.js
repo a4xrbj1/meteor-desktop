@@ -483,11 +483,24 @@ export default class LocalServer {
                 '127.0.0.1',
                 startPort,
                 stopPort,
-                (err, ports) => {
+                (errorOrPorts, maybePorts) => {
+                    const err = Array.isArray(errorOrPorts) || typeof errorOrPorts === 'number'
+                        ? null
+                        : errorOrPorts;
+                    const ports = Array.isArray(errorOrPorts) || typeof errorOrPorts === 'number'
+                        ? errorOrPorts
+                        : maybePorts;
+
                     if (err) {
                         reject(err);
                         return;
                     }
+
+                    if (typeof ports === 'number') {
+                        resolve(ports);
+                        return;
+                    }
+
                     if (!ports || ports.length === 0) {
                         reject();
                     } else {

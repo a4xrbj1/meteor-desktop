@@ -220,6 +220,15 @@ export default class Module {
     }
 
     /**
+     * Sets the renderer reference.
+     *
+     * @param {Object|null} rendererRef - renderer-like object or null
+     */
+    static setRenderer(rendererRef) {
+        renderer = rendererRef;
+    }
+
+    /**
      * Test helper for overriding renderer reference in unit tests.
      *
      * @param {Object|null} rendererRef - renderer-like object or null
