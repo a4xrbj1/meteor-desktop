@@ -6,21 +6,23 @@
  * correctly (the situation after normal app install where we have a bundled meteor app version).
  */
 
-import chai from 'chai';
+import * as chai from 'chai';
 import dirty from 'dirty-chai';
 import sinonChai from 'sinon-chai';
 import fetch from 'node-fetch';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-import paths from '../../helpers/paths';
-import { getFakeLogger } from '../../helpers/meteorDesktop';
-import LocalServer from '../../../skeleton/modules/localServer';
-import AssetBundle from '../../../skeleton/modules/autoupdate/assetBundle';
+import paths from '../../helpers/paths.js';
+import { getFakeLogger } from '../../helpers/meteorDesktop.js';
+import LocalServer from '../../../skeleton/modules/localServer.js';
+import AssetBundle from '../../../skeleton/modules/autoupdate/assetBundle.js';
 
 chai.use(sinonChai);
 chai.use(dirty);
 const { describe, it } = global;
 const { expect } = chai;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let localPort;
 let localServer;

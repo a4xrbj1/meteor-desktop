@@ -31,14 +31,22 @@
 import path from 'path';
 import shell from 'shelljs';
 import fs from 'fs-plus';
-import originalFs from 'original-fs';
+import { createRequire } from 'module';
 import { rimraf } from 'rimraf';
 import url from 'url';
 
-import AssetBundle from './autoupdate/assetBundle';
-import AssetBundleManager from './autoupdate/assetBundleManager';
+import AssetBundle from './autoupdate/assetBundle.js';
+import AssetBundleManager from './autoupdate/assetBundleManager.js';
 
 const { join } = path;
+const require = createRequire(import.meta.url);
+
+let originalFs = fs;
+try {
+    originalFs = require('original-fs');
+} catch (e) {
+    // Falls back to fs-plus outside Electron.
+}
 
 /**
  * Represents the hot code push client.

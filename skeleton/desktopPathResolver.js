@@ -1,5 +1,8 @@
 import path, { join } from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default class DesktopPathResolver {
     /**

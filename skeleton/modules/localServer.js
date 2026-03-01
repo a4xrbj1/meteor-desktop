@@ -483,11 +483,15 @@ export default class LocalServer {
                 '127.0.0.1',
                 startPort,
                 stopPort,
-                (ports) => {
-                    if (ports.length === 0) {
+                (err, ports) => {
+                    if (err) {
+                        reject(err);
+                        return;
+                    }
+                    if (!ports || ports.length === 0) {
                         reject();
                     } else {
-                        const port = ports[Math.floor(Math.random() * (ports.length - 1))];
+                        const port = ports[Math.floor(Math.random() * ports.length)];
                         resolve(port);
                     }
                 }

@@ -1,10 +1,9 @@
 /* eslint-disable import/extensions, import/no-extraneous-dependencies, global-require */
-import chai from 'chai';
+import * as chai from 'chai';
 import dirty from 'dirty-chai';
 import sinonChai from 'sinon-chai';
 import sinon from 'sinon';
-import mockery from 'mockery';
-import importFresh from 'import-fresh';
+import fs from 'fs';
 
 chai.use(sinonChai);
 chai.use(dirty);
@@ -13,29 +12,27 @@ const {
 } = global;
 const { expect } = chai;
 
-const fs = {};
 const METEOR_APP_CONTEXT = { env: { paths: { meteorApp: { root: 'root.path', packages: 'package.file', versions: 'version.file' } } } };
 
 let MeteorManager;
+let readFileSyncStub;
 
 describe('meteorManager', () => {
-    before(() => {
-        mockery.registerMock('fs', fs);
-        mockery.enable({
-            warnOnReplace: false,
-            warnOnUnregistered: false
-        });
-
-        MeteorManager = importFresh('../../lib/meteorManager.js').default;
+    before(async () => {
+        MeteorManager = (await import('../../lib/meteorManager.js')).default;
     });
 
     after(() => {
-        mockery.deregisterMock('fs');
-        mockery.disable();
+        if (readFileSyncStub) {
+            readFileSyncStub.restore();
+        }
     });
 
     function prepareFsStubs() {
-        const readFileSyncStub = sinon.stub();
+        if (readFileSyncStub) {
+            readFileSyncStub.restore();
+        }
+        readFileSyncStub = sinon.stub(fs, 'readFileSync');
         readFileSyncStub
             .withArgs(sinon.match(METEOR_APP_CONTEXT.env.paths.meteorApp.packages, 'UTF-8'))
             .returns([
@@ -52,7 +49,6 @@ describe('meteorManager', () => {
                 'mongo@1.1.18',
                 'omega:meteor-desktop-localstorage@0.0.11'
             ].join('\n'));
-        fs.readFileSync = readFileSyncStub;
     }
 
     describe('#checkPackages', () => {

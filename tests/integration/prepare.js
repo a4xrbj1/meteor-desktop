@@ -1,11 +1,15 @@
 /* eslint-disable no-console */
-require('@meteorjs/reify');
 // CI cache version: 1
 
-const tempDir = require('temp-dir');
-const shell = require('shelljs');
-const path = require('path');
-const fs = require('fs');
+import tempDir from 'temp-dir';
+import shell from 'shelljs';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+import versions from '../../lib/defaultDependencies.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const testsTmpPath = path.resolve(path.join(tempDir, '.__tmp_int'));
 
@@ -25,7 +29,6 @@ if (!fs.existsSync(testsTmpPath) || !fs.existsSync(path.join(appDir, 'package.js
     const packageJson = JSON.parse(fs.readFileSync(path.join(appDir, 'package.json'), 'utf8'));
     packageJson.dependencies['meteor-desktop'] = path.resolve(path.join(__dirname, '..', '..'));
     if (process.env.APPVEYOR) {
-        const versions = require('../../lib/defaultDependencies');
         packageJson.dependencies.electron = versions.electron;
         packageJson.dependencies['electron-builder'] = versions['electron-builder'];
     }

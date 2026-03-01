@@ -5,7 +5,7 @@
  * @type {Module}
  */
 
-import Module from './module';
+import Module from './module.js';
 
 const dummy = new Module('dummyModule');
 

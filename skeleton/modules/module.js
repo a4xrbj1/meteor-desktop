@@ -1,4 +1,12 @@
-import electron from 'electron';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+let electron = { ipcMain: { on: Function.prototype, once: Function.prototype, removeListener: Function.prototype, removeAllListeners: Function.prototype } };
+try {
+    electron = require('electron');
+} catch (e) {
+    // Allows unit tests to run outside Electron.
+}
 
 const { ipcMain } = electron;
 
@@ -209,5 +217,14 @@ export default class Module {
      */
     static sendGlobal(event, ...data) {
         Module.sendInternal(event, ...data);
+    }
+
+    /**
+     * Test helper for overriding renderer reference in unit tests.
+     *
+     * @param {Object|null} rendererRef - renderer-like object or null
+     */
+    static __setRendererForTest(rendererRef) {
+        renderer = rendererRef;
     }
 }

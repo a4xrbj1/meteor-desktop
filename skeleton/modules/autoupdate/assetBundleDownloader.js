@@ -30,12 +30,21 @@
  */
 
 import fs from 'fs';
-import originalFs from 'original-fs';
 import url from 'url';
+import { createRequire } from 'module';
 // TODO: maybe use node-fetch?
 import fetch from 'node-fetch';
 import queue from 'queue';
-import IsDesktopInjector from './isDesktopInjector';
+import IsDesktopInjector from './isDesktopInjector.js';
+
+const require = createRequire(import.meta.url);
+
+let originalFs = fs;
+try {
+    originalFs = require('original-fs');
+} catch (e) {
+    // Falls back to fs outside Electron.
+}
 
 export default class AssetBundleDownloader {
     /**
@@ -66,7 +75,7 @@ export default class AssetBundleDownloader {
         this.onFailure = null;
         this.cancelInvoked = false;
 
-        this.queue = queue();
+        this.queue = new queue();
     }
 
     /**

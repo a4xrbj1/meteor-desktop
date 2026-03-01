@@ -27,23 +27,24 @@
  * If you need some more debug telling you why a test failed change the 'showLogs` var below the
  * imports section.
  */
-import chai from 'chai';
+import * as chai from 'chai';
 import dirty from 'dirty-chai';
 import sinonChai from 'sinon-chai';
 import path from 'path';
 import shell from 'shelljs';
 import fs from 'fs';
 import mockery from 'mockery';
+import { createRequire } from 'module';
 
-import mockerySettings from '../../helpers/mockerySettings';
-import paths from '../../helpers/paths';
-import { serveVersion } from '../../helpers/autoupdate/meteorServer';
+import mockerySettings from '../../helpers/mockerySettings.js';
+import paths from '../../helpers/paths.js';
+import { serveVersion } from '../../helpers/autoupdate/meteorServer.js';
 import {
     setUpLocalServer, expectVersionServedToEqual,
     shutdownLocalServer, restartLocalServerAndExpectVersion, expectAssetToBeServed,
     expectAssetServedToContain
-} from '../../helpers/autoupdate/localServer';
-import { getFakeLogger } from '../../helpers/meteorDesktop';
+} from '../../helpers/autoupdate/localServer.js';
+import { getFakeLogger } from '../../helpers/meteorDesktop.js';
 
 let HCPClient;
 
@@ -53,6 +54,7 @@ const {
     describe, it, before, after
 } = global;
 const { expect } = chai;
+const require = createRequire(import.meta.url);
 
 const showLogs = true;
 const showErrors = true;

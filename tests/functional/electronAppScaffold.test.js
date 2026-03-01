@@ -1,9 +1,9 @@
-import chai from 'chai';
+import * as chai from 'chai';
 import dirty from 'dirty-chai';
 import fs from 'fs';
 import shell from 'shelljs';
 
-import { createTestInstance, StubLog } from '../helpers/meteorDesktop';
+import { createTestInstance, StubLog } from '../helpers/meteorDesktop.js';
 
 chai.use(dirty);
 const { describe, it } = global;

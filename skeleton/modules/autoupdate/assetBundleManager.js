@@ -32,15 +32,23 @@
 import path from 'path';
 import fs from 'fs-plus';
 import { rimraf } from 'rimraf';
-import originalFs from 'original-fs';
 import url from 'url';
+import { createRequire } from 'module';
 import fetch from 'node-fetch';
 import shell from 'shelljs';
 
-import AssetBundle from './assetBundle';
-import AssetBundleDownloader from './assetBundleDownloader';
-import AssetManifest from './assetManifest';
-import utils from './utils';
+import AssetBundle from './assetBundle.js';
+import AssetBundleDownloader from './assetBundleDownloader.js';
+import AssetManifest from './assetManifest.js';
+import utils from './utils.js';
+
+const require = createRequire(import.meta.url);
+let originalFs = fs;
+try {
+    originalFs = require('original-fs');
+} catch (e) {
+    // Falls back to fs-plus outside Electron.
+}
 
 const { rimrafWithRetries } = utils;
 

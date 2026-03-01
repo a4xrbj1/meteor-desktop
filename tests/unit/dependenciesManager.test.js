@@ -1,9 +1,9 @@
-import chai from 'chai';
+import * as chai from 'chai';
 import dirty from 'dirty-chai';
 import sinonChai from 'sinon-chai';
 import sinon from 'sinon';
 
-import DependenciesManager from '../../lib/dependenciesManager';
+import DependenciesManager from '../../lib/dependenciesManager.js';
 
 chai.use(sinonChai);
 chai.use(dirty);

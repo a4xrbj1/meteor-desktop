@@ -1,12 +1,12 @@
 /* eslint-disable global-require */
-import chai from 'chai';
+import * as chai from 'chai';
 import dirty from 'dirty-chai';
 import sinonChai from 'sinon-chai';
 import sinon from 'sinon';
-import mockery from 'mockery';
 import path from 'path';
-
-import mockerySettings from '../../helpers/mockerySettings';
+import fs from 'fs';
+import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
 
 chai.use(sinonChai);
 chai.use(dirty);
@@ -15,29 +15,29 @@ const {
     describe, it, after, before
 } = global;
 const { expect } = chai;
-
-const fs = {};
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
 
 let DesktopPathResolver;
+let readFileSyncStub;
 
 describe('DesktopPathResolver', () => {
     before(() => {
-        mockery.registerMock('fs', fs);
-        mockery.enable(mockerySettings);
-
         DesktopPathResolver = require('../../../skeleton/desktopPathResolver.js').default;
     });
 
     after(() => {
-        mockery.deregisterMock('fs');
-        mockery.disable();
+        if (readFileSyncStub) {
+            readFileSyncStub.restore();
+        }
     });
 
     describe('#resolveDesktopPath', () => {
-        let readFileSyncStub;
-
         function prepareFsStubs(desktopVersion, initialMeteorVersion, autoUpdateJson) {
-            readFileSyncStub = sinon.stub();
+            if (readFileSyncStub) {
+                readFileSyncStub.restore();
+            }
+            readFileSyncStub = sinon.stub(fs, 'readFileSync');
             // initial desktop version
             readFileSyncStub
                 .withArgs(sinon.match('desktop.asar').and(sinon.match('settings.json')))
@@ -50,7 +50,6 @@ describe('DesktopPathResolver', () => {
             readFileSyncStub
                 .withArgs(sinon.match('autoupdate.json'))
                 .returns(JSON.stringify(autoUpdateJson));
-            fs.readFileSync = readFileSyncStub;
         }
 
         it('should use initial version when meteor initial bundle version has changed', () => {

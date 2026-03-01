@@ -1,12 +1,9 @@
 /* eslint-disable no-underscore-dangle */
-import chai from 'chai';
+import * as chai from 'chai';
 import dirty from 'dirty-chai';
 import sinonChai from 'sinon-chai';
 import sinon from 'sinon';
-import mockery from 'mockery';
-import rewire from 'rewire';
-
-import mockerySettings from '../../helpers/mockerySettings';
+import Module from '../../../skeleton/modules/module.js';
 
 chai.use(sinonChai);
 chai.use(dirty);
@@ -15,46 +12,36 @@ const {
 } = global;
 const { expect } = chai;
 
-const Electron = {
-};
-
-let RewiredModule;
-let Module;
-
 describe('Module', () => {
     before(() => {
-        mockery.registerMock('electron', Electron);
-        mockery.enable(mockerySettings);
-        RewiredModule = rewire('../../../skeleton/modules/module.js');
-        Module = RewiredModule.default;
+        Module.__setRendererForTest(null);
     });
 
     after(() => {
-        mockery.deregisterMock('electron');
-        mockery.disable();
+        Module.__setRendererForTest(null);
     });
 
     describe('#sendInternal', () => {
         it('should throw when no reference to renderer set yet', () => {
-            expect(Module.sendInternal.bind(module, 'test')).to.throw(
+            expect(Module.sendInternal.bind(Module, 'test')).to.throw(
                 /No reference to renderer process/
             );
         });
         it('should send ipc when renderer is set', () => {
             const rendererMock = { send: sinon.stub(), isDestroyed: () => false };
-            const revert = RewiredModule.__set__('renderer', rendererMock);
             const arg1 = { some: 'data' };
             const arg2 = 'test';
+            Module.__setRendererForTest(rendererMock);
             Module.sendInternal('event', arg1, arg2);
             expect(rendererMock.send).to.be.calledWith('event', arg1, arg2);
-            revert();
+            Module.__setRendererForTest(null);
         });
         it('should not send ipc when renderer is destroyed', () => {
             const rendererMock = { send: sinon.stub(), isDestroyed: () => true };
-            const revert = RewiredModule.__set__('renderer', rendererMock);
+            Module.__setRendererForTest(rendererMock);
             Module.sendInternal('event');
             expect(rendererMock.send).to.have.callCount(0);
-            revert();
+            Module.__setRendererForTest(null);
         });
     });
     describe('#getEventName', () => {

@@ -33,7 +33,7 @@ import path from 'path';
 import fs from 'fs';
 import url from 'url';
 
-import AssetManifest from './assetManifest';
+import AssetManifest from './assetManifest.js';
 
 /**
  * Represent single asset in the bundle.

@@ -5,10 +5,13 @@ import modRewrite from 'connect-modrewrite';
 import url from 'url';
 import path from 'path';
 import fs from 'fs';
-import sha1File from 'sha1-file';
 import enableDestroy from 'server-destroy';
+import { createRequire } from 'module';
 
-import paths from '../paths';
+import paths from '../paths.js';
+
+const require = createRequire(import.meta.url);
+const { sha1FileSync } = require('sha1-file');
 
 let meteorServer;
 
@@ -110,11 +113,11 @@ export default class MeteorServer {
             if (
                 exists(path.join(serverPath, pathname))
             ) {
-                res.setHeader('ETag', `"${sha1File(path.join(serverPath, pathname))}"`);
+                res.setHeader('ETag', `"${sha1FileSync(path.join(serverPath, pathname))}"`);
             }
             if (parentServerPath
                 && exists(path.join(parentServerPath, pathname))) {
-                res.setHeader('ETag', `"${sha1File(path.join(parentServerPath, pathname))}"`);
+                res.setHeader('ETag', `"${sha1FileSync(path.join(parentServerPath, pathname))}"`);
             }
             next();
         }
@@ -215,5 +218,3 @@ export function serveVersion(version) {
     meteorServer.init(path.join(paths.fixtures.downloadableVersions, version), undefined, true);
     return Promise.resolve(meteorServer);
 }
-
-module.exports = { serveVersion };

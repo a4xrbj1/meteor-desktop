@@ -1,7 +1,10 @@
-import fs from 'fs-plus';
-import shelljs from 'shelljs';
-import { rimraf } from 'rimraf';
-import fsExtra from 'fs-extra';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const fs = require('fs-plus');
+const shelljs = require('shelljs');
+const { rimraf } = require('rimraf');
+const fsExtra = require('fs-extra');
 
 /**
  * Traverses the local storage directory looking for the last modified local storage file.

@@ -3,23 +3,33 @@
 
 import { EventEmitter as Events } from 'events';
 import path from 'path';
+import { createRequire } from 'module';
 import fs from 'fs-plus';
 import shell from 'shelljs';
 import semver from 'semver';
-import assignIn from 'lodash/assignIn';
-import Module from './modules/module';
-import LoggerManager from './loggerManager';
-import DesktopPathResolver from './desktopPathResolver';
-import WindowSettings from './windowSettings';
-import Squirrel from './squirrel';
+import assignIn from 'lodash/assignIn.js';
+import Module from './modules/module.js';
+import LoggerManager from './loggerManager.js';
+import DesktopPathResolver from './desktopPathResolver.js';
+import WindowSettings from './windowSettings.js';
+import Squirrel from './squirrel.js';
 
-let electron;
+const require = createRequire(import.meta.url);
+
+let electron = {
+    app: {},
+    BrowserWindow: class BrowserWindow {},
+    dialog: {},
+    protocol: {
+        registerStandardSchemes: Function.prototype,
+        registerSchemesAsPrivileged: Function.prototype
+    }
+};
 try {
-    // Attempt built-in module loading via module.constructor._load to bypass NPM shadowing
-    electron = module.constructor._load('electron', undefined, true);
-} catch (e) {
     electron = require('electron');
-} // DEPRECATED
+} catch (e) {
+    // Allows unit tests to run outside Electron.
+}
 
 const {
     app, BrowserWindow, dialog, protocol

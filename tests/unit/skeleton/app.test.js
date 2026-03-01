@@ -1,11 +1,12 @@
 /* eslint-disable no-underscore-dangle, global-require */
-import chai from 'chai';
+import * as chai from 'chai';
 import dirty from 'dirty-chai';
 import sinonChai from 'sinon-chai';
 import sinon from 'sinon';
 import mockery from 'mockery';
+import { createRequire } from 'module';
 
-import mockerySettings from '../../helpers/mockerySettings';
+import mockerySettings from '../../helpers/mockerySettings.js';
 
 chai.use(sinonChai);
 chai.use(dirty);
@@ -16,6 +17,7 @@ const {
     after
 } = global;
 const { expect } = chai;
+const require = createRequire(import.meta.url);
 
 const Electron = { protocol: { registerStandardSchemes: Function.prototype } };
 const Winston = {};

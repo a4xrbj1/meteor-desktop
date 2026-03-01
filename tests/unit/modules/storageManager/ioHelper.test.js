@@ -1,13 +1,12 @@
 /* eslint-disable no-underscore-dangle, global-require, no-unused-vars */
-import chai from 'chai';
+import * as chai from 'chai';
 import dirty from 'dirty-chai';
 import sinonChai from 'sinon-chai';
 import chaiAsPromised from 'chai-as-promised';
 import sinon from 'sinon';
 import mockery from 'mockery';
-import importFresh from 'import-fresh';
 
-import mockerySettings from '../../../helpers/mockerySettings';
+import mockerySettings from '../../../helpers/mockerySettings.js';
 
 chai.use(sinonChai);
 chai.use(chaiAsPromised);
@@ -39,13 +38,13 @@ rimrafMock.sync = (path, options) => {
 let ioHelper;
 
 describe('ioHelper', () => {
-    before(() => {
+    before(async () => {
         mockery.registerMock('fs-plus', fs);
         mockery.registerMock('shelljs', shelljs);
         mockery.registerMock('rimraf', { rimraf: rimrafMock });
         mockery.registerMock('fs-extra', fsExtra);
         mockery.enable(mockerySettings);
-        ioHelper = importFresh('../../../../skeleton/modules/storageMigration/ioHelper.js');
+        ioHelper = await import(`../../../../skeleton/modules/storageMigration/ioHelper.js?testCacheBust=${Date.now()}`);
     });
 
     after(() => {

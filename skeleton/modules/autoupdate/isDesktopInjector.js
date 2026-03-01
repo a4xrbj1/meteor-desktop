@@ -69,4 +69,4 @@ class IsDesktopInjector {
     }
 }
 
-module.exports = IsDesktopInjector;
+export default IsDesktopInjector;

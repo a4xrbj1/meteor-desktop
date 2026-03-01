@@ -1,7 +1,9 @@
 import path from 'path';
+import { fileURLToPath } from 'url';
 import tempDir from 'temp-dir';
 
 const { join, resolve } = path;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const testsPath = resolve(path.join(__dirname, '..', '..', 'tests'));
 

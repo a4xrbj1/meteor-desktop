@@ -29,7 +29,7 @@
 
  */
 
-import assignIn from 'lodash/assignIn';
+import assignIn from 'lodash/assignIn.js';
 
 /**
  * Represents single file in the manifest.

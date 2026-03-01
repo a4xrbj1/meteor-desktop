@@ -1,5 +1,47 @@
 import { join } from 'path';
-import winston from 'winston';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+
+const createFallbackLogger = function createFallbackLogger() {
+    return {
+        filters: [],
+        add: Function.prototype,
+        debug: Function.prototype,
+        error: Function.prototype,
+        info: Function.prototype,
+        warn: Function.prototype,
+        log: Function.prototype
+    };
+};
+
+let winston;
+try {
+    winston = require('winston');
+} catch (e) {
+    const registry = {};
+    winston = {
+        transports: {
+            Console: class Console {},
+            File: class File {}
+        },
+        loggers: {
+            options: { transports: [] },
+            loggers: registry,
+            add(name) {
+                if (!registry[name]) {
+                    registry[name] = createFallbackLogger();
+                }
+            },
+            get(name) {
+                if (!registry[name]) {
+                    registry[name] = createFallbackLogger();
+                }
+                return registry[name];
+            }
+        }
+    };
+}
 
 export default class LoggerManager {
     /**

@@ -1,4 +1,4 @@
-import chai from 'chai';
+import * as chai from 'chai';
 import dirty from 'dirty-chai';
 import sinonChai from 'sinon-chai';
 import sinon from 'sinon';
@@ -7,8 +7,9 @@ import path from 'path';
 import shell from 'shelljs';
 import mockery from 'mockery';
 
-import paths from '../helpers/paths';
-import mockerySettings from '../helpers/mockerySettings';
+import * as meteorDesktop from '../helpers/meteorDesktop.js';
+import paths from '../helpers/paths.js';
+import mockerySettings from '../helpers/mockerySettings.js';
 
 chai.use(sinonChai);
 chai.use(dirty);
@@ -16,8 +17,6 @@ const { describe, it } = global;
 const { expect } = chai;
 
 const Electron = {};
-
-const meteorDesktop = require('../helpers/meteorDesktop');
 
 const {
     createTestInstance, StubLog, getModuleJson, saveModuleJson

@@ -1,7 +1,7 @@
 /* eslint-disable no-param-reassign */
 
 import { join } from 'path';
-import assignIn from 'lodash/assignIn';
+import assignIn from 'lodash/assignIn.js';
 
 export default class WindowSettings {
     /**

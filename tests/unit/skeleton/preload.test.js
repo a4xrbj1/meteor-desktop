@@ -1,12 +1,12 @@
 /* eslint-disable no-underscore-dangle */
-import chai from 'chai';
+import * as chai from 'chai';
 import dirty from 'dirty-chai';
 import sinonChai from 'sinon-chai';
 import sinon from 'sinon';
 import mockery from 'mockery';
-import rewire from 'rewire';
+import { createRequire } from 'module';
 
-import mockerySettings from '../../helpers/mockerySettings';
+import mockerySettings from '../../helpers/mockerySettings.js';
 
 chai.use(sinonChai);
 chai.use(dirty);
@@ -15,16 +15,19 @@ const {
     describe, it, before, after
 } = global;
 const { expect } = chai;
+const require = createRequire(import.meta.url);
 
 const Electron = {};
 
+let desktopModule;
 let Desktop;
 
 describe('Desktop', () => {
     before(() => {
         mockery.registerMock('electron', Electron);
         mockery.enable(mockerySettings);
-        Desktop = rewire('../../../skeleton/preload.js');
+        desktopModule = require('../../../skeleton/preload.js');
+        Desktop = desktopModule.Desktop;
     });
 
     after(() => {
@@ -34,8 +37,9 @@ describe('Desktop', () => {
 
     function testSend(event, module) {
         const ipcMock = { send: sinon.stub() };
-        const revertIpc = Desktop.__set__('ipc', ipcMock);
-        const desktop = Desktop.__get__('Desktop');
+        const oldIpc = desktopModule.__getIpcForTest();
+        desktopModule.__setIpcForTest(ipcMock);
+        const desktop = Desktop;
         const arg1 = { some: 'data' };
         const arg2 = 'test';
         if (module) {
@@ -45,7 +49,7 @@ describe('Desktop', () => {
             desktop.send(module, event, arg1, arg2);
             expect(ipcMock.send).to.be.calledWith(`${module}__${event}`, arg1, arg2);
         }
-        revertIpc();
+        desktopModule.__setIpcForTest(oldIpc);
     }
 
     describe('#sendGlobal', () => {
@@ -64,8 +68,9 @@ describe('Desktop', () => {
                 on: sinon.stub(),
                 send: sinon.stub()
             };
-            const revertIpc = Desktop.__set__('ipc', ipcMock);
-            const desktop = Desktop.__get__('Desktop');
+            const oldIpc = desktopModule.__getIpcForTest();
+            desktopModule.__setIpcForTest(ipcMock);
+            const desktop = Desktop;
             const arg1 = { some: 'data' };
             const arg2 = 'test';
             const event = 'yyy';
@@ -73,7 +78,7 @@ describe('Desktop', () => {
 
             desktop.fetch(module, event, 10, arg1, arg2)
                 .then(() => {
-                    revertIpc();
+                    desktopModule.__setIpcForTest(oldIpc);
                     done(new Error('should not resolve'));
                 })
                 .catch(() => {
@@ -81,7 +86,7 @@ describe('Desktop', () => {
                         expect(ipcMock.send).to.be.calledWith(`${module}__${event}`, 1, arg1, arg2);
                         expect(desktop.onceEventListeners)
                             .to.have.a.property(`${module}__${event}_1___response`);
-                        revertIpc();
+                        desktopModule.__setIpcForTest(oldIpc);
                         done();
                     } catch (e) {
                         done(e);
@@ -92,7 +97,7 @@ describe('Desktop', () => {
 
     describe('#setDefaultFetchTimeout', () => {
         it('should call fetch with correct timeout', () => {
-            const desktop = Desktop.__get__('Desktop');
+            const desktop = Desktop;
             const arg1 = { some: 'data' };
             const arg2 = 'test';
             const event = 'yyy';
@@ -106,8 +111,9 @@ describe('Desktop', () => {
     });
 
     function prepareOnOrOnceTest(ipcMock, callbacks, once, module, event) {
-        const revertIpc = Desktop.__set__('ipc', ipcMock);
-        const desktop = Desktop.__get__('Desktop');
+        const oldIpc = desktopModule.__getIpcForTest();
+        desktopModule.__setIpcForTest(ipcMock);
+        const desktop = Desktop;
 
         callbacks.forEach((callback) => {
             if (once) {
@@ -133,7 +139,7 @@ describe('Desktop', () => {
                 desktop.eventListeners = {};
                 desktop.onceEventListeners = {};
                 desktop.registeredInIpc = {};
-                revertIpc();
+                desktopModule.__setIpcForTest(oldIpc);
             }
         };
     }
@@ -264,7 +270,7 @@ describe('Desktop', () => {
             };
             const callback3 = function callback3() {
             };
-            const desktop = Desktop.__get__('Desktop');
+            const desktop = Desktop;
             desktop.eventListeners.test__test = [callback, callback2, callback3];
             desktop.onceEventListeners.test__test = [callback, callback2, callback3];
             desktop.removeListener('test', 'test', callback2);
@@ -279,28 +285,28 @@ describe('Desktop', () => {
 
     describe('#getEventName', () => {
         it('should return namespaced event name', () => {
-            const desktop = Desktop.__get__('Desktop');
+            const desktop = Desktop;
             expect(desktop.getEventName('desktop', 'event')).to.equal('desktop__event');
         });
     });
 
     describe('#getResponseEventName', () => {
         it('should return namespaced response event name', () => {
-            const desktop = Desktop.__get__('Desktop');
+            const desktop = Desktop;
             expect(desktop.getResponseEventName('desktop', 'event')).to.equal('desktop__event___response');
         });
     });
 
     describe('#getFileUrl', () => {
         it('should return an url to a file from local filesystem', () => {
-            const desktop = Desktop.__get__('Desktop');
+            const desktop = Desktop;
             expect(desktop.getFileUrl('C:/test.txt')).to.equal('/local-filesystem/C:/test.txt');
         });
     });
 
     describe('#getAssetUrl', () => {
         it('should return an url to an asset', () => {
-            const desktop = Desktop.__get__('Desktop');
+            const desktop = Desktop;
             expect(desktop.getAssetUrl('meteor.ico')).to.equal('/___desktop/meteor.ico');
         });
     });

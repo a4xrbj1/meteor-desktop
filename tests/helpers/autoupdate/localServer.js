@@ -1,14 +1,17 @@
 import http from 'http';
 import fetch from 'node-fetch';
-import chai from 'chai';
+import * as chai from 'chai';
 import dirty from 'dirty-chai';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-import { getFakeLogger } from '../meteorDesktop';
-import AssetBundle from '../../../skeleton/modules/autoupdate/assetBundle';
-import LocalServer from '../../../skeleton/modules/localServer';
+import { getFakeLogger } from '../meteorDesktop.js';
+import AssetBundle from '../../../skeleton/modules/autoupdate/assetBundle.js';
+import LocalServer from '../../../skeleton/modules/localServer.js';
 
 chai.use(dirty);
 const { expect } = chai;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let localServer;
 let localServerPort;
@@ -161,13 +164,3 @@ export async function expectAssetServedToContain(path, expectedContents) {
     const body = await response.text();
     expect(body).to.contain(expectedContents);
 }
-
-module.exports = {
-    setUpLocalServer,
-    fetchFromLocalServer,
-    expectVersionServedToEqual,
-    shutdownLocalServer,
-    restartLocalServerAndExpectVersion,
-    expectAssetToBeServed,
-    expectAssetServedToContain
-};

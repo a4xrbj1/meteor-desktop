@@ -1,15 +1,15 @@
-import chai from 'chai';
+import * as chai from 'chai';
 import dirty from 'dirty-chai';
 import sinonChai from 'sinon-chai';
 import path from 'path';
 import fs from 'fs';
 import shell from 'shelljs';
-import asar from '@electron/asar';
+import * as asar from '@electron/asar';
 
 import {
     createTestInstance, StubLog, getModuleJson, saveModuleJson
-} from '../helpers/meteorDesktop';
-import paths from '../helpers/paths';
+} from '../helpers/meteorDesktop.js';
+import paths from '../helpers/paths.js';
 
 chai.use(sinonChai);
 chai.use(dirty);

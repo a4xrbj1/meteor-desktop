@@ -1,8 +1,27 @@
 /* eslint-disable global-require */
+import { createRequire } from 'module';
 // This was inspiried by
 // https://github.com/electron-webapps/meteor-electron/blob/master/app/preload.js
-const ipc = require('electron').ipcRenderer;
-const { contextBridge } = require('electron');
+const require = createRequire(import.meta.url);
+
+let electron = {
+    ipcRenderer: {
+        on: Function.prototype,
+        send: Function.prototype,
+        removeListener: Function.prototype
+    },
+    contextBridge: {
+        exposeInMainWorld: Function.prototype
+    }
+};
+try {
+    electron = require('electron');
+} catch (e) {
+    // Allows unit tests to run outside Electron.
+}
+
+let ipc = electron.ipcRenderer;
+const { contextBridge } = electron;
 
 const exposedModules = [];
 /**
@@ -311,6 +330,16 @@ const Desktop = new (class {
         };
     }
 })();
+
+const __setIpcForTest = function __setIpcForTest(newIpc) {
+    ipc = newIpc;
+};
+
+const __getIpcForTest = function __getIpcForTest() {
+    return ipc;
+};
+
+export { Desktop, __setIpcForTest, __getIpcForTest };
 
 process.once('loaded', () => {
     if (process.env.NODE_ENV === 'test') {

@@ -1,12 +1,13 @@
 /* eslint-disable global-require, import/extensions */
-import chai from 'chai';
+import * as chai from 'chai';
 import dirty from 'dirty-chai';
 import sinonChai from 'sinon-chai';
 import sinon from 'sinon';
-import mockery from 'mockery';
+import fs from 'fs';
+import { createRequire } from 'module';
 
 // need for running test
-import asar from '@electron/asar'; // eslint-disable-line no-unused-vars
+import * as asar from '@electron/asar'; // eslint-disable-line no-unused-vars
 
 chai.use(sinonChai);
 chai.use(dirty);
@@ -15,8 +16,8 @@ const {
     describe, it, before, after
 } = global;
 const { expect } = chai;
+const require = createRequire(import.meta.url);
 
-const fs = {};
 const METEOR_APP_CONTEXT = { env: { paths: { meteorApp: { release: 'release.file' } } } };
 const METEOR_RELEASES = [
     { release: 'METEOR@1.3.4', version: '1.3.4', semver: '1.3.4' },
@@ -27,28 +28,27 @@ const METEOR_RELEASES = [
 ];
 
 let MeteorApp;
+let readFileSyncStub;
 
 describe('meteorApp', () => {
-    before(() => {
-        mockery.registerMock('fs', fs);
-        mockery.enable({
-            warnOnReplace: false,
-            warnOnUnregistered: false
-        });
-        MeteorApp = require('../../lib/meteorApp.js').default;
+    before(async () => {
+        MeteorApp = (await import('../../lib/meteorApp.js')).default;
     });
 
     after(() => {
-        mockery.deregisterMock('fs');
-        mockery.disable();
+        if (readFileSyncStub) {
+            readFileSyncStub.restore();
+        }
     });
 
     function prepareFsStubs(release) {
-        const readFileSyncStub = sinon.stub();
+        if (readFileSyncStub) {
+            readFileSyncStub.restore();
+        }
+        readFileSyncStub = sinon.stub(fs, 'readFileSync');
         readFileSyncStub
             .withArgs(sinon.match('release.file'), 'UTF-8')
             .returns(release);
-        fs.readFileSync = readFileSyncStub;
     }
 
     describe('#castMeteorReleaseToSemver', () => {

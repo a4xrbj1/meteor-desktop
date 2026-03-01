@@ -5,8 +5,8 @@ import path from 'path';
 import fs from 'fs';
 import shell from 'shelljs';
 
-import meteorDesktop from '../../dist/index';
-import paths from './paths';
+import meteorDesktop from '../../lib/index.js';
+import paths from './paths.js';
 
 export function StubLog(object, methods, stubProcessExit) {
     const stubs = {};
