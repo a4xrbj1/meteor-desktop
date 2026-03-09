@@ -891,7 +891,7 @@ Meteor._debug = function (/* arguments */) {                                    
   }                                                                                                       // 18
   if (typeof console !== 'undefined' &&                                                                   // 19
       typeof console.log !== 'undefined') {                                                               // 20
-    if (arguments.length == 0) { // IE Companion breaks otherwise                                         // 21
+    if (arguments.length === 0) { // IE Companion breaks otherwise                                         // 21
       // IE10 PP4 requires at least one argument                                                          // 22
       console.log('');                                                                                    // 23
     } else {                                                                                              // 24
