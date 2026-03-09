@@ -1,4 +1,4 @@
-/* eslint-disable import/no-dynamic-require */
+/* eslint-disable import-x/no-dynamic-require */
 import path from 'path';
 import { spawnSync } from 'child_process';
 import fs from 'fs-plus';

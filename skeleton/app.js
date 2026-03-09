@@ -1,5 +1,5 @@
-/* eslint-disable import/no-unresolved,no-console */
-/* eslint-disable global-require, import/no-dynamic-require */
+/* eslint-disable import-x/no-unresolved,no-console */
+/* eslint-disable global-require, import-x/no-dynamic-require */
 
 import { EventEmitter as Events } from 'events';
 import path from 'path';
