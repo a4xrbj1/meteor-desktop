@@ -86,6 +86,7 @@
     "sinon-chai": "^4.0.1",
     "spectron": "19.0.0",
     "temp-dir": "^3.0.0",
+    "typescript": "^5.9.3",
     "watch": "1.0.2"
   },
   "dependencies": {
