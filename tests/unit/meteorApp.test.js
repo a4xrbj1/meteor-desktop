@@ -1,4 +1,4 @@
-/* eslint-disable global-require, import/extensions */
+/* eslint-disable global-require, import-x/extensions */
 import * as chai from 'chai';
 import dirty from 'dirty-chai';
 import sinonChai from 'sinon-chai';
