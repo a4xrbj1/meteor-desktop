@@ -612,7 +612,7 @@ export default class App {
 
         windowSettings.webPreferences.nodeIntegration = false; // node integration must be off
         windowSettings.webPreferences.preload = join(__dirname, 'preload.js');
-        windowSettings.webPreferences.enableRemoteModule = true; // needed since Electron 10
+        windowSettings.webPreferences.enableRemoteModule = false; // disabled: deprecated since Electron 14, removed in Electron 28+; enabled renderer access to main-process Node.js APIs (XSS-to-RCE risk)
 
         this.currentPort = port;
 
