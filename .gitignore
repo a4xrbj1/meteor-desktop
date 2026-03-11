@@ -19,3 +19,10 @@ tests/.__tmp/autoupdate/autoupdate.json
 tests/.__tmp/meteorProject
 .codacy/
 AGENTS.md
+
+# Tool state dirs
+.overstory/
+.seeds/
+.mulch/
+.canopy/
+.claude/
