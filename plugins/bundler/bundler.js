@@ -967,7 +967,10 @@ class MeteorDesktopBundler {
                 } catch (_) {
                     asarPkgDir = path.dirname(appRequire.resolve('@a4xrbj1/meteor-desktop/node_modules/@electron/asar/package.json'));
                 }
-                const asarBin = path.join(asarPkgDir, 'bin', 'asar.mjs');
+                const { readFileSync: nativeFsReadFileSync } = Npm.require('fs');
+                const asarPkgJson = JSON.parse(nativeFsReadFileSync(path.join(asarPkgDir, 'package.json'), 'utf8'));
+                const asarBinRelative = (asarPkgJson.bin && asarPkgJson.bin.asar) || 'bin/asar.mjs';
+                const asarBin = path.join(asarPkgDir, asarBinRelative);
                 const { execFileSync } = Npm.require('child_process');
                 execFileSync(process.execPath, [asarBin, 'pack', desktopTmpPath, asarPath], {
                     stdio: 'pipe'
