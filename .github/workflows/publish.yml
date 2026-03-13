@@ -20,12 +20,8 @@ jobs:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
-      # Build the project to ensure dist/ is populated
       - name: Install dependencies
         run: npm ci
-
-      - name: Build
-        run: npm run build
 
       # Publish to the global npm registry
       - name: Publish to npm
