@@ -551,9 +551,9 @@ class MeteorDesktopBundler {
                 const deps = this.lookForAndRequireDependencies(this.deps);
                 ({ cacache } = deps);
 
-                DependenciesManager = this.requireLocal('@a4xrbj1/meteor-desktop/dist/dependenciesManager').default;
-                this.utils = this.requireLocal('@a4xrbj1/meteor-desktop/dist/utils');
-                ElectronAppScaffold = this.requireLocal('@a4xrbj1/meteor-desktop/dist/electronAppScaffold').default;
+                DependenciesManager = this.requireLocal('@a4xrbj1/meteor-desktop/lib/dependenciesManager').default;
+                this.utils = this.requireLocal('@a4xrbj1/meteor-desktop/lib/utils');
+                ElectronAppScaffold = this.requireLocal('@a4xrbj1/meteor-desktop/lib/electronAppScaffold').default;
             } catch (e) {
                 // Restore original String.prototype.to to prevent side effects.
                 String.prototype.to = StringPrototypeToOriginal; // eslint-disable-line
