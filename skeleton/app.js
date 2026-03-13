@@ -19,6 +19,7 @@ let electron = {
     app: {},
     BrowserWindow: class BrowserWindow { },
     dialog: {},
+    net: { fetch: Function.prototype },
     protocol: {
         registerStandardSchemes: Function.prototype,
         registerSchemesAsPrivileged: Function.prototype
@@ -31,7 +32,7 @@ try {
 }
 
 const {
-    app, BrowserWindow, dialog, protocol
+    app, BrowserWindow, dialog, net, protocol
 } = electron;
 const { join } = path;
 
@@ -676,15 +677,9 @@ export default class App {
         try {
             this.webContents.session.protocol.handle(
                 'meteor',
-                async (request) => {
+                (request) => {
                     const url = request.url.substr(urlStripLength);
-                    try {
-                        const res = await this.modules.localServer.getStreamProtocolResponse(url);
-                        return new Response(res.data, { status: res.statusCode, headers: res.headers });
-                    } catch (e) {
-                        this.l.error(`error while trying to fetch ${url}: ${e.toString()}`);
-                        return new Response('Internal Server Error', { status: 500 });
-                    }
+                    return net.fetch(`http://127.0.0.1:${this.currentPort}${url}`);
                 }
             );
         } catch (e) {
