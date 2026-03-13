@@ -103,7 +103,6 @@
     "isbinaryfile": "5.0.7",
     "lodash": "4.17.23",
     "md5": "2.3.0",
-    "node-fetch": "3.3.2",
     "path-exists-cli": "^2.0.0",
     "regenerator-runtime": "0.14.1",
     "rimraf": "6.1.3",
