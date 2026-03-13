@@ -87,9 +87,7 @@ class MeteorDesktopBundler {
         this.fs = fileSystem;
         this.deps = ['cacache'];
         this.buildDeps = [
-            '@electron/asar',
             'shelljs',
-            'del',
             '@babel/core',
             '@babel/preset-env',
             'terser',
@@ -538,7 +536,7 @@ class MeteorDesktopBundler {
 
             console.time('[meteor-desktop] preparing desktop.asar took');
 
-            let electronAsar; let shelljs; let babelCore; let babelPresetEnv; let terser; let del; let cacache; let
+            let shelljs; let babelCore; let babelPresetEnv; let terser; let cacache; let
                 md5;
 
             /**
@@ -713,9 +711,7 @@ class MeteorDesktopBundler {
             try {
                 const deps = this.lookForAndRequireDependencies(this.buildDeps);
                 ({
-                    electronAsar,
                     shelljs,
-                    del,
                     babelCore,
                     babelPresetEnv,
                     terser,
@@ -772,12 +768,15 @@ class MeteorDesktopBundler {
                 shelljs.mkdir('-p', path.join(desktopTmpPath, 'assets'));
             }
 
-            // Delete test files and macOS metadata files
-            del.sync([
-                path.join(desktopTmpPath, '**', '*.test.js'),
-                path.join(desktopTmpPath, '**', '._*'),
-                path.join(desktopTmpPath, '**', '.DS_Store')
-            ]);
+            // Delete test files and macOS metadata files (del is ESM-only; use shelljs.find instead).
+            shelljs.find(desktopTmpPath)
+                .filter((item) => shelljs.test('-f', item))
+                .forEach((item) => {
+                    const name = path.basename(item);
+                    if (name.endsWith('.test.js') || name.startsWith('._') || name === '.DS_Store') {
+                        shelljs.rm(item);
+                    }
+                });
 
             // Set proper permissions
             shelljs.chmod('-R', '644', desktopTmpPath);
@@ -939,7 +938,13 @@ class MeteorDesktopBundler {
 
             const asarPath = path.join(desktopTmpAsarPath, 'desktop.asar');
             try {
-                await electronAsar.createPackage(desktopTmpPath, asarPath);
+                // Use dynamic import() — @electron/asar v4 is ESM-only and cannot be require()'d.
+                // Resolve absolute path via Module.createRequire so import() can locate the package.
+                const { createRequire } = Npm.require('module');
+                const appRequire = createRequire(path.resolve('.', 'package.json'));
+                const asarPkgAbsPath = appRequire.resolve('@a4xrbj1/meteor-desktop/node_modules/@electron/asar');
+                const { createPackage } = await import(asarPkgAbsPath);
+                await createPackage(desktopTmpPath, asarPath);
             } catch (e) {
                 inputFile.error({
                     message: e.message || e
