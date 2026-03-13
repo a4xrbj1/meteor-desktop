@@ -736,7 +736,25 @@ class MeteorDesktopBundler {
             const modulesPath = path.join(desktopTmpPath, 'modules');
 
             this.stampPerformance('copy .desktop');
-            shelljs.rm('-rf', desktopTmpPath);
+
+            if (fs.existsSync(desktopTmpPath)) {
+                // A previous interrupted build may have left directories at mode 644 (no
+                // execute bit), making them inaccessible to shelljs.rm('-rf'). Fix permissions
+                // top-down using native fs so each parent is traversable before we descend
+                // into its children, then remove with fs.rmSync.
+                const nativeFs = Npm.require('fs');
+                const fixDirPerms = (dirPath) => {
+                    nativeFs.chmodSync(dirPath, 0o755);
+                    nativeFs.readdirSync(dirPath).forEach((entry) => {
+                        const entryPath = path.join(dirPath, entry);
+                        if (nativeFs.lstatSync(entryPath).isDirectory()) {
+                            fixDirPerms(entryPath);
+                        }
+                    });
+                };
+                try { fixDirPerms(desktopTmpPath); } catch (e) { /* best-effort */ }
+                nativeFs.rmSync(desktopTmpPath, { recursive: true, force: true });
+            }
 
             // Make sure to create the directory structure first
             shelljs.mkdir('-p', desktopTmpPath);
