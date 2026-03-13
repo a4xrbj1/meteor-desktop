@@ -6,7 +6,6 @@ import path from 'path';
 import { createRequire } from 'module';
 import fs from 'fs-plus';
 import shell from 'shelljs';
-import semver from 'semver';
 import assignIn from 'lodash/assignIn.js';
 import Module from './modules/module.js';
 import LoggerManager from './loggerManager.js';
@@ -46,19 +45,14 @@ export default class App {
         this.startup = true;
         console.time('startup took');
 
-        // Fallback for Electron version lower than 5 which don't support registerSchemesAsPrivileged
-        if (semver.lt(process.versions.electron, '5.0.0-beta.0')) {
-            electron.protocol.registerStandardSchemes(['meteor'], { secure: true });
-        } else {
-            electron.protocol.registerSchemesAsPrivileged([
-                {
-                    scheme: 'meteor',
-                    privileges: {
-                        standard: true, secure: true, supportFetchAPI: true, stream: true
-                    }
+        electron.protocol.registerSchemesAsPrivileged([
+            {
+                scheme: 'meteor',
+                privileges: {
+                    standard: true, secure: true, supportFetchAPI: true, stream: true
                 }
-            ]);
-        }
+            }
+        ]);
 
         // Until user defined handling will be loaded it is good to register something
         // temporarily.
