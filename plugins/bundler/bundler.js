@@ -778,15 +778,16 @@ class MeteorDesktopBundler {
                     }
                 });
 
-            // Set proper permissions
-            shelljs.chmod('-R', '644', desktopTmpPath);
-            // Make directories executable (necessary for traversal)
-            shelljs.find(desktopTmpPath).forEach((file) => {
-                if (fs.statSync(file).isDirectory()) {
-                    shelljs.chmod('755', file);
+            // Set permissions with a single-pass find — shelljs.chmod('-R', '644', ...) in
+            // shelljs 0.10.0 strips execute bits from directories before recursing into them,
+            // making child entries inaccessible and causing a crash. Walk once instead.
+            shelljs.find(desktopTmpPath).forEach((item) => {
+                if (fs.statSync(item).isDirectory()) {
+                    shelljs.chmod('755', item);
+                } else {
+                    shelljs.chmod('644', item);
                 }
             });
-            shelljs.cp('-rf', desktopPath, desktopTmpPath);
 
             // del.sync([path.join(desktopTmpPath, '**', '*.test.js')]);
             // this.stampPerformance('copy .desktop');
