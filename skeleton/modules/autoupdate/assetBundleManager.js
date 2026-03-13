@@ -34,7 +34,6 @@ import fs from 'fs-plus';
 import { rimraf } from 'rimraf';
 import url from 'url';
 import { createRequire } from 'module';
-import fetch from 'node-fetch';
 import shell from 'shelljs';
 
 import AssetBundle from './assetBundle.js';
@@ -83,7 +82,7 @@ class AssetBundleManager {
         this.callback = null;
         this.assetBundleDownloader = null;
 
-        this.httpClient = fetch;
+        this.httpClient = globalThis.fetch;
 
         this.loadDownloadedAssetBundles();
     }

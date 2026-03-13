@@ -32,8 +32,6 @@
 import fs from 'fs';
 import url from 'url';
 import { createRequire } from 'module';
-// TODO: maybe use node-fetch?
-import fetch from 'node-fetch';
 import queue from 'queue';
 import IsDesktopInjector from './isDesktopInjector.js';
 
@@ -65,7 +63,7 @@ export default class AssetBundleDownloader {
         this.assetBundle = assetBundle;
         this.baseUrl = baseUrl;
         this.injector = new IsDesktopInjector();
-        this.httpClient = fetch;
+        this.httpClient = globalThis.fetch;
 
         this.eTagWithSha1HashPattern = /"([0-9a-f]{40})"/;
 
