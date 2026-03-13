@@ -959,9 +959,17 @@ class MeteorDesktopBundler {
             try {
                 // Use dynamic import() — @electron/asar v4 is ESM-only and cannot be require()'d.
                 // Resolve absolute path via Module.createRequire so import() can locate the package.
+                // Try direct resolution first (works when @electron/asar is hoisted to app-level
+                // node_modules, or when meteor-desktop is installed via a file: symlink where the
+                // nested node_modules path does not exist). Fall back to the nested path.
                 const { createRequire } = Npm.require('module');
                 const appRequire = createRequire(path.resolve('.', 'package.json'));
-                const asarPkgAbsPath = appRequire.resolve('@a4xrbj1/meteor-desktop/node_modules/@electron/asar');
+                let asarPkgAbsPath;
+                try {
+                    asarPkgAbsPath = appRequire.resolve('@electron/asar');
+                } catch (e) {
+                    asarPkgAbsPath = appRequire.resolve('@a4xrbj1/meteor-desktop/node_modules/@electron/asar');
+                }
                 const { createPackage } = await import(asarPkgAbsPath);
                 await createPackage(desktopTmpPath, asarPath);
             } catch (e) {
