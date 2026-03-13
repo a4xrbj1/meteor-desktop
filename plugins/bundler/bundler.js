@@ -957,22 +957,21 @@ class MeteorDesktopBundler {
 
             const asarPath = path.join(desktopTmpAsarPath, 'desktop.asar');
             try {
-                // Use dynamic import() — @electron/asar v4 is ESM-only and cannot be require()'d.
-                // Resolve absolute path via Module.createRequire so import() can locate the package.
-                // Try direct resolution first (works when @electron/asar is hoisted to app-level
-                // node_modules, or when meteor-desktop is installed via a file: symlink where the
-                // nested node_modules path does not exist). Fall back to the nested path.
+                // @electron/asar v4 is ESM-only — import() is not available in Meteor's
+                // build plugin VM. Shell out to the asar CLI binary instead.
                 const { createRequire } = Npm.require('module');
                 const appRequire = createRequire(path.resolve('.', 'package.json'));
-                let asarPkgAbsPath;
+                let asarPkgDir;
                 try {
-                    asarPkgAbsPath = appRequire.resolve('@electron/asar');
-                } catch (e) {
-                    asarPkgAbsPath = appRequire.resolve('@a4xrbj1/meteor-desktop/node_modules/@electron/asar');
+                    asarPkgDir = path.dirname(appRequire.resolve('@electron/asar/package.json'));
+                } catch (_) {
+                    asarPkgDir = path.dirname(appRequire.resolve('@a4xrbj1/meteor-desktop/node_modules/@electron/asar/package.json'));
                 }
-                const dynamicImport = new Function('p', 'return import(p)');
-                const { createPackage } = await dynamicImport(asarPkgAbsPath);
-                await createPackage(desktopTmpPath, asarPath);
+                const asarBin = path.join(asarPkgDir, 'bin', 'asar.mjs');
+                const { execFileSync } = Npm.require('child_process');
+                execFileSync(process.execPath, [asarBin, 'pack', desktopTmpPath, asarPath], {
+                    stdio: 'pipe'
+                });
             } catch (e) {
                 inputFile.error({
                     message: e.message || e
