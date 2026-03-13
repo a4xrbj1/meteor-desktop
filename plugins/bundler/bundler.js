@@ -913,7 +913,7 @@ class MeteorDesktopBundler {
                             // const transformed = await babelCore.transformAsync(fileContents[file], {
                             //     presets: [preset]
                             // });
-                            const transformed = await babelCore.transformAsync(code, {
+                            const transformed = await babelCore.transformAsync(fileContents[file], {
                                 presets: [[babelPresetEnv, { targets: { node: '14' } }]]
                             });
 
