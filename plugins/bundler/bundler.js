@@ -970,7 +970,8 @@ class MeteorDesktopBundler {
                 } catch (e) {
                     asarPkgAbsPath = appRequire.resolve('@a4xrbj1/meteor-desktop/node_modules/@electron/asar');
                 }
-                const { createPackage } = await import(asarPkgAbsPath);
+                const dynamicImport = new Function('p', 'return import(p)');
+                const { createPackage } = await dynamicImport(asarPkgAbsPath);
                 await createPackage(desktopTmpPath, asarPath);
             } catch (e) {
                 inputFile.error({
