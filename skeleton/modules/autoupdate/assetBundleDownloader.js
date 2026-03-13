@@ -188,9 +188,9 @@ export default class AssetBundleDownloader {
                 const downloadUrl = self.downloadUrlForAsset(asset);
                 self.queue.push((callback) => {
                     self.httpClient(downloadUrl, { headers: { Connection: 'close' } })
-                        .then((response) => Promise.all([response, response.buffer()]))
-                        .then(([response, body]) => {
-                            onResponse(asset, response, body);
+                        .then((response) => Promise.all([response, response.arrayBuffer()]))
+                        .then(([response, arrayBuffer]) => {
+                            onResponse(asset, response, Buffer.from(arrayBuffer));
                             callback();
                         })
                         .catch((error) => {
