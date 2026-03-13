@@ -318,7 +318,7 @@ class MeteorDesktopBundler {
 
         let deps = Object.keys(dependencies).sort();
         deps = deps.map((dependency) => `${dependency}:${dependencies[dependency]}`);
-        const mainCompatibilityVersion = this.requireLocal('@meteor-community/meteor-desktop/package.json')
+        const mainCompatibilityVersion = this.requireLocal('@a4xrbj1/meteor-desktop/package.json')
             .version
             .split('.');
         const desktopCompatibilityVersion = settings.version.split('.')[0];
@@ -358,7 +358,7 @@ class MeteorDesktopBundler {
 
         try {
             // Attempt to require the dependency from meteor-desktop's node_modules.
-            meteorDesktopScope = this.requireLocal(`@meteor-community/meteor-desktop/node_modules/${dependency}`);
+            meteorDesktopScope = this.requireLocal(`@a4xrbj1/meteor-desktop/node_modules/${dependency}`);
             if (process.env.METEOR_DESKTOP_DEBUG) {
                 console.log(`Found ${dependency} in meteor-desktop scope`);
             }
@@ -385,7 +385,7 @@ class MeteorDesktopBundler {
     getPackageJsonField(field) {
         if (!this.packageJson) {
             try {
-                this.packageJson = this.requireLocal('@meteor-community/meteor-desktop/package.json');
+                this.packageJson = this.requireLocal('@a4xrbj1/meteor-desktop/package.json');
             } catch (e) {
                 throw new Error('Could not load package.json from meteor-desktop. Is meteor-desktop installed?');
             }
@@ -553,9 +553,9 @@ class MeteorDesktopBundler {
                 const deps = this.lookForAndRequireDependencies(this.deps);
                 ({ cacache } = deps);
 
-                DependenciesManager = this.requireLocal('@meteor-community/meteor-desktop/dist/dependenciesManager').default;
-                this.utils = this.requireLocal('@meteor-community/meteor-desktop/dist/utils');
-                ElectronAppScaffold = this.requireLocal('@meteor-community/meteor-desktop/dist/electronAppScaffold').default;
+                DependenciesManager = this.requireLocal('@a4xrbj1/meteor-desktop/dist/dependenciesManager').default;
+                this.utils = this.requireLocal('@a4xrbj1/meteor-desktop/dist/utils');
+                ElectronAppScaffold = this.requireLocal('@a4xrbj1/meteor-desktop/dist/electronAppScaffold').default;
             } catch (e) {
                 // Restore original String.prototype.to to prevent side effects.
                 String.prototype.to = StringPrototypeToOriginal; // eslint-disable-line
