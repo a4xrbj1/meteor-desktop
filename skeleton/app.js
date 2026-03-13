@@ -674,16 +674,17 @@ export default class App {
         const urlStripLength = 'meteor://desktop'.length;
 
         try {
-            this.webContents.session.protocol.registerStreamProtocol(
+            this.webContents.session.protocol.handle(
                 'meteor',
-                (request, callback) => {
+                async (request) => {
                     const url = request.url.substr(urlStripLength);
-                    this.modules.localServer.getStreamProtocolResponse(url)
-                        .then((res) => callback(res))
-                        .catch((e) => {
-                            callback(this.modules.localServer.getServerErrorResponse());
-                            this.log.error(`error while trying to fetch ${url}: ${e.toString()}`);
-                        });
+                    try {
+                        const res = await this.modules.localServer.getStreamProtocolResponse(url);
+                        return new Response(res.data, { status: res.statusCode, headers: res.headers });
+                    } catch (e) {
+                        this.l.error(`error while trying to fetch ${url}: ${e.toString()}`);
+                        return new Response('Internal Server Error', { status: 500 });
+                    }
                 }
             );
         } catch (e) {
