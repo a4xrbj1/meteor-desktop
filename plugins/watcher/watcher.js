@@ -268,9 +268,9 @@ if (!('desktopHCP' in settings) || !settings.desktopHCP) {
             })
             .catch((e) => { throw new Error(`[meteor-desktop] failed to compute .desktop hash: ${e}`); });
     } else {
-        console.info('[meteor-desktop] .desktop HCP will not work because either web.cordova '
+        console.info('[meteor-desktop] .desktop HCP will not work because either web.browser '
             + 'architecture is missing or the bundler had troubles with creating desktop.asar. Be'
-            + ' sure that you are running mobile target or with --mobile-server.');
+            + ' sure that you are running with --desktop.');
     }
 } else {
     throw new Error('[meteor-desktop] bundler plugin was not detected. Are you sure you have '

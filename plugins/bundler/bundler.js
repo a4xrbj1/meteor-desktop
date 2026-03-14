@@ -487,7 +487,7 @@ class MeteorDesktopBundler {
 
         // Identify relevant files.
         files.forEach((file) => {
-            if (file.getArch() === 'web.cordova') {
+            if (file.getArch() === 'web.browser') {
                 if (
                     file.getPackageName() === 'communitypackages:meteor-desktop-bundler'
                     && file.getPathInPackage() === 'version._desktop_.js'
