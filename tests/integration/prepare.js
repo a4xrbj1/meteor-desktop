@@ -51,7 +51,7 @@ if (process.env.TRAVIS) {
     shell.exec('meteor add-platform android', { cwd: appDir });
     console.log(shell.exec('meteor build ../build --server=127.0.0.1:3000', { cwd: appDir }));
 } else {
-    // This should bootstrap cordova.
+    // This should bootstrap the mobile platform.
     console.log('adding platform ios');
     shell.exec('meteor add-platform ios', { cwd: appDir });
     console.log('removing  platform ios');

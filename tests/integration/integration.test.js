@@ -222,7 +222,7 @@ describe('desktop', () => {
                     build: true,
                     output: appDir,
                     skipMobileBuild: true,
-                    forceCordovaBuild: true
+                    forceLegacyBuild: true
                 }
             );
 
@@ -253,7 +253,7 @@ describe('desktop', () => {
                     output: appDir,
                     scaffold: true,
                     skipMobileBuild: true,
-                    forceCordovaBuild: true,
+                    forceLegacyBuild: true,
                     skipRemoveMobilePlatform: true
                 }
             );
@@ -289,7 +289,7 @@ describe('desktop', () => {
                         output: appDir,
                         scaffold: true,
                         skipMobileBuild: !!process.env.TRAVIS,
-                        forceCordovaBuild: !!process.env.TRAVIS,
+                        forceLegacyBuild: !!process.env.TRAVIS,
                         skipRemoveMobilePlatform: true
                     }
                 );
