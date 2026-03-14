@@ -18,7 +18,7 @@ class IsDesktopInjector {
 
     /**
      * Searches for and replaces two places in Meteor app:
-     *  - where `isCordova` is set to true
+     *  - where `isCordova` is declared (web.browser object-literal form)
      *  - where `startupDidComplete` is fired
      *
      * @param {string} contents
@@ -32,10 +32,7 @@ class IsDesktopInjector {
         let injected = false;
         let fileContents = contents;
 
-        // This changes the place where `isCordova` is set to true.
-        // Web.cordova patterns (assignment form, older Meteor builds):
-        fileContents = fileContents.replace('.isCordova=!0', '.isDesktop=!0');
-        fileContents = fileContents.replace('.isCordova = true', '.isDesktop = true');
+        // This changes the place where `isCordova` is declared.
         // Web.browser patterns (Meteor 3.x object-literal form: isCordova: false).
         // Inject isDesktop: true alongside the falsy isCordova declaration so that
         // Meteor.isDesktop becomes true even though isCordova is false.
@@ -59,9 +56,7 @@ class IsDesktopInjector {
             injectedStartupDidComplete = true;
         }
 
-        if (~fileContents.indexOf('.isDesktop=!0')
-            || ~fileContents.indexOf('.isDesktop = true')
-            || ~fileContents.indexOf('isDesktop: true,')
+        if (~fileContents.indexOf('isDesktop: true,')
             || ~fileContents.indexOf('isDesktop:!0,')) {
             injected = true;
         }

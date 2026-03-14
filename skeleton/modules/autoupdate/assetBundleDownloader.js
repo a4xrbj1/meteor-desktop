@@ -273,9 +273,7 @@ export default class AssetBundleDownloader {
                             + `${expectedHash} != ${actualHash}`
                         );
                     } else if (asset.entrySize !== body.length) {
-                        // This check is specific to this integration. It is not present in
-                        // Cordova integration.
-                        // For now will not throw here as it is accepted on Cordova.
+                        // Size mismatch: log but do not throw, as the bundle is still usable.
                         this.log.debug(`wrong size for: ${asset.filePath} - expected: `
                             + `${asset.entrySize} != ${body.length}`);
                     }
@@ -313,6 +311,7 @@ export default class AssetBundleDownloader {
      */
     verifyRuntimeConfig(runtimeConfig) {
         const expectedVersion = this.assetBundle.getVersion();
+        // autoupdateVersionCordova is Meteor's runtime config field name — not controlled by us.
         const actualVersion = runtimeConfig.autoupdateVersionCordova;
 
         if (actualVersion) {

@@ -555,17 +555,6 @@ export default class HCPClient {
             return false;
         }
 
-        // Don't download versions potentially incompatible with the bundled native code
-        // This is commented out intentionally as we do not care about cordova compatibility version
-        // this should not affect us.
-        /*
-         if (this.config.cordovaCompatibilityVersion !== manifest.cordovaCompatibilityVersion) {
-         this.notifyError("Skipping downloading new version because the Cordova platform version
-         or plugin versions have changed and are potentially incompatible");
-         return false;
-         }
-         */
-
         if (desktopVersion) {
             this.log.debug(`got desktop version information: ${desktopVersion.version} `
                 + `(compatibility: ${desktopVersion.compatibilityVersion})`);

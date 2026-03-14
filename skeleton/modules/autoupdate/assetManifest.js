@@ -90,9 +90,6 @@ export default function AssetManifest(logger, manifestSource) {
          * @type object
          * @property {string} format
          * @property {string|null} version
-         * @property {object} cordovaCompatibilityVersions
-         * @property {string} cordovaCompatibilityVersions.android
-         * @property {string} cordovaCompatibilityVersions.ios
          * @property {Array} manifest
          */
         json = JSON.parse(manifestSource);
