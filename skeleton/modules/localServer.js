@@ -299,7 +299,7 @@ export default class LocalServer {
         }
 
         /**
-         * Right now this is only used to serve cordova.js and it might seems like an overkill but
+         * Right now this is only used to serve desktop-hcp.js and it might seems like an overkill but
          * it will be used later for serving desktop specific files bundled into meteor bundle.
          *
          * @param {Object} req    - request object
@@ -310,7 +310,7 @@ export default class LocalServer {
         function WwwHandler(req, res, next, local = false) {
             const parsedUrl = new url.URL(req.url, 'http://localhost');
 
-            if (parsedUrl.pathname !== '/cordova.js') {
+            if (parsedUrl.pathname !== '/desktop-hcp.js') {
                 return next();
             }
             const parentAssetBundle = self.assetBundle.getParentAssetBundle();

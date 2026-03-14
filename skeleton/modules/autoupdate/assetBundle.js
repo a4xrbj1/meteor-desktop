@@ -103,7 +103,6 @@ export default class AssetBundle {
         }
 
         this.version = this.manifest.version;
-        this.cordovaCompatibilityVersion = this.manifest.cordovaCompatibilityVersion;
         if (!desktopVersion.version) {
             this.log.verbose(`trying to read desktop version for ${this.version}`);
             this.desktopVersion = this.loadDesktopVersion();
