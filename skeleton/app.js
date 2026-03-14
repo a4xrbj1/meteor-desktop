@@ -704,6 +704,24 @@ export default class App {
                                 // If we get HTML back for what should be a JS/asset request,
                                 // fall through to the local server rather than surfacing HTML as JS.
                                 if (devResponse.ok && !ct.includes('text/html')) {
+                                    // Patch JS responses for ESM compatibility: injectEsm()
+                                    // patches these at build time, but dev server files are
+                                    // unpatched. In module context, 'this' at top level is
+                                    // undefined, breaking 'var global = this;' patterns.
+                                    if (ct.includes('javascript')) {
+                                        let js = await devResponse.text();
+                                        js = js.replace(/var global = this;/g, 'var global = this || window;');
+                                        js = js.replace(/global\s*=\s*this;/g, 'global = this || window;');
+                                        js = js.replace(/\}\)\.call\(this\)/g, '}).call(this || window)');
+                                        js = js.replace(/\}\.call\(this\)/g, '}.call(this || window)');
+                                        const headers = new Headers(devResponse.headers);
+                                        headers.delete('content-length');
+                                        return new Response(js, {
+                                            status: devResponse.status,
+                                            statusText: devResponse.statusText,
+                                            headers
+                                        });
+                                    }
                                     return devResponse;
                                 }
                             } catch (e) {
