@@ -732,7 +732,27 @@ export default class App {
 
                     // Local server handles: root HTML (ESM-patched), cordova.js,
                     // desktop assets, and fallback for files absent from the dev server.
-                    return net.fetch(`http://127.0.0.1:${this.currentPort}${urlPath}`);
+                    const localResp = await net.fetch(`http://127.0.0.1:${this.currentPort}${urlPath}`);
+                    // In dev mode, strip type="module" from HTML: dev-server scripts use
+                    // Meteor's IIFE/reify format with bare global assignments
+                    // (meteorInstall=..., Mongo=..., Package=...) that throw ReferenceError
+                    // in strict module context. Classic scripts share one global scope,
+                    // allowing these assignments to succeed.
+                    if (meteorDevPort) {
+                        const localCt = (localResp.headers.get('content-type') || '').toLowerCase();
+                        if (localCt.includes('text/html')) {
+                            let html = await localResp.text();
+                            html = html.replace(/\s+type=["']module["']/gi, '');
+                            const localHeaders = new Headers(localResp.headers);
+                            localHeaders.delete('content-length');
+                            return new Response(html, {
+                                status: localResp.status,
+                                statusText: localResp.statusText,
+                                headers: localHeaders
+                            });
+                        }
+                    }
+                    return localResp;
                 }
             );
         } catch (e) {
