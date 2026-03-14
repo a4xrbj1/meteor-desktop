@@ -102,7 +102,6 @@ export default class HCPClient {
         this.config = {
             appId: null,
             rootUrlString: null,
-            cordovaCompatibilityVersion: null,
             blacklistedVersions: [],
             lastDownloadedVersion: null
         };
@@ -127,7 +126,6 @@ export default class HCPClient {
 
         this.config.appId = this.currentAssetBundle.getAppId();
         this.config.rootUrlString = this.currentAssetBundle.getRootUrlString();
-        this.config.cordovaCompatibilityVersion = this.currentAssetBundle.cordovaCompatibilityVersion;
 
         this.saveConfig();
     }
@@ -261,7 +259,7 @@ export default class HCPClient {
             return;
         }
 
-        this.assetBundleManager.checkForUpdates(url.resolve(rootUrl, '__cordova/'));
+        this.assetBundleManager.checkForUpdates(url.resolve(rootUrl, '/'));
     }
 
     /**
@@ -432,7 +430,6 @@ export default class HCPClient {
 
         this.config.appId = this.currentAssetBundle.getAppId();
         this.config.rootUrlString = this.currentAssetBundle.getRootUrlString();
-        this.config.cordovaCompatibilityVersion = this.currentAssetBundle.cordovaCompatibilityVersion;
 
         this.saveConfig();
 

@@ -74,7 +74,6 @@ function ManifestEntry(manifestEntry) {
  * @param {string} manifestSource - Manifest source.
  *
  * @property {string} version
- * @property {string} cordovaCompatibilityVersion
  *
  * @constructor
  */
@@ -110,14 +109,6 @@ export default function AssetManifest(logger, manifestSource) {
 
         this.version = json.version;
 
-        // We are not using compatibility versions, but for sanity check this is ok.
-        if (!('cordovaCompatibilityVersions' in json)
-            || !('android' in json.cordovaCompatibilityVersions)) {
-            error('Asset manifest does not have a cordovaCompatibilityVersion.');
-        }
-
-        this.cordovaCompatibilityVersion = json.cordovaCompatibilityVersions.android;
-
         this.entries = json.manifest
             .filter((manifestEntry) => manifestEntry.where === 'client')
             .map((manifestEntry) => new ManifestEntry(manifestEntry));
@@ -131,5 +122,4 @@ export default function AssetManifest(logger, manifestSource) {
 /**
  * @typedef {Object} AssetManifest
  * @property {string} version
- * @property {string} cordovaCompatibilityVersion
  */
