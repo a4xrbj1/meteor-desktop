@@ -792,6 +792,31 @@ export default class App {
                             let html = await localResp.text();
                             const htmlOrig = html;
                             html = html.replace(/\s+type=["']module["']/gi, '');
+                            // Patch __meteor_runtime_config__ DDP/ROOT_URL for dev mode.
+                            // Without this, DDP.connect('/') resolves to meteor://desktop/
+                            // which throws in Meteor 3.x core-runtime processNext(), killing
+                            // ALL subsequent package loading → white screen.
+                            const devUrl = `http://127.0.0.1:${meteorDevPort}/`;
+                            html = html.replace(
+                                /("DDP_DEFAULT_CONNECTION_URL"\s*:\s*)"[^"]*"/g,
+                                `$1"${devUrl}"`
+                            );
+                            html = html.replace(
+                                /("ROOT_URL"\s*:\s*)"[^"]*"/g,
+                                `$1"${devUrl}"`
+                            );
+                            // Belt-and-suspenders: inject override script right after the
+                            // __meteor_runtime_config__ inline block so we cover cases where
+                            // the keys were absent from the serialised config JSON.
+                            const ddpOverride = '<script>(function(){'
+                                + 'if(typeof __meteor_runtime_config__==="object"){'
+                                + `__meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL="${devUrl}";`
+                                + `__meteor_runtime_config__.ROOT_URL="${devUrl}";`
+                                + '}})();</script>';
+                            html = html.replace(
+                                /(<script[^>]*>__meteor_runtime_config__\s*=[^<]*<\/script>)/,
+                                `$1${ddpOverride}`
+                            );
                             // A5: canary — warn if type="module" stripping was needed in HTML.
                             if (html !== htmlOrig) {
                                 warnOnce(
