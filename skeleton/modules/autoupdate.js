@@ -29,7 +29,6 @@
  */
 
 import path from 'path';
-import shell from 'shelljs';
 import fs from 'fs-plus';
 import { createRequire } from 'module';
 import url from 'url';
@@ -168,7 +167,7 @@ export default class HCPClient {
         if (!fs.existsSync(this.versionsDir)) {
             this.log.info('created versions dir');
             // TODO: what if this fails? We need to report this to the main app.
-            shell.mkdir(this.versionsDir);
+            fs.mkdirSync(this.versionsDir);
         }
 
         this.assetBundleManager = new AssetBundleManager(

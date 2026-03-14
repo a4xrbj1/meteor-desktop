@@ -5,7 +5,6 @@ import { EventEmitter as Events } from 'events';
 import path from 'path';
 import { createRequire } from 'module';
 import fs from 'fs-plus';
-import shell from 'shelljs';
 import Module from './modules/module.js';
 import LoggerManager from './loggerManager.js';
 import DesktopPathResolver from './desktopPathResolver.js';
@@ -318,11 +317,15 @@ export default class App {
      */
     loadModules() {
         // Load internal modules. Scan for files in /modules.
-        shell.ls(join(__dirname, 'modules', '*.js')).forEach((file) => {
-            if (!~file.indexOf('module.js')) {
-                this.loadModule(true, file);
-            }
-        });
+        const modulesDir = join(__dirname, 'modules');
+        fs.readdirSync(modulesDir)
+            .filter((f) => f.endsWith('.js'))
+            .map((f) => join(modulesDir, f))
+            .forEach((file) => {
+                if (!~file.indexOf('module.js')) {
+                    this.loadModule(true, file);
+                }
+            });
 
         // Now go through each directory in .desktop/modules.
         let moduleDirectories = [];
