@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 /**
  This is a slightly modified JS port of hot code push android client from here:
  https://github.com/meteor/cordova-plugin-meteor-webapp
@@ -99,10 +101,13 @@ export default function AssetManifest(logger, manifestSource) {
             error(`The asset manifest format is incompatible: ${format}`);
         }
         if (!('version' in json) || json.version === null) {
-            error('Asset manifest does not have a version.');
+            // Meteor 3.x omits the version field from program.json.
+            // Derive a stable version from a SHA-256 hash of the manifest content.
+            this.version = crypto.createHash('sha256')
+                .update(manifestSource).digest('hex').substring(0, 40);
+        } else {
+            this.version = json.version;
         }
-
-        this.version = json.version;
 
         this.entries = json.manifest
             .filter((manifestEntry) => manifestEntry.where === 'client')

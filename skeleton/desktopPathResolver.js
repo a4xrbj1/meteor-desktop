@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import path, { join } from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -20,7 +21,9 @@ export default class DesktopPathResolver {
     /**
      * Reads meteor app version from the initial asset bundle.
      * Falls back to the unpacked meteor/ directory when meteor.asar does not exist.
-     * @returns {string}
+     * When program.json has no version field (Meteor 3.x), derives a stable version
+     * from a SHA-256 hash of the manifest file content.
+     * @returns {string|undefined}
      */
     static readInitialAssetBundleVersion() {
         const asarPath = path.resolve(join(__dirname, '..', 'meteor.asar'));
@@ -28,7 +31,26 @@ export default class DesktopPathResolver {
             ? path.join(asarPath, 'program.json')
             : path.resolve(join(__dirname, '..', 'meteor', 'program.json'));
 
-        return DesktopPathResolver.readJsonFile(manifestPath).version;
+        let content;
+        try {
+            content = fs.readFileSync(manifestPath, 'UTF-8');
+        } catch (e) {
+            return undefined;
+        }
+
+        let parsed = {};
+        try {
+            parsed = JSON.parse(content);
+        } catch (e) {
+            // fall through
+        }
+
+        if (parsed.version != null) {
+            return parsed.version;
+        }
+
+        // Meteor 3.x omits version; derive stable version from manifest content hash.
+        return crypto.createHash('sha256').update(content).digest('hex').substring(0, 40);
     }
 
     /**

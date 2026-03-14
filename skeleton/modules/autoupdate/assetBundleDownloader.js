@@ -311,8 +311,10 @@ export default class AssetBundleDownloader {
      */
     verifyRuntimeConfig(runtimeConfig) {
         const expectedVersion = this.assetBundle.getVersion();
-        // autoupdateVersionCordova is Meteor's runtime config field name — not controlled by us.
-        const actualVersion = runtimeConfig.autoupdateVersionCordova;
+        // autoupdateVersionCordova is absent in Meteor 3.x web.browser runtime config;
+        // fall back to autoupdateVersion (the web.browser equivalent).
+        const actualVersion = runtimeConfig.autoupdateVersionCordova
+            || runtimeConfig.autoupdateVersion;
 
         if (actualVersion) {
             if (actualVersion !== expectedVersion) {

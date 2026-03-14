@@ -148,7 +148,8 @@ class AssetBundleManager {
      */
     checkForUpdates(baseUrl) {
         let manifest;
-        const manifestUrl = url.resolve(baseUrl, 'manifest.json');
+        // Meteor serves the HCP manifest at /__cordova/manifest.json (webapp package endpoint).
+        const manifestUrl = url.resolve(baseUrl, '__cordova/manifest.json');
         const desktopVersionUrl = url.resolve(baseUrl, 'version.desktop.json?meteor_dont_serve_index=true');
 
         this.log.info(`trying to query ${manifestUrl}`);
