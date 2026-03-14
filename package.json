@@ -82,6 +82,7 @@
     "spectron": "19.0.0",
     "temp-dir": "^3.0.0",
     "typescript": "^5.9.3",
+    "shelljs": "^0.10.0",
     "watch": "1.0.2"
   },
   "dependencies": {
@@ -95,7 +96,6 @@
     "install-local": "^4.1.0",
     "path-exists-cli": "^2.0.0",
     "semver": "^7.7.4",
-    "shelljs": "^0.10.0",
     "terser": "^5.46.0"
   },
   "peerDependencies": {

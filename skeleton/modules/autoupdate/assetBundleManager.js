@@ -33,7 +33,6 @@ import path from 'path';
 import fs from 'fs-plus';
 import url from 'url';
 import { createRequire } from 'module';
-import shell from 'shelljs';
 
 import AssetBundle from './assetBundle.js';
 import AssetBundleDownloader from './assetBundleDownloader.js';
@@ -314,18 +313,14 @@ class AssetBundleManager {
      * @private
      */
     makeDownloadDirectory() {
-        // Make shellJs throw on failure.
-        shell.config.fatal = true;
         try {
             if (!fs.existsSync(this.downloadDirectory)) {
                 this.log.info('created download dir.');
-                shell.mkdir(this.downloadDirectory);
+                fs.mkdirSync(this.downloadDirectory);
             }
             return true;
         } catch (e) {
             this.log.debug(`creating download dir failed: ${e.message}`);
-        } finally {
-            shell.config.fatal = false;
         }
         return false;
     }
@@ -336,7 +331,7 @@ class AssetBundleManager {
      * @private
      */
     loadDownloadedAssetBundles() {
-        shell.ls(this.versionsDirectory).forEach((file) => {
+        fs.readdirSync(this.versionsDirectory).forEach((file) => {
             const directory = path.join(this.versionsDirectory, file);
             if (this.downloadDirectory !== directory
                 && this.partialDownloadDirectory !== directory
@@ -496,14 +491,11 @@ class AssetBundleManager {
             try {
                 fs.lstatSync(containingDirectory);
             } catch (e) {
-                shell.config.fatal = true;
                 try {
-                    shell.mkdir('-p', containingDirectory);
-                } catch (shellError) {
+                    fs.mkdirSync(containingDirectory, { recursive: true });
+                } catch (mkdirError) {
                     this.didFail(`could not create containing directory: ${containingDirectory}`);
                     return;
-                } finally {
-                    shell.config.fatal = false;
                 }
             }
 
@@ -511,18 +503,15 @@ class AssetBundleManager {
             const cachedAsset = this.cachedAssetForAsset(asset);
 
             if (cachedAsset !== null) {
-                shell.config.fatal = true;
                 try {
                     if (~cachedAsset.getFile().indexOf('desktop.asar')) {
                         originalFs.createReadStream(cachedAsset.getFile())
                             .pipe(originalFs.createWriteStream(asset.getFile()));
                     } else {
-                        shell.cp(cachedAsset.getFile(), asset.getFile());
+                        fs.copyFileSync(cachedAsset.getFile(), asset.getFile());
                     }
                 } catch (e) {
                     this.didFail(e.message);
-                } finally {
-                    shell.config.fatal = false;
                 }
             } else {
                 missingAssets.push(asset);
@@ -580,8 +569,6 @@ class AssetBundleManager {
      * @private
      */
     moveExistingDownloadDirectoryIfNeeded() {
-        shell.config.fatal = true;
-
         if (fs.existsSync(this.downloadDirectory)) {
             if (fs.existsSync(this.partialDownloadDirectory)) {
                 try {
@@ -602,7 +589,6 @@ class AssetBundleManager {
                 originalFs.renameSync(this.downloadDirectory, this.partialDownloadDirectory);
             } catch (e) {
                 this.log.error('could not rename existing download directory');
-                shell.config.fatal = false;
                 return;
             }
 
@@ -617,7 +603,6 @@ class AssetBundleManager {
                 this.log.warn('could not load partially downloaded asset bundle.');
             }
         }
-        shell.config.fatal = false;
     }
 }
 export default AssetBundleManager;
