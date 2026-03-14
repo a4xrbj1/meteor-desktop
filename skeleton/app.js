@@ -714,6 +714,8 @@ export default class App {
                                         js = js.replace(/global\s*=\s*this;/g, 'global = this || window;');
                                         js = js.replace(/\}\)\.call\(this\)/g, '}).call(this || window)');
                                         js = js.replace(/\}\.call\(this\)/g, '}.call(this || window)');
+                                        // Polyfill import.meta: SyntaxError in classic scripts (type=module stripped).
+                                        js = js.replace(/\bimport\.meta\b/g, '({url: location.href})');
                                         const headers = new Headers(devResponse.headers);
                                         headers.delete('content-length');
                                         return new Response(js, {
