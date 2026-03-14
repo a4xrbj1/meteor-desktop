@@ -679,24 +679,41 @@ export default class App {
             this.webContents.session.protocol.handle(
                 'meteor',
                 async (request) => {
-                    const urlPath = request.url.substr(urlStripLength);
+                    const urlPath = request.url.substr(urlStripLength) || '/';
 
-                    // In dev mode, try the Meteor dev server first — it holds individual
-                    // package JS files in memory that don't exist on disk / in meteor.asar.
                     if (meteorDevPort) {
-                        try {
-                            const devResponse = await net.fetch(
-                                `http://127.0.0.1:${meteorDevPort}/__cordova${urlPath}`
-                            );
-                            if (devResponse.ok) {
-                                return devResponse;
+                        // Root HTML and local-only assets come from the local server,
+                        // which has injectEsm() patches (type="module" script tags) applied.
+                        // Serving root HTML from the dev server would skip those patches and
+                        // cause "import.meta outside a module" errors in Meteor 3.x modules.js.
+                        const isLocalOnly = urlPath === '/'
+                            || urlPath === '/index.html'
+                            || urlPath === '/cordova.js'
+                            || urlPath.startsWith('/___desktop/')
+                            || urlPath.startsWith('/local-filesystem/');
+
+                        if (!isLocalOnly) {
+                            // Meteor package JS files exist only in the dev server's memory
+                            // (INDEX_FROM_RUNNING_SERVER mode) — fetch them from there.
+                            try {
+                                const devResponse = await net.fetch(
+                                    `http://127.0.0.1:${meteorDevPort}/__cordova${urlPath}`
+                                );
+                                const ct = (devResponse.headers.get('content-type') || '').toLowerCase();
+                                // Guard: Meteor's SPA catch-all returns 200+HTML for unknown paths.
+                                // If we get HTML back for what should be a JS/asset request,
+                                // fall through to the local server rather than surfacing HTML as JS.
+                                if (devResponse.ok && !ct.includes('text/html')) {
+                                    return devResponse;
+                                }
+                            } catch (e) {
+                                // Dev server unreachable, fall through to local server.
                             }
-                        } catch (e) {
-                            // Dev server unreachable, fall through to local server.
                         }
                     }
 
-                    // Fall back to local server (handles cordova.js, desktop assets, etc.)
+                    // Local server handles: root HTML (ESM-patched), cordova.js,
+                    // desktop assets, and fallback for files absent from the dev server.
                     return net.fetch(`http://127.0.0.1:${this.currentPort}${urlPath}`);
                 }
             );
