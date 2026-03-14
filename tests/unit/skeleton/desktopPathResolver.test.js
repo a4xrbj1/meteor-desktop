@@ -42,9 +42,9 @@ describe('DesktopPathResolver', () => {
             readFileSyncStub
                 .withArgs(sinon.match('desktop.asar').and(sinon.match('settings.json')))
                 .returns(JSON.stringify({ desktopVersion }));
-            // initial meteor version
+            // initial meteor version (matches both meteor.asar/program.json and meteor/program.json)
             readFileSyncStub
-                .withArgs(sinon.match('meteor.asar').and(sinon.match('program.json')))
+                .withArgs(sinon.match('meteor').and(sinon.match('program.json')))
                 .returns(JSON.stringify({ version: initialMeteorVersion }));
             // autoupdate.json
             readFileSyncStub

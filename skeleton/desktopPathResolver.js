@@ -19,12 +19,16 @@ export default class DesktopPathResolver {
 
     /**
      * Reads meteor app version from the initial asset bundle.
+     * Falls back to the unpacked meteor/ directory when meteor.asar does not exist.
      * @returns {string}
      */
     static readInitialAssetBundleVersion() {
-        const initialAssetBundleManifestPath = path.resolve(join(__dirname, '..', 'meteor.asar', 'program.json'));
+        const asarPath = path.resolve(join(__dirname, '..', 'meteor.asar'));
+        const manifestPath = fs.existsSync(asarPath)
+            ? path.join(asarPath, 'program.json')
+            : path.resolve(join(__dirname, '..', 'meteor', 'program.json'));
 
-        return DesktopPathResolver.readJsonFile(initialAssetBundleManifestPath).version;
+        return DesktopPathResolver.readJsonFile(manifestPath).version;
     }
 
     /**

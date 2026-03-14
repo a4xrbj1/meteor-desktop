@@ -558,6 +558,16 @@ export default class App {
     }
 
     /**
+     * Resolves the initial bundle path, falling back to the unpacked meteor/ directory
+     * when meteor.asar does not exist (e.g. in dev mode before the first production build).
+     * @returns {string}
+     */
+    resolveInitialBundlePath() {
+        const asarPath = path.join(__dirname, '..', 'meteor.asar');
+        return fs.existsSync(asarPath) ? asarPath : path.join(__dirname, '..', 'meteor');
+    }
+
+    /**
      * Returns prepared autoupdate module settings.
      * @returns {{dataPath: *, desktopBundlePath: String, bundleStorePath: *, initialBundlePath,
       * webAppStartupTimeout: number}}
@@ -568,7 +578,7 @@ export default class App {
             desktopBundlePath: this.userDataDir,
             bundleStorePath: this.userDataDir,
             customHCPUrl: this.settings.customHCPUrl || null,
-            initialBundlePath: path.join(__dirname, '..', 'meteor.asar'),
+            initialBundlePath: this.resolveInitialBundlePath(),
             webAppStartupTimeout: this.settings.webAppStartupTimeout ? this.settings.webAppStartupTimeout : 20000
         };
     }
