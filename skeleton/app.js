@@ -675,11 +675,29 @@ export default class App {
         const urlStripLength = 'meteor://desktop'.length;
 
         try {
+            const meteorDevPort = this.settings.meteorDevServerPort;
             this.webContents.session.protocol.handle(
                 'meteor',
-                (request) => {
-                    const url = request.url.substr(urlStripLength);
-                    return net.fetch(`http://127.0.0.1:${this.currentPort}${url}`);
+                async (request) => {
+                    const urlPath = request.url.substr(urlStripLength);
+
+                    // In dev mode, try the Meteor dev server first — it holds individual
+                    // package JS files in memory that don't exist on disk / in meteor.asar.
+                    if (meteorDevPort) {
+                        try {
+                            const devResponse = await net.fetch(
+                                `http://127.0.0.1:${meteorDevPort}/__cordova${urlPath}`
+                            );
+                            if (devResponse.ok) {
+                                return devResponse;
+                            }
+                        } catch (e) {
+                            // Dev server unreachable, fall through to local server.
+                        }
+                    }
+
+                    // Fall back to local server (handles cordova.js, desktop assets, etc.)
+                    return net.fetch(`http://127.0.0.1:${this.currentPort}${urlPath}`);
                 }
             );
         } catch (e) {
