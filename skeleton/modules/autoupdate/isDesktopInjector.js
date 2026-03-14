@@ -33,8 +33,16 @@ class IsDesktopInjector {
         let fileContents = contents;
 
         // This changes the place where `isCordova` is set to true.
+        // Web.cordova patterns (assignment form, older Meteor builds):
         fileContents = fileContents.replace('.isCordova=!0', '.isDesktop=!0');
         fileContents = fileContents.replace('.isCordova = true', '.isDesktop = true');
+        // Web.browser patterns (Meteor 3.x object-literal form: isCordova: false).
+        // Inject isDesktop: true alongside the falsy isCordova declaration so that
+        // Meteor.isDesktop becomes true even though isCordova is false.
+        fileContents = fileContents.replace('isCordova: false,', 'isCordova: false, isDesktop: true,');
+        // Minified variants (terser outputs !1 for false, !0 for true):
+        fileContents = fileContents.replace('isCordova:!1,', 'isCordova:!1,isDesktop:!0,');
+        fileContents = fileContents.replace('isCordova:false,', 'isCordova:false,isDesktop:!0,');
 
         if (this.startupDidCompleteRegEx.test(fileContents)) {
             fileContents = fileContents.replace(
@@ -52,7 +60,9 @@ class IsDesktopInjector {
         }
 
         if (~fileContents.indexOf('.isDesktop=!0')
-            || ~fileContents.indexOf('.isDesktop = true')) {
+            || ~fileContents.indexOf('.isDesktop = true')
+            || ~fileContents.indexOf('isDesktop: true,')
+            || ~fileContents.indexOf('isDesktop:!0,')) {
             injected = true;
         }
 

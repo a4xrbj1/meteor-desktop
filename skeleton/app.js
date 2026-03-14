@@ -730,10 +730,15 @@ export default class App {
                                         // Polyfill import.meta: SyntaxError in classic scripts (type=module stripped).
                                         js = js.replace(/\bimport\.meta\b/g, '({url: location.href})');
                                         // IsDesktopInjector: in dev mode the bundler plugin never runs, so
-                                        // packages/meteor.js still has .isCordova=!0 instead of .isDesktop=!0.
+                                        // packages/meteor.js still has isCordova patterns instead of isDesktop.
                                         // Apply the same replacements that IsDesktopInjector does at build time.
+                                        // Web.cordova assignment form (older Meteor builds):
                                         js = js.replace('.isCordova=!0', '.isDesktop=!0');
                                         js = js.replace('.isCordova = true', '.isDesktop = true');
+                                        // Web.browser object-literal form (Meteor 3.x: isCordova: false):
+                                        js = js.replace('isCordova: false,', 'isCordova: false, isDesktop: true,');
+                                        js = js.replace('isCordova:!1,', 'isCordova:!1,isDesktop:!0,');
+                                        js = js.replace('isCordova:false,', 'isCordova:false,isDesktop:!0,');
                                         // Also fix the startupDidComplete condition so it fires on isDesktop.
                                         js = js.replace(
                                             /(\(\w+\.)(?:isCordova)(\)[\S\s]*?startupDidComplete\()/gm,
