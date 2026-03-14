@@ -316,13 +316,18 @@ export default class AssetBundleDownloader {
         const actualVersion = runtimeConfig.autoupdateVersionCordova
             || runtimeConfig.autoupdateVersion;
 
-        if (actualVersion) {
-            if (actualVersion !== expectedVersion) {
-                throw new Error(
-                    `version mismatch for index page, expected: ${expectedVersion}`
-                    + `, actual: ${actualVersion}`
-                );
-            }
+        if (!actualVersion) {
+            throw new Error(
+                'runtime config missing both autoupdateVersionCordova and autoupdateVersion'
+                + ' — cannot verify downloaded bundle version'
+            );
+        }
+
+        if (actualVersion !== expectedVersion) {
+            throw new Error(
+                `version mismatch for index page, expected: ${expectedVersion}`
+                + `, actual: ${actualVersion}`
+            );
         }
 
         if (!('ROOT_URL' in runtimeConfig)) {

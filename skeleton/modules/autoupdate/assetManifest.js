@@ -103,15 +103,29 @@ export default function AssetManifest(logger, manifestSource) {
         if (!('version' in json) || json.version === null) {
             // Meteor 3.x omits the version field from program.json.
             // Derive a stable version from a SHA-256 hash of the manifest content.
-            this.version = crypto.createHash('sha256')
+            const derivedVersion = crypto.createHash('sha256')
                 .update(manifestSource).digest('hex').substring(0, 40);
+            log.warn(`asset manifest has no version field — derived hash version: ${derivedVersion}`);
+            this.version = derivedVersion;
         } else {
             this.version = json.version;
         }
 
+        if (!Array.isArray(json.manifest)) {
+            error(`asset manifest 'manifest' field is not an array (got: ${typeof json.manifest})`);
+        }
+
+        const allWhereValues = [...new Set(json.manifest.map((e) => e.where))];
         this.entries = json.manifest
             .filter((manifestEntry) => manifestEntry.where === 'client')
             .map((manifestEntry) => new ManifestEntry(manifestEntry));
+
+        if (this.entries.length === 0) {
+            error(
+                `asset manifest has no 'client' entries after filtering — `
+                + `'where' values found: [${allWhereValues.join(', ')}]`
+            );
+        }
 
         log.debug(`${this.entries.length} entries. (Version: ${this.version})`);
     } catch (e) {

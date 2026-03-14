@@ -159,7 +159,7 @@ class AssetBundleManager {
             .then(([response, body]) => {
                 if (response.status !== 200) {
                     this.didFail(
-                        `non-success status code ${response.status} for asset manifest`
+                        `non-success status code ${response.status} for asset manifest at ${manifestUrl}`
                     );
                     return;
                 }

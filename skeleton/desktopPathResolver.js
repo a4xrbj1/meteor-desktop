@@ -50,7 +50,13 @@ export default class DesktopPathResolver {
         }
 
         // Meteor 3.x omits version; derive stable version from manifest content hash.
-        return crypto.createHash('sha256').update(content).digest('hex').substring(0, 40);
+        const derivedHash = crypto.createHash('sha256').update(content).digest('hex').substring(0, 40);
+        // eslint-disable-next-line no-console
+        console.warn(
+            `[DesktopPathResolver] no version in manifest at ${manifestPath}`
+            + ` — using derived hash version: ${derivedHash}`
+        );
+        return derivedHash;
     }
 
     /**
