@@ -1,21 +1,19 @@
-import { rimraf } from 'rimraf';
+import fs from 'fs';
 
 /**
- * Simple wrapper for rimraf with additional retries in case of failure.
+ * Simple wrapper for native fs.rmSync with additional retries in case of failure.
  * It is useful when something is concurrently reading the dir you want to remove.
  */
 function rimrafWithRetries(path, optionsOrFs) {
-    let options = {};
+    let fsToUse = fs;
     if (optionsOrFs && optionsOrFs.unlinkSync) {
-        options = { fs: optionsOrFs };
-    } else if (optionsOrFs) {
-        options = optionsOrFs;
+        fsToUse = optionsOrFs;
     }
     let retries = 0;
     return new Promise((resolve, reject) => {
         function rm() {
             try {
-                rimraf.sync(path, options);
+                fsToUse.rmSync(path, { recursive: true, force: true });
                 resolve();
             } catch (e) {
                 retries += 1;
