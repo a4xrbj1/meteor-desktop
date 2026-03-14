@@ -718,7 +718,7 @@ export default class App {
                             // (INDEX_FROM_RUNNING_SERVER mode) — fetch them from there.
                             try {
                                 const devResponse = await net.fetch(
-                                    `http://127.0.0.1:${meteorDevPort}/__cordova${urlPath}`
+                                    `http://127.0.0.1:${meteorDevPort}/__browser${urlPath}`
                                 );
                                 const ct = (devResponse.headers.get('content-type') || '').toLowerCase();
                                 // Guard: Meteor's SPA catch-all returns 200+HTML for unknown paths.
