@@ -29,8 +29,6 @@
 
  */
 
-import assignIn from 'lodash/assignIn.js';
-
 /**
  * Represents single file in the manifest.
  *
@@ -55,7 +53,7 @@ import assignIn from 'lodash/assignIn.js';
  * @constructor
  */
 function ManifestEntry(manifestEntry) {
-    assignIn(this, {
+    Object.assign(this, {
         filePath: manifestEntry.path,
         urlPath: manifestEntry.url,
         fileType: manifestEntry.type,

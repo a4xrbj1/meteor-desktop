@@ -6,7 +6,6 @@ import path from 'path';
 import { createRequire } from 'module';
 import fs from 'fs-plus';
 import shell from 'shelljs';
-import assignIn from 'lodash/assignIn.js';
 import Module from './modules/module.js';
 import LoggerManager from './loggerManager.js';
 import DesktopPathResolver from './desktopPathResolver.js';
@@ -390,7 +389,7 @@ export default class App {
             // module.json is mandatory, but we can live without it.
             try {
                 const result = App.readModuleConfiguration(modulePath);
-                assignIn(settings, result.settings);
+                Object.assign(settings, result.settings);
                 if (result.moduleName) {
                     ({ moduleName } = result);
                 }
@@ -598,7 +597,7 @@ export default class App {
             windowSettings.show = true;
         }
 
-        assignIn(windowSettings, this.settings.window);
+        Object.assign(windowSettings, this.settings.window);
 
         // Emit windowSettings so that it can be modified if that is needed in any of the modules.
         // I do not really like, that it can modified indirectly but until 1.0 it needs to stay

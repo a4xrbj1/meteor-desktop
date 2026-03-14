@@ -1,7 +1,6 @@
 /* eslint-disable no-param-reassign */
 
 import { join } from 'path';
-import assignIn from 'lodash/assignIn.js';
 
 export default class WindowSettings {
     /**
@@ -9,7 +8,7 @@ export default class WindowSettings {
      */
     static mergeWindowDevSettings(settings) {
         if ('windowDev' in settings) {
-            assignIn(settings.window, settings.windowDev);
+            Object.assign(settings.window, settings.windowDev);
         }
     }
 
@@ -22,7 +21,7 @@ export default class WindowSettings {
                 os[`is${system[0].toUpperCase()}${system.substring(1)}`]
                 && (`_${system}`) in settings.window
             ) {
-                assignIn(settings.window, settings.window[`_${system}`]);
+                Object.assign(settings.window, settings.window[`_${system}`]);
             }
         });
     }
