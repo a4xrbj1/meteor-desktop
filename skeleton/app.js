@@ -763,7 +763,7 @@ export default class App {
                         }
                     }
 
-                    // Local server handles: root HTML (ESM-patched), cordova.js,
+                    // Local server handles: root HTML (ESM-patched), desktop-hcp.js,
                     // desktop assets, and fallback for files absent from the dev server.
                     const localResp = await net.fetch(`http://127.0.0.1:${this.currentPort}${urlPath}`);
                     // In dev mode, strip type="module" from HTML: dev-server scripts use

@@ -32,7 +32,7 @@ meteor npm install --save-dev @meteor-community/meteor-desktop
 meteor add-platform ios # or android
 npm run desktop -- init
 
-meteor --mobile-server=127.0.0.1:3000
+meteor
 
 # open new terminal
 npm run desktop
@@ -77,7 +77,7 @@ Usage: npm run desktop -- [command] [options]
     -V, --version                         output the version number
 
 
-  [ddp_url] - pass a ddp url if you want to use different one than used in meteor's --mobile-server
+  [ddp_url] - pass a ddp url if you want to use a different one than the default
               this will also work with -b
 ```
 #### `--build-meteor`
@@ -157,15 +157,15 @@ Below is a high level architecture diagram of this integration.
 
 The main goal was to provide a non hacky integration without actually submitting any desktop
 oriented pull request to `Meteor`.
-The whole concept is based on taking the `web.cordova` build, modifying it as little as possible
-and running it in the `Electron's` renderer process. The current `cordova` integration
+The whole concept is based on taking the `web.browser` build, modifying it as little as possible
+and running it in the `Electron's` renderer process. The desktop integration
 architecture is more or less conceptually replicated.
 
 Currently the only modification that the mobile build is subjected to is injecting the `Meteor.isDesktop` variable.
 
-To obtain the mobile build, this integration takes the build from either
-`.meteor/local/cordova-build` (version `< 1.3.4.1`) or from `.meteor/local/build/programs/web.cordova`.
-Because `index.html` is not present in the `web.cordova` directory and `program.json` lacks
+To obtain the build, this integration takes the build from either
+`.meteor/local/cordova-build` (version `< 1.3.4.1`) or from `.meteor/local/build/programs/web.browser`.
+Because `index.html` is not present in the `web.browser` directory and `program.json` lacks
 `version` field, they are just downloaded from the running project.
 
 #### How the `Electron` app is structured?
@@ -259,7 +259,7 @@ The default `settings.json` is already using that for setting a different window
 ##### Supported dependency version types
 
 Only explicit versions are supported to avoid potential problems with different versions being
-installed. It is no different from `Meteor` because the same applies to adding `Cordova` plugins.
+installed. It is no different from `Meteor` because the same applies to adding desktop plugins.
 
 You can however use a local path to a npm package - and that will not be forbidden. **You need**
 to keep track what has been distributed to your clients and what your current code is expecting
@@ -384,7 +384,7 @@ In your `Meteor` app to run a part of the code only in the desktop context you c
 
 ## Accessing local filesystem in Meteor
 
-Local filesystem is exposed under and url alias (similarly to [Cordova integration](https://guide.meteor.com/mobile.html#accessing-local-files)).
+Local filesystem is exposed under and url alias (similarly to Meteor mobile integration).
 This feature is disabled by default so you need to enable it first by setting
 `exposeLocalFilesystem` in your `settings.json` to `true`. Files are exposed under
 `/local-filesystem/<absolute-path>` url.
@@ -444,9 +444,9 @@ Example of `send` and `fetch` usage - [here](https://github.com/a4xrbj1/meteor-d
 There is an experimental support for hot code push of the `.desktop` directory.  
 It works similarly to the `Meteor`'s builtin one. It also produces a `version` and
 `compatibilityVersion` to detect whether the update can be made.  
-In `Meteor` whenever you change any of your `Cordova` dependencies (add/remove/change version)
-you will make an incompatible change meaning that a new version will not be hot code pushed.  
-The same applies here. In this case your desktop dependencies are npm packages.   
+In `Meteor` whenever you change any of your desktop dependencies (add/remove/change version)
+you will make an incompatible change meaning that a new version will not be hot code pushed.
+In this case your desktop dependencies are npm packages.   
 To make it clear, **npm packages are not hot code pushed** - only contents of `.desktop` are.
 
 The `compatibilityVersion` is calculated from combined list of:
