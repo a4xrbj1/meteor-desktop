@@ -673,6 +673,15 @@ export default class App {
 
         const urlStripLength = 'meteor://desktop'.length;
 
+        // A5: Dev/prod parity canary — track which patch types have been warned this session.
+        this.a5WarnedPatches = new Set();
+        const warnOnce = (key, msg) => {
+            if (!this.a5WarnedPatches.has(key)) {
+                this.a5WarnedPatches.add(key);
+                this.l.warn(`[canary:A5] ${msg} — ensure injectEsm() applies same fix in prod build`);
+            }
+        };
+
         try {
             const meteorDevPort = this.settings.meteorDevServerPort;
             this.webContents.session.protocol.handle(
@@ -709,6 +718,8 @@ export default class App {
                                     // undefined, breaking 'var global = this;' patterns.
                                     if (ct.includes('javascript')) {
                                         let js = await devResponse.text();
+                                        // A5: track which patch types fire so we can warn once per type.
+                                        const jsOrig = js;
                                         js = js.replace(/var global = this;/g, 'var global = this || window;');
                                         js = js.replace(/global\s*=\s*this;/g, 'global = this || window;');
                                         js = js.replace(/\}\)\.call\(this\)/g, '}).call(this || window)');
@@ -729,6 +740,13 @@ export default class App {
                                             /(\w+\.)(?:isCordova)(&&\w*\.startupDidComplete\()/gm,
                                             '$1isDesktop$2'
                                         );
+                                        // A5: canary — warn (once per type) when patches were actually needed.
+                                        if (js !== jsOrig) {
+                                            warnOnce(
+                                                'js-patches',
+                                                `dev-mode JS patches applied (${urlPath}) — prod needs injectEsm`
+                                            );
+                                        }
                                         const headers = new Headers(devResponse.headers);
                                         headers.delete('content-length');
                                         return new Response(js, {
@@ -757,7 +775,15 @@ export default class App {
                         const localCt = (localResp.headers.get('content-type') || '').toLowerCase();
                         if (localCt.includes('text/html')) {
                             let html = await localResp.text();
+                            const htmlOrig = html;
                             html = html.replace(/\s+type=["']module["']/gi, '');
+                            // A5: canary — warn if type="module" stripping was needed in HTML.
+                            if (html !== htmlOrig) {
+                                warnOnce(
+                                    'html-type-module',
+                                    `type="module" stripped from HTML (${urlPath}) — prod needs injectEsm`
+                                );
+                            }
                             const localHeaders = new Headers(localResp.headers);
                             localHeaders.delete('content-length');
                             return new Response(html, {
@@ -777,6 +803,26 @@ export default class App {
         }
 
         this.l.debug('protocol meteor:// registered');
+
+        // A6: Boot smoke test — verify BrowserWindow loads successfully (dev mode only).
+        if (!this.isProduction()) {
+            this.webContents.once('did-fail-load', (event, errorCode, errorDescription) => {
+                this.l.error(`[smoke:A6] BrowserWindow load FAILED: ${errorCode} ${errorDescription}`);
+            });
+            this.webContents.once('did-finish-load', () => {
+                this.webContents.executeJavaScript('document.body ? document.body.innerHTML.length : 0')
+                    .then((len) => {
+                        if (len > 0) {
+                            this.l.info('[smoke:A6] BrowserWindow loaded successfully (DOM has content)');
+                        } else {
+                            this.l.warn('[smoke:A6] BrowserWindow loaded but DOM is empty — possible white screen');
+                        }
+                    })
+                    .catch((e) => {
+                        this.l.warn(`[smoke:A6] could not verify DOM content: ${e}`);
+                    });
+            });
+        }
 
         this.l.debug('opening meteor://desktop');
         setTimeout(() => {
