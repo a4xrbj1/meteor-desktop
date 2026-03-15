@@ -298,11 +298,13 @@ describe('localServer', () => {
             expect(response.headers.get('Access-Control-Allow-Origin')).to.equal('*');
         });
 
-        it('should server cordova.js file', async () => {
+        it('should serve desktop-hcp.js content for /cordova.js (legacy alias)', async () => {
+            // Meteor HTML includes <script src="/cordova.js"> but the file was renamed to
+            // desktop-hcp.js. WwwHandler must alias /cordova.js → desktop-hcp.js so that
+            // WebAppLocalServer is defined before meteor.js runs.
             const response = await fetchFromLocalServer('/cordova.js');
             const body = await response.text();
-            expect(body).to.contain('window.cordova');
-            expect(body).to.contain('module.exports = cordova;');
+            expect(body).to.contain('WebAppLocalServer');
         });
     });
 });

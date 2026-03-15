@@ -309,8 +309,11 @@ export default class LocalServer {
          */
         function WwwHandler(req, res, next, local = false) {
             const parsedUrl = new url.URL(req.url, 'http://localhost');
+            const { pathname } = parsedUrl;
 
-            if (parsedUrl.pathname !== '/desktop-hcp.js') {
+            // Accept /cordova.js as a legacy alias — Meteor HTML includes
+            // <script src="/cordova.js"> but the file was renamed to desktop-hcp.js.
+            if (pathname !== '/desktop-hcp.js' && pathname !== '/cordova.js') {
                 return next();
             }
             const parentAssetBundle = self.assetBundle.getParentAssetBundle();
@@ -320,7 +323,8 @@ export default class LocalServer {
             const initialAssetBundlePath = parentAssetBundle
                 ? parentAssetBundle.getDirectoryUri() : self.assetBundle.getDirectoryUri();
 
-            const filePath = path.join(initialAssetBundlePath, parsedUrl.pathname);
+            // Always resolve to desktop-hcp.js regardless of which URL alias was requested.
+            const filePath = path.join(initialAssetBundlePath, 'desktop-hcp.js');
 
             if (fs.existsSync(filePath)) {
                 return local
