@@ -1,3 +1,84 @@
+## v5.0.0 <sup>15.03.2026</sup>
+
+Major release bringing full Meteor 3.x compatibility, ESM support, dependency debloat, and a hardened build pipeline.
+
+### Meteor 3.x Compatibility
+* Switch bundler architecture from `web.cordova` to `web.browser` — Meteor 3.x no longer builds a `web.cordova` target for desktop apps.
+* Fix `isCordova` detection for Meteor 3.x object-literal form (`isCordova: false`).
+* Replace `acquireManifest()` HTTP fetch with `fs.readFileSync` from on-disk build output; add defensive JSON validation.
+* Use `/__browser/` manifest and asset paths for Meteor 3.x dev server (was `/__cordova/`).
+* Fix autoupdate manifest/version handling for Meteor 3.x `web.browser` arch.
+* Fall back to unpacked `meteor/` directory when `meteor.asar` is absent in dev mode.
+* Extend `injectEsm()` to patch root-level JS files produced by Meteor 3.x linker.
+* Add auto-repair for server/local build hash mismatches and ambiguous `bundleCandidates`.
+* Strip query strings from script `src` before `fs.existsSync` in `injectEsm` validation.
+* Add A2.5 hash coherence gate before `injectEsm` runs.
+
+### ESM Support
+* Replace `registerStreamProtocol` with `protocol.handle` for Electron 33+ compatibility.
+* Use `net.fetch()` proxy for `meteor://` protocol (required by `protocol.handle`).
+* Patch dev-server JS responses for ESM compatibility: inject `var global = this`, strip `type=module`, polyfill `import.meta`.
+* Fix `import.meta` polyfill in dev-mode JS patching for classic scripts.
+* Use classic scripts + `import.meta` polyfill (no `type=module`) to fix bare global `ReferenceError`.
+* Patch `__meteor_runtime_config__` DDP URL in dev-mode HTML.
+* Patch dynamic `import.meta` on force reload in production.
+* `injectEsm()` must NOT set `type=module` on script tags.
+
+### HCP (Hot Code Push) Improvements
+* Rename `cordova.js` to `desktop-hcp.js`; remove `cordovaCompatibilityVersion`.
+* Inject `desktop-hcp.js` script tag into `index.html` during build.
+* Accept `/cordova.js` as a legacy alias for `/desktop-hcp.js` in `WwwHandler`.
+* Inject cordova loader before script tags with attributes.
+* Add fallback path for `desktop-hcp.js` in `WwwHandler`.
+* Add 5 fail-fast guardrails to skeleton autoupdate for Meteor 3.x.
+
+### Dependency Debloat
+* Replace `node-fetch` with native `fetch` throughout (`meteorApp.js`, skeleton autoupdate modules).
+* Replace `response.buffer()` with `arrayBuffer()` + `Buffer.from()` for native fetch compatibility.
+* Replace `shelljs` with native `fs`/`child_process` in 7 lib files and the skeleton runtime.
+* Remove `lodash` and `rimraf` from skeleton dependencies; replace with native JS/Node equivalents.
+* Remove `isbinaryfile`; replace with `.node` extension check in `binaryModulesDetector`.
+* Remove `del` (ESM-only) and replace with `fs` builtins.
+* Eliminate `dist/` build step — point `package.json` directly to `lib/`.
+* Remove dead Electron <5 `semver` check from `skeleton/app.js`.
+
+### Build Hardening & Validation Gates
+* Add `validateDesktopAsar()` post-pack validation with dynamic file discovery.
+* Add A2 bundle structure and A3 `meteor.asar` validation gates (A3 is a hard gate).
+* Add A4 and A7 validation gates to `electronApp`.
+* Add A5 dev/prod parity canary and A6 boot smoke test to skeleton.
+* Add post-`injectEsm` validation guardrails (A1).
+* `getMeteorClientBuild()` catch block now calls `process.exit(1)` after logging.
+* Every error path in `meteorApp.build()` and `electronApp.build()` either throws or calls `process.exit(1)`.
+* `validateMeteorAsar` `rootJsFiles` filter excludes `node_modules/` and `dynamic/` paths.
+* Run `transpileAndMinify()` before `packSkeletonToAsar()` in `beforeBuild`.
+* Guard `desktopTmp.root` in `transpileAndMinify` with `fs.existsSync`.
+
+### Reliability Fixes
+* Add `maxRetries:3` + `retryDelay:150` to all recursive `fs.rmSync` calls (fixes ENOTEMPTY races on macOS).
+* Run `chmodRecursive()` on all platforms in `copyBuild()`, not just Windows.
+* Surface 3 silent errors as hard failures; fix 10+ additional silent error paths in `meteorApp.js`.
+* Apply `IsDesktopInjector` patches in dev-mode protocol handler.
+* Fix FSEvents watcher warning noise in stderr handler.
+* Fix `bundler.js` `requireLocal` imports to use `lib/` instead of `dist/`.
+* Replace dynamic `import()` with `execFileSync` to asar CLI in `bundler.js`.
+* Abort build when `getMeteorClientBuild` fails (was silently continuing).
+
+### Cordova Cleanup
+* Remove dead `web.cordova` assignment patterns (`.isCordova=!0`, `.isCordova=!1`) from patching logic.
+* Remove Cordova references from CLI, tests, and docs.
+* Remove dead `web.cordova` patterns and stale Cordova comments from skeleton.
+* `isDesktopInjector.js` `isCordova` regex patterns remain functional (required for Meteor internals).
+
+### Build Infrastructure
+* Upgrade CI workflows: remove `Meteor/dist/`, add `setup-node`, fix publish pipeline.
+* Upgrade ESLint to v10 with flat config.
+* Use local plugin symlinks instead of Atmosphere in `ensureDesktopHCPPackages`.
+* Replace `@meteor-community/meteor-desktop` refs with `@a4xrbj1/meteor-desktop` in bundler plugin.
+* Disable `enableRemoteModule` in `skeleton/app.js` for security.
+* Add `typescript` as devDependency (ESLint peer dep).
+* Upgrade `actions/checkout` and `actions/cache` from v4 to v5.
+
 ## v4.1.2 <sup>01.03.2026</sup>
 * Fix CLI macOS target option parsing by using the correct `--mac` long flag.
 * Modernize protocol registration in the skeleton app to remove deprecation warnings on newer Electron versions.

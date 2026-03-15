@@ -17,6 +17,21 @@ push implementation - which means you can release updates the same way you are u
 
 
 
+## What's new in v5
+
+v5.0.0 is a major release focused on **Meteor 3.x compatibility**, **ESM support**, and a significantly leaner, more reliable build pipeline.
+
+**Key highlights:**
+
+- **Meteor 3.x support** — switched from `web.cordova` to `web.browser` architecture; `/__browser/` paths, `isCordova` detection, and autoupdate all updated for Meteor 3.x.
+- **ESM / Electron 33+ compatibility** — replaced deprecated `registerStreamProtocol` with `protocol.handle`; patched dev-server responses for `import.meta`, `global`, and classic-script constraints.
+- **HCP improvements** — `cordova.js` renamed to `desktop-hcp.js`; auto-injected into `index.html`; fail-fast guardrails added to autoupdate.
+- **Dependency debloat** — removed `node-fetch`, `shelljs`, `lodash`, `rimraf`, `isbinaryfile`, and `del`; all replaced with native Node.js APIs. Eliminated the `dist/` build step.
+- **Hardened build pipeline** — seven new validation gates (A1–A7) catch broken bundles early; every error path now throws or exits instead of silently continuing.
+- **Reliability** — `fs.rmSync` race-condition fixes for macOS; `chmodRecursive` runs on all platforms; 13+ silent error paths surfaced.
+
+See [CHANGELOG.md](CHANGELOG.md) for the full list of changes.
+
 ## Prerequisites
 
  - Meteor >= `3.0`
