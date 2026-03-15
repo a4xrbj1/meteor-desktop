@@ -58,7 +58,7 @@
             "target": "nsis"
         },
         "squirrelWindows": {
-            "iconUrl": "https://github.com/wojtkowiak/meteor-desktop/blob/beta/scaffold/assets/meteor.ico?raw=true",
+            "iconUrl": "https://github.com/a4xrbj1/meteor-desktop/blob/master/scaffold/assets/meteor.ico?raw=true",
             "loadingGif": ".desktop/assets/loading.gif"
         },
         "publish": [
@@ -91,7 +91,7 @@
         },
         "appVersion": "@version",
         "buildVersion": "@version",
-        "appCopyright": "Copyright 2018 My Company - All rights reserved.",
+        "appCopyright": "Copyright 2026 My Company - All rights reserved.",
         "win32metadata": {
             "CompanyName": "My Company",
             "FileDescription": "MyMeteorApp",

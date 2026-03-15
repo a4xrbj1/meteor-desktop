@@ -17,6 +17,8 @@ push implementation - which means you can release updates the same way you are u
 
 
 
+Originally authored by [Paweł Wójtkowiak](https://github.com/wojtkowiak). Currently maintained by [@a4xrbj1](https://github.com/a4xrbj1).
+
 ## What's new in v5
 
 v5.0.0 is a major release focused on **Meteor 3.x compatibility**, **ESM support**, and a significantly leaner, more reliable build pipeline.
@@ -35,7 +37,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the full list of changes.
 ## Prerequisites
 
  - Meteor >= `3.0`
- - at least basic [Electron](http://electron.atom.io/) framework knowledge
+ - at least basic [Electron](https://www.electronjs.org/) framework knowledge
  - mobile platform added to project<sup>__*1__</sup>  
 
 <sup>__*1__ you can always build with `--server-only` if you do not want to have mobile clients,  you do not actually have to have android sdk or xcode to go on with your project</sup>
@@ -43,7 +45,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the full list of changes.
 ## Quick start
 ```bash
 cd /your/meteor/app
-meteor npm install --save-dev @meteor-community/meteor-desktop
+meteor npm install --save-dev @a4xrbj1/meteor-desktop
 meteor add-platform ios # or android
 npm run desktop -- init
 
@@ -58,7 +60,7 @@ The first time, you can also combine `npm run desktop -- init` and `npm run desk
 ## Usage `--help`
 
 ```
-// Assumming you have a `desktop` script in npm scripts that equals to "@meteor-community/meteor-desktop"
+// Assuming you have a `desktop` script in npm scripts that equals to "@a4xrbj1/meteor-desktop"
 Usage: npm run desktop -- [command] [options]
 
   Commands:
@@ -143,7 +145,6 @@ Documentation
   * [Building installer](#building-installer)
     * [Building for linux](#building-for-linux)
     * [Building for Windows Store (AppX)](#building-for-windows-store-appx)
-  * [Roadmap](#roadmap)
   * [Contribution](#contribution)
   * [Built with meteor-desktop](#built-with-meteor-desktop)
   * [FAQ](#faq)  
@@ -170,18 +171,18 @@ Below is a high level architecture diagram of this integration.
 #### How does this work with Meteor?
 > <sup>or how hacky is this?</sup>
 
-The main goal was to provide a non hacky integration without actually submitting any desktop
-oriented pull request to `Meteor`.
-The whole concept is based on taking the `web.browser` build, modifying it as little as possible
-and running it in the `Electron's` renderer process. The desktop integration
-architecture is more or less conceptually replicated.
+The main goal was to provide a non-hacky integration without submitting desktop-specific pull
+requests to `Meteor`.
+The whole concept is based on taking the `web.browser` build, modifying it as little as possible,
+and running it in Electron's renderer process.
 
-Currently the only modification that the mobile build is subjected to is injecting the `Meteor.isDesktop` variable.
+In v5.0.0, the build pipeline works as follows:
 
-To obtain the build, this integration takes the build from either
-`.meteor/local/cordova-build` (version `< 1.3.4.1`) or from `.meteor/local/build/programs/web.browser`.
-Because `index.html` is not present in the `web.browser` directory and `program.json` lacks
-`version` field, they are just downloaded from the running project.
+1. **Manifest acquisition** — `program.json` is read directly from the on-disk `web.browser` build output via `fs.readFileSync` (no HTTP download required).
+2. **ESM patching** — JS responses from the Meteor dev server are patched for `import.meta`, `global`, and classic-script constraints so they run correctly in Electron's renderer.
+3. **Hash coherence** — a validation gate (A2.5) checks that bundle hashes are consistent before packaging, catching stale or mismatched builds early.
+4. **`import.meta` polyfill** — injected into production bundles so Meteor 3.x ESM output runs in Electron without errors.
+5. **`Meteor.isDesktop` injection** — the `isDesktopInjector` build plugin injects the `isDesktop` flag into the web.browser bundle at build time.
 
 #### How the `Electron` app is structured?
 
@@ -454,9 +455,8 @@ There are two extra methods:
 Example of `send` and `fetch` usage - [here](https://github.com/a4xrbj1/meteor-desktop-localstorage/blob/master/plugins/localstorage/localstorage.js#L9).  
 
 ## desktopHCP - `.desktop` hot code push
-> #### experimental!
 
-There is an experimental support for hot code push of the `.desktop` directory.  
+There is support for hot code push of the `.desktop` directory.  
 It works similarly to the `Meteor`'s builtin one. It also produces a `version` and
 `compatibilityVersion` to detect whether the update can be made.  
 In `Meteor` whenever you change any of your desktop dependencies (add/remove/change version)
@@ -583,8 +583,6 @@ Change `target: ["appx"]` in `win` section of `builderOptions`. In case of probl
 
 ## Developing meteor-desktop
 
-No matter which method below you choose, run `npm run build-watch` in your local meteor-desktop folder before making changes to the code, if you want them reflected in Meteor apps that depend on the package.
-
 ### Using devEnvSetup.js
 To help you contribute, there is a development environment setup script. It also runs default tests.
 
@@ -603,7 +601,7 @@ node devEnvSetup.js
 1. Clone and install meteor-desktop as above
 2. From a clean Meteor project, install meteor-desktop from its local folder: `meteor npm i --save-dev /path/to/meteor-desktop` (doesn't work with npm link, tbc)
 3. In your Meteor app's `package.json`:
-   1. Add a script `desktop` with `METEOR_PACKAGE_DIRS=/path/to/meteor-desktop/plugins node /path/to/meteor-desktop/dist/bin/cli.js`
+   1. Add a script `desktop` with `METEOR_PACKAGE_DIRS=/path/to/meteor-desktop/plugins node /path/to/meteor-desktop/lib/bin/cli.js`
    2. Add `METEOR_PACKAGE_DIRS=/path/to/meteor-desktop/plugins` to the `start` script as well.
 
 The last step is so that the desktop HCP Meteor packages are also taken from your local meteor-desktop repo. 
@@ -614,8 +612,6 @@ Finally, follow the above "Quick start" steps (except the npm install) from your
 ## Built with `meteor-desktop`
 
 Built an app using meteor-desktop? File an issue or PR to list it here.
-
-* [Coygo](https://www.coygo.app) - Multi-exchange cryptocurrency and digital asset trading tool
 
 ## FAQ
 
