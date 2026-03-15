@@ -4,6 +4,8 @@ import dirty from 'dirty-chai';
 import sinonChai from 'sinon-chai';
 import sinon from 'sinon';
 import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { createRequire } from 'module';
 
 // need for running test
@@ -29,6 +31,7 @@ const METEOR_RELEASES = [
 
 let MeteorApp;
 let readFileSyncStub;
+let tempDirToRemove;
 
 describe('meteorApp', () => {
     before(async () => {
@@ -38,6 +41,9 @@ describe('meteorApp', () => {
     after(() => {
         if (readFileSyncStub) {
             readFileSyncStub.restore();
+        }
+        if (tempDirToRemove) {
+            fs.rmSync(tempDirToRemove, { recursive: true, force: true });
         }
     });
 
@@ -68,6 +74,44 @@ describe('meteorApp', () => {
                 prepareFsStubs(version.release);
                 expect(instance.getMeteorRelease()).be.equal(version.version);
             });
+        });
+    });
+
+    describe('#injectEsm', () => {
+        it('should patch import.meta inside dynamic js files', () => {
+            if (readFileSyncStub) {
+                readFileSyncStub.restore();
+                readFileSyncStub = null;
+            }
+            tempDirToRemove = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-inject-esm-'));
+            const dynamicDir = path.join(tempDirToRemove, 'dynamic', 'node_modules', '@zip.js', 'zip.js', 'lib');
+            const rootBundlePath = path.join(tempDirToRemove, 'bundle.js');
+            const indexHtmlPath = path.join(tempDirToRemove, 'index.html');
+            const dynamicFilePath = path.join(dynamicDir, 'zip-core-base.js');
+
+            fs.mkdirSync(dynamicDir, { recursive: true });
+            fs.writeFileSync(rootBundlePath, 'var global = this;');
+            fs.writeFileSync(dynamicFilePath, 'try{configure({ baseURI: import.meta.url })}catch{}');
+            fs.writeFileSync(indexHtmlPath, '<html><head></head><body><script src="/bundle.js"></script></body></html>');
+
+            const instance = new MeteorApp({
+                env: {
+                    paths: {
+                        electronApp: {
+                            meteorApp: tempDirToRemove,
+                            meteorAppIndex: indexHtmlPath
+                        },
+                        meteorApp: {
+                            release: 'release.file'
+                        }
+                    }
+                }
+            });
+
+            instance.injectEsm();
+
+            expect(fs.readFileSync(dynamicFilePath, 'UTF-8')).to.not.include('import.meta');
+            expect(fs.readFileSync(dynamicFilePath, 'UTF-8')).to.include('({url: location.href}).url');
         });
     });
 });
