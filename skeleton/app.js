@@ -821,7 +821,10 @@ export default class App {
                             // /cordova.js is the legacy alias for /desktop-hcp.js served by
                             // WwwHandler. This defines WebAppLocalServer globally before meteor.js.
                             if (!html.includes('/cordova.js') && !html.includes('/desktop-hcp.js')) {
-                                html = html.replace(/<script\s+src=/i, '<script src="/cordova.js"></script>\n<script src=');
+                                html = html.replace(
+                                    /<script\b(?=[^>]*\bsrc=)[^>]*>/i,
+                                    '<script src="/cordova.js"></script>\n$&'
+                                );
                             }
 
                             // A5: canary — warn if type="module" was present in HTML (stale build).
