@@ -781,16 +781,16 @@ export default class App {
                     // Local server handles: root HTML (ESM-patched), desktop-hcp.js,
                     // desktop assets, and fallback for files absent from the dev server.
                     const localResp = await net.fetch(`http://127.0.0.1:${this.currentPort}${urlPath}`);
-                    // In dev mode, strip type="module" from HTML: dev-server scripts use
-                    // Meteor's IIFE/reify format with bare global assignments
-                    // (meteorInstall=..., Mongo=..., Package=...) that throw ReferenceError
-                    // in strict module context. Classic scripts share one global scope,
-                    // allowing these assignments to succeed.
+                    // In dev mode, patch local-server HTML before serving.
+                    // injectEsm() no longer adds type="module" (classic scripts preserve shared
+                    // global scope). The strip below is kept as a safety net for any stale builds
+                    // that still have type="module". The A5 canary fires if type="module" is
+                    // found, signalling that the build was produced by an old injectEsm version.
                     if (meteorDevPort) {
                         const localCt = (localResp.headers.get('content-type') || '').toLowerCase();
                         if (localCt.includes('text/html')) {
                             let html = await localResp.text();
-                            const htmlOrig = html;
+                            const htmlBeforeStrip = html;
                             html = html.replace(/\s+type=["']module["']/gi, '');
                             // Patch __meteor_runtime_config__ DDP/ROOT_URL for dev mode.
                             // Without this, DDP.connect('/') resolves to meteor://desktop/
@@ -817,11 +817,14 @@ export default class App {
                                 /(<script[^>]*>__meteor_runtime_config__\s*=[^<]*<\/script>)/,
                                 `$1${ddpOverride}`
                             );
-                            // A5: canary — warn if type="module" stripping was needed in HTML.
-                            if (html !== htmlOrig) {
+                            // A5: canary — warn if type="module" was present in HTML (stale build).
+                            // injectEsm() should NOT add type="module" — it breaks bare global
+                            // assignments (CollectionExtensions, WebAppLocalServer, etc.) in strict
+                            // module context. If this fires, the build was made by an old injectEsm.
+                            if (html !== htmlBeforeStrip) {
                                 warnOnce(
                                     'html-type-module',
-                                    `type="module" stripped from HTML (${urlPath}) — prod needs injectEsm`
+                                    `type="module" found and stripped from HTML (${urlPath}) — stale build; injectEsm should not add type=module`
                                 );
                             }
                             const localHeaders = new Headers(localResp.headers);
