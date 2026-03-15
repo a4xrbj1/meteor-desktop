@@ -817,6 +817,13 @@ export default class App {
                                 /(<script[^>]*>__meteor_runtime_config__\s*=[^<]*<\/script>)/,
                                 `$1${ddpOverride}`
                             );
+                            // Inject desktop-hcp.js loader before Meteor scripts.
+                            // /cordova.js is the legacy alias for /desktop-hcp.js served by
+                            // WwwHandler. This defines WebAppLocalServer globally before meteor.js.
+                            if (!html.includes('/cordova.js') && !html.includes('/desktop-hcp.js')) {
+                                html = html.replace(/<script\s+src=/i, '<script src="/cordova.js"></script>\n<script src=');
+                            }
+
                             // A5: canary — warn if type="module" was present in HTML (stale build).
                             // injectEsm() should NOT add type="module" — it breaks bare global
                             // assignments (CollectionExtensions, WebAppLocalServer, etc.) in strict
