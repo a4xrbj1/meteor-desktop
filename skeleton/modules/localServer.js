@@ -323,8 +323,15 @@ export default class LocalServer {
             const initialAssetBundlePath = parentAssetBundle
                 ? parentAssetBundle.getDirectoryUri() : self.assetBundle.getDirectoryUri();
 
-            // Always resolve to desktop-hcp.js regardless of which URL alias was requested.
-            const filePath = path.join(initialAssetBundlePath, 'desktop-hcp.js');
+            // Primary: check inside asset bundle. Fallback: skeleton app root (sibling of modules/).
+            const bundlePath = path.join(initialAssetBundlePath, 'desktop-hcp.js');
+            const fallbackPath = path.resolve(__dirname, '..', 'desktop-hcp.js');
+            const filePath = fs.existsSync(bundlePath) ? bundlePath : fallbackPath;
+
+            if (!fs.existsSync(bundlePath)) {
+                // eslint-disable-next-line no-console
+                console.warn('[WwwHandler] desktop-hcp.js not in bundle:', bundlePath, '— fallback:', fallbackPath);
+            }
 
             if (fs.existsSync(filePath)) {
                 return local
