@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+    "allowJs": true,
+    "target": "ES2022",
+    "module": "esnext"
+  },
+  "exclude": [
+    "node_modules",
+    ".meteor",
+    ".meteor/local",
+    ".meteor/local-*",
+    ".meteor/packages",
+    ".meteor/plugin-cache",
+    ".meteor/cordova-build",
+    ".meteor/dev_bundle",
+    "_build",
+    "build",
+    "dist",
+    "coverage",
+    "logs",
+    ".desktop-build",
+    ".desktop-installer",
+    "playwright-report",
+    "test-results"
+  ]
+}
