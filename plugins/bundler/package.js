@@ -3,7 +3,7 @@ Package.describe({
     name: 'a4xrbj1:meteor-desktop-bundler',
     version: '5.1.0',
     summary: 'Bundles .desktop dir into desktop.asar.',
-    git: 'https://github.com/Meteor-Community-Packages/meteor-desktop',
+    git: 'https://github.com/a4xrbj1/meteor-desktop',
     documentation: 'README.md'
 });
 
