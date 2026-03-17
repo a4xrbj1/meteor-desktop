@@ -489,7 +489,7 @@ class MeteorDesktopBundler {
         files.forEach((file) => {
             if (file.getArch() === 'web.browser') {
                 if (
-                    file.getPackageName() === 'communitypackages:meteor-desktop-bundler'
+                    file.getPackageName() === 'a4xrbj1:meteor-desktop-bundler'
                     && file.getPathInPackage() === 'version._desktop_.js'
                 ) {
                     versionFile = file;
