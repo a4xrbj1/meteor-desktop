@@ -60,7 +60,7 @@ export default [
                 'process',
                 'ava',
                 'send',
-                'meteor-desktop-test-suite',
+                '@playwright/test',
             ],
         },
         rules: {

@@ -528,7 +528,7 @@ This integration fully supports rebuilding native modules (npm packages with nat
 ## Testing desktop app and modules
 
 For unit tests you should not have problems with using [electron-mocha](https://github.com/jprichardson/electron-mocha).  
-For functional testing, we recommend using [Playwright](https://playwright.dev/docs/intro) or [WebdriverIO](https://webdriver.io/docs/electron-testing.html). Note that [Spectron](http://electron.atom.io/spectron) is deprecated.
+For functional testing, we recommend using [Playwright](https://playwright.dev/docs/intro) or [WebdriverIO](https://webdriver.io/docs/electron-testing.html).
 
 There are two exemplary tests present in the default scaffold. Check them out as they have some
 comments in them.  
@@ -539,9 +539,7 @@ npm run desktop -- init-tests-support
 Two tasks should be added to your `scripts` section: `test-desktop` and `test-desktop-watch`.
 Feel free to run the tests with: `npm run test-desktop`.
 
-For testing modules there is a [test suite](https://github.com/a4xrbj1/meteor-desktop-test-suite) available.
-It is used extensively in the plugins (splash screen & localstorage) tests so you can check there
-for more examples.
+Check the scaffold test files for usage examples.
 
 ## `MD_LOG_LEVEL`
 `MD_LOG_LEVEL` env var is used to set the logger verbosity. It is set to
