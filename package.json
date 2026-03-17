@@ -25,7 +25,6 @@
     "lint": "eslint lib plugins scaffold skeleton tests",
     "prepare-integration-tests": "node tests/integration/prepare.js",
     "coverage-html": "nyc report --reporter=lcov",
-    "coverage": "nyc report --reporter=text-lcov | coveralls",
     "report-coverage": "nyc report --reporter=lcov > coverage.lcov && codecov",
     "version": "node lib/scripts/propagateVersion.js && git add plugins",
     "postversion": "npm run publish-npm",
@@ -52,7 +51,6 @@
     "codecov": "3.8.3",
     "connect": "3.7.0",
     "connect-modrewrite": "0.10.2",
-    "coveralls": "3.1.1",
     "cross-env": "^10.1.0",
     "dirty-chai": "^3.0.0",
     "eslint": "^10.0.3",
@@ -119,8 +117,7 @@
       "plugins",
       "tests",
       "scaffold",
-      "lib",
-      "devEnvSetup.js"
+      "lib"
     ],
     "sourceMap": false,
     "instrument": false,

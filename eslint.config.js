@@ -17,7 +17,6 @@ export default [
             'tests/.__tmp/**',
             'tests/fixtures/**',
             'plugins/bundler/version._desktop_.js',
-            'devEnvSetup.js',
         ],
     },
 
