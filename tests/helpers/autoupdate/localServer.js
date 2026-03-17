@@ -1,4 +1,3 @@
-import http from 'http';
 import * as chai from 'chai';
 import dirty from 'dirty-chai';
 import path from 'path';
@@ -77,9 +76,7 @@ export function setUpLocalServer(mainPath, parentPath) {
 
 // Fetches from the local server.
 export function fetchFromLocalServer(url) {
-    return fetch(`http://127.0.0.1:${localServerPort}${url}`, {
-        agent: new http.Agent({ keepAlive: false })
-    });
+    return fetch(`http://127.0.0.1:${localServerPort}${url}`);
 }
 
 /**

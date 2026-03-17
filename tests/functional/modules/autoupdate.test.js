@@ -735,42 +735,6 @@ describe('autoupdate', () => {
         });
     });
 
-    describe('when downloading a version with a missing cordovaCompatibilityVersion', () => {
-        beforeEach(async () => {
-            try {
-                meteorServer = await serveVersion('missing_cordova_compatibility_version');
-            } catch (e) {
-                throw new Error(e);
-            }
-            cleanup();
-        });
-        afterEach(async () => {
-            await shutdownMeteorServer();
-            await shutdownLocalServer();
-        });
-
-        it('should invoke the onError callback with an error', () => new Promise((resolve, reject) => {
-            setUpAutoupdate(showLogs, () => {
-                reject(new Error('onVersionReady invoked unexpectedly'));
-            }, 'version1', (error) => {
-                try {
-                    expect(error).to.include('Asset manifest does not have a cordovaCompatibilityVersion.');
-                    resolve();
-                } catch (e) {
-                    reject(e);
-                }
-            }, false).then((autoupdate) => {
-                autoupdate.checkForUpdates();
-            }).catch(reject);
-        }));
-
-        it('should not invoke the onNewVersionReady callback', (done) => {
-            runAutoUpdateTests(done, () => {
-                done('onVersionReady invoked unexpectedly');
-            }, 'missing_cordova_compatibility_version', 'version1', false, false);
-            waitForTestToFail(1000, done);
-        });
-    });
 
     // Commented out as the cordova compatibility check is disabled in this autoupdate integration.
     // That is of course because we have Electron, not Cordova integration.

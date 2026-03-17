@@ -5,5 +5,17 @@
     "android": "4017747ca6b4f460f33b121e439b7a11a070205a",
     "ios": "0abe549f2adbcf6cd295428aefea628ebe69666a"
   },
-  "manifest": []
+  "manifest": [
+    {
+      "path": "packages/meteor.js",
+      "where": "client",
+      "type": "js",
+      "cacheable": true,
+      "url": "/packages/meteor.js?57d11a30155349aa5106f8150cee35eac5f4764c",
+      "sourceMap": "packages/meteor.js.map",
+      "sourceMapUrl": "/packages/57d11a30155349aa5106f8150cee35eac5f4764c.map",
+      "size": 113991,
+      "hash": "57d11a30155349aa5106f8150cee35eac5f4764c"
+    }
+  ]
 }
