@@ -4,10 +4,12 @@ import findPort from 'find-port';
 import enableDestroy from 'server-destroy';
 import url from 'url';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import fs from 'fs-plus';
 import send from 'send';
 import mime from 'mime';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const oneYearInSeconds = 60 * 60 * 24 * 365;
 
 // This is a stream protocol response object that is compatible in very limited way with

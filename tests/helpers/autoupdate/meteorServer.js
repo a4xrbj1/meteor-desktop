@@ -80,12 +80,16 @@ export default class MeteorServer {
         server.use(saveRequests);
 
         /**
-         * Listen on `__cordova` path.
+         * Listen on `__cordova` and `__browser` paths.
+         * Meteor 3.x uses `__browser` instead of `__cordova`.
          */
         server.use(modRewrite([
             '^/__cordova/(?!($|manifest.json|app|packages|merged-stylesheets.css|.*meteor_js_'
             + 'resource|cordova.js))(.*) /app/$2',
-            '^/__cordova/(.*) /$1'
+            '^/__cordova/(.*) /$1',
+            '^/__browser/(?!($|manifest.json|app|packages|merged-stylesheets.css|.*meteor_js_'
+            + 'resource|cordova.js))(.*) /app/$2',
+            '^/__browser/(.*) /$1'
         ]));
 
         function setSourceMapHeader(req, res, next) {
@@ -114,10 +118,15 @@ export default class MeteorServer {
                 exists(path.join(serverPath, pathname))
             ) {
                 res.setHeader('ETag', `"${sha1FileSync(path.join(serverPath, pathname))}"`);
+            } else if (exists(path.join(serverPath, 'app', pathname))) {
+                res.setHeader('ETag', `"${sha1FileSync(path.join(serverPath, 'app', pathname))}"`);
             }
             if (parentServerPath
                 && exists(path.join(parentServerPath, pathname))) {
                 res.setHeader('ETag', `"${sha1FileSync(path.join(parentServerPath, pathname))}"`);
+            } else if (parentServerPath
+                && exists(path.join(parentServerPath, 'app', pathname))) {
+                res.setHeader('ETag', `"${sha1FileSync(path.join(parentServerPath, 'app', pathname))}"`);
             }
             next();
         }
@@ -136,6 +145,11 @@ export default class MeteorServer {
 
         // Serve files as static from the main directory.
         server.use(serveStatic(serverPath),
+            {});
+
+        // Meteor 3.x non-cacheable assets have root-level URLs (e.g. /some-file) but live
+        // inside the app/ subdirectory of the fixture. Serve app/ as a fallback root.
+        server.use(serveStatic(path.join(serverPath, 'app')),
             {});
 
         if (parentServerPath) {

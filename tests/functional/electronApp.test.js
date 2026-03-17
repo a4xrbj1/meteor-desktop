@@ -103,7 +103,7 @@ describe('electronApp', () => {
         });
         it('should report error dependency conflict with core', () => {
             testUpdateDependenciesError(
-                'someModule', 'shelljs', '0.2.0', /found to be conflicting/
+                'someModule', 'connect', '0.2.0', /found to be conflicting/
             );
         });
     });

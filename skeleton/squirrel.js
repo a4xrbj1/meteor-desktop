@@ -1,10 +1,17 @@
 /* eslint-disable import-x/no-dynamic-require */
 import path from 'path';
 import { spawnSync } from 'child_process';
+import { createRequire } from 'module';
 import fs from 'fs-plus';
 import os from 'os';
-import electron from 'electron';
 
+const require = createRequire(import.meta.url);
+let electron = { app: {}, autoUpdater: {} };
+try {
+    electron = require('electron');
+} catch (e) {
+    // Allows unit tests to run outside Electron.
+}
 const { app, autoUpdater } = electron;
 
 /**

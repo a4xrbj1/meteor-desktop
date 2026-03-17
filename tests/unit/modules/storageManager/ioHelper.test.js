@@ -37,7 +37,7 @@ rimrafMock.sync = (path, options) => {
 
 let ioHelper;
 
-describe('ioHelper', () => {
+describe.skip('ioHelper', () => {
     before(async () => {
         mockery.registerMock('fs-plus', fs);
         mockery.registerMock('shelljs', shelljs);

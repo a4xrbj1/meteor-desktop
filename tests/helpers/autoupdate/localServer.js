@@ -1,5 +1,4 @@
 import http from 'http';
-import fetch from 'node-fetch';
 import * as chai from 'chai';
 import dirty from 'dirty-chai';
 import path from 'path';

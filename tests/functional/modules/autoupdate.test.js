@@ -264,7 +264,6 @@ describe('autoupdate', () => {
         shell.rm('-rf', paths.autoUpdateVersionsPath);
         shell.mkdir('-p', paths.autoUpdateVersionsPath);
         mockery.registerMock('original-fs', fs);
-        mockery.registerAllowable('node-fetch');
         mockery.enable(mockerySettings);
         HCPClient = require('../../../skeleton/modules/autoupdate').default;
     });
@@ -284,7 +283,7 @@ describe('autoupdate', () => {
             cleanup();
         });
         afterEach(async () => {
-            shutdownMeteorServer();
+            await shutdownMeteorServer();
             await shutdownLocalServer();
         });
 
@@ -296,12 +295,12 @@ describe('autoupdate', () => {
             meteorServer.receivedRequests = [];
             runAutoUpdateTests(done, () => {
                 expect(meteorServer.receivedRequests).to.include.members([
-                    '/__cordova/manifest.json',
-                    '/__cordova/app/template.mobileapp.js',
-                    '/__cordova/app/3f6275657e6db3a21acb37d0f6c207cf83871e90.map',
-                    '/__cordova/some-file',
-                    '/__cordova/some-other-file',
-                    '/__cordova/']);
+                    '/__browser/manifest.json',
+                    '/app/template.mobileapp.js',
+                    '/app/3f6275657e6db3a21acb37d0f6c207cf83871e90.map',
+                    '/some-file',
+                    '/some-other-file',
+                    '/']);
                 expect(meteorServer.receivedRequests).to.have.a.lengthOf(6);
             }, 'version2');
         });
@@ -326,7 +325,7 @@ describe('autoupdate', () => {
             downloadAndServeVersionLocally('version2', 'version3', done);
         });
         afterEach(async () => {
-            shutdownMeteorServer();
+            await shutdownMeteorServer();
             await shutdownLocalServer();
         });
 
@@ -338,11 +337,11 @@ describe('autoupdate', () => {
             meteorServer.receivedRequests = [];
             runAutoUpdateTests(done, () => {
                 expect(meteorServer.receivedRequests).to.include.members([
-                    '/__cordova/manifest.json',
-                    '/__cordova/',
-                    '/__cordova/app/template.mobileapp.js',
-                    '/__cordova/app/36e96c1d40459ae12164569599c9c0a203b36db7.map',
-                    '/__cordova/some-file']);
+                    '/__browser/manifest.json',
+                    '/',
+                    '/app/template.mobileapp.js',
+                    '/app/36e96c1d40459ae12164569599c9c0a203b36db7.map',
+                    '/some-file']);
                 expect(meteorServer.receivedRequests).to.have.a.lengthOf(5);
             }, 'version3', 'version2');
         });
@@ -387,7 +386,7 @@ describe('autoupdate', () => {
             downloadAndServeVersionLocally('version2', 'version1', done);
         });
         afterEach(async () => {
-            shutdownMeteorServer();
+            await shutdownMeteorServer();
             await shutdownLocalServer();
         });
 
@@ -399,7 +398,7 @@ describe('autoupdate', () => {
             meteorServer.receivedRequests = [];
             runAutoUpdateTests(done, () => {
                 expect(meteorServer.receivedRequests).to.deep.equal([
-                    '/__cordova/manifest.json'
+                    '/__browser/manifest.json'
                 ]);
             }, 'version1', 'version2');
         });
@@ -454,7 +453,7 @@ describe('autoupdate', () => {
             downloadAndServeVersionLocally('version2', 'version2', done);
         });
         afterEach(async () => {
-            shutdownMeteorServer();
+            await shutdownMeteorServer();
             await shutdownLocalServer();
         });
 
@@ -472,7 +471,7 @@ describe('autoupdate', () => {
             autoupdate.checkForUpdates();
             await new Promise((resolve) => { setTimeout(resolve, 500); });
             expect(meteorServer.receivedRequests).to.deep.equal([
-                '/__cordova/manifest.json'
+                '/__browser/manifest.json'
             ]);
         });
     });
@@ -487,7 +486,7 @@ describe('autoupdate', () => {
             cleanup();
         });
         afterEach(async () => {
-            shutdownMeteorServer();
+            await shutdownMeteorServer();
             await shutdownLocalServer();
         });
 
@@ -525,7 +524,7 @@ describe('autoupdate', () => {
             cleanup();
         });
         afterEach(async () => {
-            shutdownMeteorServer();
+            await shutdownMeteorServer();
             await shutdownLocalServer();
         });
 
@@ -563,7 +562,7 @@ describe('autoupdate', () => {
             cleanup();
         });
         afterEach(async () => {
-            shutdownMeteorServer();
+            await shutdownMeteorServer();
             await shutdownLocalServer();
         });
 
@@ -601,7 +600,7 @@ describe('autoupdate', () => {
             cleanup();
         });
         afterEach(async () => {
-            shutdownMeteorServer();
+            await shutdownMeteorServer();
             await shutdownLocalServer();
         });
 
@@ -633,7 +632,7 @@ describe('autoupdate', () => {
             downloadAndServeVersionLocally('127.0.0.1_root_url', 'wrong_root_url', done);
         });
         afterEach(async () => {
-            shutdownMeteorServer();
+            await shutdownMeteorServer();
             await shutdownLocalServer();
         });
 
@@ -671,7 +670,7 @@ describe('autoupdate', () => {
             cleanup();
         });
         afterEach(async () => {
-            shutdownMeteorServer();
+            await shutdownMeteorServer();
             await shutdownLocalServer();
         });
 
@@ -708,7 +707,7 @@ describe('autoupdate', () => {
             cleanup();
         });
         afterEach(async () => {
-            shutdownMeteorServer();
+            await shutdownMeteorServer();
             await shutdownLocalServer();
         });
 
@@ -746,7 +745,7 @@ describe('autoupdate', () => {
             cleanup();
         });
         afterEach(async () => {
-            shutdownMeteorServer();
+            await shutdownMeteorServer();
             await shutdownLocalServer();
         });
 
@@ -838,16 +837,16 @@ describe('autoupdate', () => {
             }).catch(done);
         });
         afterEach(async () => {
-            shutdownMeteorServer();
+            await shutdownMeteorServer();
             await shutdownLocalServer();
         });
 
         it('should only download the manifest, the index page, and the remaining assets', () => {
             expect(meteorServer.receivedRequests).to.include.members([
-                '/__cordova/manifest.json',
-                '/__cordova/',
-                '/__cordova/app/template.mobileapp.js',
-                '/__cordova/app/3f6275657e6db3a21acb37d0f6c207cf83871e90.map']);
+                '/__browser/manifest.json',
+                '/',
+                '/app/template.mobileapp.js',
+                '/app/3f6275657e6db3a21acb37d0f6c207cf83871e90.map']);
         });
 
         it('should only serve the new version after a page reload', async () => {
@@ -888,17 +887,17 @@ describe('autoupdate', () => {
         });
 
         afterEach(async () => {
-            shutdownMeteorServer();
+            await shutdownMeteorServer();
             await shutdownLocalServer();
         });
 
         it('should only download the manifest, the index page, and the remaining assets', () => {
             expect(meteorServer.receivedRequests).to.include.members([
-                '/__cordova/manifest.json',
-                '/__cordova/',
-                '/__cordova/app/template.mobileapp.js',
-                '/__cordova/app/36e96c1d40459ae12164569599c9c0a203b36db7.map',
-                '/__cordova/some-file']);
+                '/__browser/manifest.json',
+                '/',
+                '/app/template.mobileapp.js',
+                '/app/36e96c1d40459ae12164569599c9c0a203b36db7.map',
+                '/some-file']);
         });
 
         it('should only serve the new verson after a page reload', async () => {
@@ -972,7 +971,7 @@ describe('autoupdate', () => {
 
     describe('when version is blacklisted', () => {
         afterEach(async () => {
-            shutdownMeteorServer();
+            await shutdownMeteorServer();
             await shutdownLocalServer();
         });
 
@@ -1002,7 +1001,7 @@ describe('autoupdate', () => {
             cleanup();
         });
         afterEach(async () => {
-            shutdownMeteorServer();
+            await shutdownMeteorServer();
             await shutdownLocalServer();
         });
 
