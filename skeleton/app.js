@@ -700,25 +700,37 @@ export default class App {
             this.webContents.session.protocol.handle(
                 'meteor',
                 async (request) => {
-                    const urlPath = request.url.substr(urlStripLength) || '/';
+                    const requestUrl = new URL(request.url);
+                    const urlPathname = requestUrl.pathname || '/';
+                    const urlPath = `${urlPathname}${requestUrl.search || ''}`;
 
                     if (meteorDevPort) {
                         // Root HTML and local-only assets come from the local server,
                         // which has injectEsm() patches (type="module" script tags) applied.
                         // Serving root HTML from the dev server would skip those patches and
                         // cause "import.meta outside a module" errors in Meteor 3.x modules.js.
-                        const isLocalOnly = urlPath === '/'
-                            || urlPath === '/index.html'
-                            || urlPath === '/cordova.js'
-                            || urlPath.startsWith('/___desktop/')
-                            || urlPath.startsWith('/local-filesystem/');
+                        const isLocalOnly = urlPathname === '/'
+                            || urlPathname === '/index.html'
+                            || urlPathname === '/cordova.js'
+                            || urlPathname.startsWith('/___desktop/')
+                            || urlPathname.startsWith('/local-filesystem/');
+                        const isRspackClientRequest = urlPathname === '/__rspack__/client-rspack.js';
 
                         if (!isLocalOnly) {
                             // Meteor package JS files exist only in the dev server's memory
                             // (INDEX_FROM_RUNNING_SERVER mode) — fetch them from there.
+                            // Rspack-managed assets such as /__rspack__/client-rspack.js and
+                            // /build-chunks/* live on the dev server outside /__browser and must
+                            // be fetched from their exact public paths.
                             try {
+                                const devRequestPath = (
+                                    urlPathname.startsWith('/__rspack__/')
+                                    || urlPathname.startsWith('/build-chunks/')
+                                )
+                                    ? urlPath
+                                    : `/__browser${urlPath}`;
                                 const devResponse = await net.fetch(
-                                    `http://127.0.0.1:${meteorDevPort}/__browser${urlPath}`
+                                    `http://127.0.0.1:${meteorDevPort}${devRequestPath}`
                                 );
                                 const ct = (devResponse.headers.get('content-type') || '').toLowerCase();
                                 // Guard: Meteor's SPA catch-all returns 200+HTML for unknown paths.
@@ -755,6 +767,65 @@ export default class App {
                                             /(\w+\.)(?:isCordova)(&&\w*\.startupDidComplete\()/gm,
                                             '$1isDesktop$2'
                                         );
+                                        if (isRspackClientRequest) {
+                                            const rspackLogThrottlePreamble = `(function(){
+var scope = typeof window !== 'undefined' ? window : globalThis;
+var state = scope.__meteorDesktopRspackLogThrottle || (scope.__meteorDesktopRspackLogThrottle = {});
+var throttleMs = 30000;
+var wrapConsoleMethod = function(methodName){
+    var original = console[methodName];
+    if (typeof original !== 'function' || original.__meteorDesktopRspackWrapped) {
+        return;
+    }
+    var wrapped = function(){
+        var text = Array.prototype.map.call(arguments, function(arg){
+            if (typeof arg === 'string') {
+                return arg;
+            }
+            if (arg && typeof arg.message === 'string') {
+                return arg.message;
+            }
+            return String(arg);
+        }).join(' ');
+        var matchedKey = null;
+        if (text.indexOf('[webpack-dev-server] Event') !== -1) {
+            matchedKey = 'webpack-dev-server-event';
+        } else if (text.indexOf('[webpack-dev-server] Disconnected!') !== -1) {
+            matchedKey = 'webpack-dev-server-disconnected';
+        }
+        if (matchedKey) {
+            var now = Date.now();
+            var previous = state[matchedKey];
+            if (previous && (now - previous.lastLoggedAt) < throttleMs) {
+                previous.suppressedCount += 1;
+                state[matchedKey] = previous;
+                return;
+            }
+            if (previous && previous.suppressedCount > 0 && typeof arguments[0] === 'string') {
+                arguments[0] = arguments[0] + ' (repeated ' + previous.suppressedCount + ' times)';
+            }
+            state[matchedKey] = { lastLoggedAt: now, suppressedCount: 0 };
+        }
+        return original.apply(this, arguments);
+    };
+    wrapped.__meteorDesktopRspackWrapped = true;
+    console[methodName] = wrapped;
+};
+wrapConsoleMethod('error');
+wrapConsoleMethod('warn');
+wrapConsoleMethod('log');
+})();\n`;
+                                            js = `${rspackLogThrottlePreamble}${js}`;
+                                            js = js.replace(
+                                                /var allowToHot = search\.indexOf\('webpack-dev-server-hot=false'\) === -1;/g,
+                                                'var allowToHot = false;'
+                                            );
+                                            js = js.replace(
+                                                /var allowToLiveReload = search\.indexOf\('webpack-dev-server-live-reload=false'\) === -1;/g,
+                                                'var allowToLiveReload = false;'
+                                            );
+                                            js = js.replace(/var maxRetries = 10;/g, 'var maxRetries = 0;');
+                                        }
                                         // A5: canary — warn (once per type) when patches were actually needed.
                                         if (js !== jsOrig) {
                                             warnOnce(
