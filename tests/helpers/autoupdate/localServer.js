@@ -74,9 +74,25 @@ export function setUpLocalServer(mainPath, parentPath) {
     });
 }
 
-// Fetches from the local server.
-export function fetchFromLocalServer(url) {
-    return fetch(`http://127.0.0.1:${localServerPort}${url}`);
+/**
+ * Fetches from the local server with retry logic to handle stale undici connections
+ * after a server restart.
+ * @param {string} url
+ * @param {number} retries
+ * @returns {Promise<Response>}
+ */
+export async function fetchFromLocalServer(url, retries = 3) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+            return await fetch(`http://127.0.0.1:${localServerPort}${url}`);
+        } catch (e) {
+            if (attempt < retries) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            } else {
+                throw e;
+            }
+        }
+    }
 }
 
 /**
