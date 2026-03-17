@@ -1,3 +1,32 @@
+## v5.1.0 <sup>18.03.2026</sup>
+
+Adds full rspack bundler support alongside existing Babel builds, renames plugins to the `@a4xrbj1` namespace, and hardens build validation gates.
+
+### Rspack Bundler Support
+* Support Meteor apps bundled with rspack in addition to the traditional Babel pipeline.
+* Route `/__rspack__/`, `/build-assets/`, and `/build-chunks/` paths through the Meteor dev server proxy in Electron.
+* Resolve rspack-style asset paths (files in `app/` subdirectory) via `program.json` manifest in both A2.5 hash coherence gate and `injectEsm()` validation.
+* Normalize stale script src hashes in `index.html` against the authoritative `program.json` manifest.
+* Throttle noisy rspack/webpack-dev-server reconnection logs in the Electron console.
+* Disable rspack hot-reload and live-reload in the Electron client (not applicable to desktop builds).
+
+### Plugin Namespace Rename
+* Rename Atmosphere plugins from `communitypackages:meteor-desktop-*` to `a4xrbj1:meteor-desktop-*`.
+* Fix `ensureDesktopHCPPackages()` to write packages to `.meteor/packages` in addition to symlinking (symlinks alone were insufficient).
+* Skip HCP build-plugin package script tags in A2.5 and `injectEsm()` validation gates (server-only packages that produce no client JS).
+
+### Dev Proxy Hardening
+* Parse `meteor://` request URLs with `URL` constructor instead of substring slicing for correct query string handling.
+* Retry fetch on connection error after local server restart.
+
+### Housekeeping
+* Remove stale CI configs (`appveyor.yml`, `.coveralls.yml`, `.codeclimate.yml`, `.babelrc`, `.npmignore`), dead `devEnvSetup.js`, and `gh-md-toc`.
+* Remove `coveralls` dev dependency.
+* Update README: correct package name to `@a4xrbj1/meteor-desktop`, fix Electron link, add maintainer attribution.
+* Update test fixtures and helpers for Node 22 and Meteor 3.x compatibility.
+* Remove dead `ioHelper` test (source file no longer exists).
+* Add `jsconfig.json` with workspace excludes for VS Code.
+
 ## v5.0.0 <sup>15.03.2026</sup>
 
 Major release bringing full Meteor 3.x compatibility, ESM support, dependency debloat, and a hardened build pipeline.
