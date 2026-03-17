@@ -42,19 +42,4 @@ describe('desktop', () => {
             fs.writeFileSync(packageJsonPath, original);
         });
     });
-
-    describe('build involved tests', () => {
-        before(function skipSpectronTests() {
-            // spectron was deprecated and archived by the Electron team.
-            // It only supports Electron <= 19 while this project uses Electron 33+.
-            // These tests need rewriting with @playwright/test or similar.
-            this.skip();
-        });
-
-        it('expose electron modules', async () => {
-        }).timeout(10 * 60000);
-
-        it('should build installer', async () => {
-        }).timeout(10 * 60000);
-    });
 });
