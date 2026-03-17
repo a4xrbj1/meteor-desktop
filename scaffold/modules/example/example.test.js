@@ -1,26 +1,32 @@
 /**
- * Example module functional test scaffold.
+ * Example functional test for the example module using Playwright.
  *
- * This file is a placeholder for functional tests using @playwright/test with
- * Electron. Spectron was deprecated and archived by the Electron team (Electron <= 19 only).
- * meteor-desktop-test-suite relied on Spectron and is no longer usable.
+ * Install Playwright with Electron support:
+ *   npm install --save-dev @playwright/test playwright
  *
- * To add real tests:
- * 1. Install: npm install --save-dev @playwright/test
- * 2. Follow the Playwright Electron guide:
- *    https://playwright.dev/docs/api/class-electronapplication
- *
- * Example skeleton for module testing:
- *
- *   import { test, expect, _electron as electron } from '@playwright/test';
- *
- *   test('example module testEvent returns true for 1', async () => {
- *       const app = await electron.launch({ args: ['.'] });
- *       const window = await app.firstWindow();
- *       const result = await window.evaluate(() =>
- *           Desktop.send('example', 'testEvent', 1)
- *       );
- *       expect(result).toBe(true);
- *       await app.close();
- *   });
+ * See https://playwright.dev/docs/api/class-electronapplication for the full API.
+ * Run with: npm run test-desktop
  */
+import { test, expect, _electron as electron } from '@playwright/test';
+
+let electronApp;
+
+test.beforeAll(async () => {
+    electronApp = await electron.launch({
+        args: ['.meteor/desktop-build'],
+        env: { ELECTRON_ENV: 'test' }
+    });
+});
+
+test.afterAll(async () => {
+    if (electronApp) {
+        await electronApp.close();
+    }
+});
+
+test('app window appears', async () => {
+    const window = await electronApp.firstWindow();
+    await window.waitForLoadState('domcontentloaded');
+    // Replace with assertions for your module.
+    expect(await electronApp.windows()).toHaveLength(1);
+});
