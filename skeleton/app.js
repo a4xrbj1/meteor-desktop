@@ -725,6 +725,7 @@ export default class App {
                             try {
                                 const devRequestPath = (
                                     urlPathname.startsWith('/__rspack__/')
+                                    || urlPathname.startsWith('/build-assets/')
                                     || urlPathname.startsWith('/build-chunks/')
                                 )
                                     ? urlPath
