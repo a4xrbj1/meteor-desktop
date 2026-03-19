@@ -33,7 +33,7 @@ describe('DesktopPathResolver', () => {
     });
 
     describe('#resolveDesktopPath', () => {
-        function prepareFsStubs(desktopVersion, initialMeteorVersion, autoUpdateJson) {
+        function prepareFsStubs(desktopVersion, initialMeteorVersion, autoUpdateJson, indexHtml = '<html>initial</html>') {
             if (readFileSyncStub) {
                 readFileSyncStub.restore();
             }
@@ -46,6 +46,9 @@ describe('DesktopPathResolver', () => {
             readFileSyncStub
                 .withArgs(sinon.match('meteor').and(sinon.match('program.json')))
                 .returns(JSON.stringify({ version: initialMeteorVersion }));
+            readFileSyncStub
+                .withArgs(sinon.match('meteor').and(sinon.match('index.html')))
+                .returns(indexHtml);
             // autoupdate.json
             readFileSyncStub
                 .withArgs(sinon.match('autoupdate.json'))
@@ -77,6 +80,25 @@ describe('DesktopPathResolver', () => {
             expect(infoStub).to.be.calledWithMatch(
                 sinon.match('using desktop.asar from initial bundle')
             );
+            expect(desktopPath.endsWith(`${path.sep}desktop.asar`)).to.be.true();
+        });
+
+        it('should use initial version when embedded bootstrap signature has changed', () => {
+            prepareFsStubs(1, 1, {
+                lastSeenInitialVersion: 1,
+                lastSeenInitialSignature: 'stale-signature',
+                lastDownloadedVersion: '546',
+                lastKnownGoodVersion: '546',
+                blacklistedVersions: []
+            }, '<html>fresh bootstrap</html>');
+
+            const infoStub = sinon.spy();
+            const desktopPath = DesktopPathResolver.resolveDesktopPath(__dirname, { info: infoStub });
+
+            expect(infoStub).to.be.calledWithMatch(sinon.match(
+                'will use desktop.asar from initial version because the embedded bootstrap '
+                + 'signature of meteor app has changed'
+            ));
             expect(desktopPath.endsWith(`${path.sep}desktop.asar`)).to.be.true();
         });
 

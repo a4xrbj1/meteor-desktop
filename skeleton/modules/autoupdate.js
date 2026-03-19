@@ -35,6 +35,7 @@ import url from 'url';
 
 import AssetBundle from './autoupdate/assetBundle.js';
 import AssetBundleManager from './autoupdate/assetBundleManager.js';
+import DesktopPathResolver from '../desktopPathResolver.js';
 
 const { join } = path;
 const require = createRequire(import.meta.url);
@@ -101,7 +102,8 @@ export default class HCPClient {
             appId: null,
             rootUrlString: null,
             blacklistedVersions: [],
-            lastDownloadedVersion: null
+            lastDownloadedVersion: null,
+            lastSeenInitialSignature: null
         };
     }
 
@@ -139,13 +141,22 @@ export default class HCPClient {
             this.log,
             this.settings.initialBundlePath
         );
+        const initialSignature = DesktopPathResolver.readAssetBundleSignature(
+            this.settings.initialBundlePath
+        );
+        const initialVersionChanged = initialAssetBundle.getVersion() !== this.config.lastSeenInitialVersion;
+        const initialSignatureChanged = !!(
+            this.config.lastSeenInitialSignature
+            && initialSignature
+            && this.config.lastSeenInitialSignature !== initialSignature
+        );
 
         // If the last seen initial version is different from the currently bundled
         // version, we delete the versions directory and unset lastDownloadedVersion
         // and blacklistedVersions.
-        if (initialAssetBundle.getVersion() !== this.config.lastSeenInitialVersion) {
+        if (initialVersionChanged || initialSignatureChanged) {
             this.log.info(
-                'detected new bundled version, removing versions directory if it exists'
+                'detected changed embedded bootstrap state, removing versions directory if it exists'
             );
             if (fs.existsSync(this.versionsDir)) {
                 // Using rimraf specifically instead of shelljs.rm because despite using
@@ -162,6 +173,7 @@ export default class HCPClient {
 
         // We keep track of the last seen initial version (see above).
         this.config.lastSeenInitialVersion = initialAssetBundle.getVersion();
+        this.config.lastSeenInitialSignature = initialSignature || null;
 
         // If the versions directory does not exist, we create it.
         if (!fs.existsSync(this.versionsDir)) {
@@ -226,13 +238,20 @@ export default class HCPClient {
             && lastKnownGoodVersion !== this.assetBundleManager.initialAssetBundle.getVersion()) {
             const assetBundle = this.assetBundleManager
                 .downloadedAssetBundleWithVersion(lastKnownGoodVersion);
-            this.log.info(`will use last known good version: ${assetBundle.getVersion()}`);
-            this.currentAssetBundle = assetBundle;
+            if (assetBundle) {
+                this.log.info(`will use last known good version: ${assetBundle.getVersion()}`);
+                this.currentAssetBundle = assetBundle;
+                return;
+            }
+
+            this.log.warn('configured last known good version is missing on disk, falling back '
+                + 'to the initial asset bundle');
         } else {
             this.log.verbose('using initial asset bundle because last know good version'
                 + 'does not exist');
-            this.currentAssetBundle = this.assetBundleManager.initialAssetBundle;
         }
+
+        this.currentAssetBundle = this.assetBundleManager.initialAssetBundle;
     }
 
     /**

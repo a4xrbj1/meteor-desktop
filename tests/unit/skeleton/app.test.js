@@ -141,4 +141,35 @@ describe('App', () => {
             });
         });
     });
+
+        describe('#injectRspackClientScript', () => {
+            it('should inject the Rspack client bundle into Cordova HTML when missing', () => {
+                const app = new App();
+                const html = '<html><head><link href="/build-chunks/main.css" rel="stylesheet"></head><body><script src="/app.js"></script></body></html>';
+
+                const patchedHtml = app.injectRspackClientScript(html);
+
+                expect(patchedHtml).to.include('/__rspack__/client-rspack.js');
+                expect((patchedHtml.match(/__rspack__\/client-rspack\.js/g) || []).length).to.equal(1);
+                expect(patchedHtml.indexOf('/app.js')).to.be.below(patchedHtml.indexOf('/__rspack__/client-rspack.js'));
+            });
+
+            it('should leave HTML unchanged when the Rspack client bundle is already present', () => {
+                const app = new App();
+                const html = '<html><head><link href="/build-chunks/main.css" rel="stylesheet"></head><body><script src="/app.js"></script><script src="/__rspack__/client-rspack.js"></script></body></html>';
+
+                const patchedHtml = app.injectRspackClientScript(html);
+
+                expect(patchedHtml).to.equal(html);
+            });
+
+            it('should leave HTML unchanged when no Rspack assets are present', () => {
+                const app = new App();
+                const html = '<html><head></head><body><script src="/app.js"></script></body></html>';
+
+                const patchedHtml = app.injectRspackClientScript(html);
+
+                expect(patchedHtml).to.equal(html);
+            });
+        });
 });

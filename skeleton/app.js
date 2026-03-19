@@ -466,6 +466,33 @@ export default class App {
     }
 
     /**
+     * Ensures dev-mode HTML loads the Rspack client bundle when the Cordova
+     * HTML omits it.
+     *
+     * @param {String} html - HTML content to patch.
+     *
+     * @returns {String} Patched HTML.
+     */
+    injectRspackClientScript(html) {
+        if (html.includes('/__rspack__/client-rspack.js')) {
+            return html;
+        }
+
+        if (!html.includes('/build-chunks/')) {
+            return html;
+        }
+
+        if (/<\/body>/i.test(html)) {
+            return html.replace(
+                /<\/body>/i,
+                '<script src="/__rspack__/client-rspack.js"></script>\n</body>'
+            );
+        }
+
+        return `${html}<script src="/__rspack__/client-rspack.js"></script>`;
+    }
+
+    /**
      * Checks wheteher object seems to be a promise.
      * @param {Object} obj
      * @returns {boolean}
@@ -891,6 +918,15 @@ wrapConsoleMethod('log');
                                 html = html.replace(
                                     /<script\b(?=[^>]*\bsrc=)[^>]*>/i,
                                     '<script src="/cordova.js"></script>\n$&'
+                                );
+                            }
+
+                            const htmlBeforeRspackInjection = html;
+                            html = this.injectRspackClientScript(html);
+                            if (html !== htmlBeforeRspackInjection) {
+                                warnOnce(
+                                    'html-rspack-client',
+                                    `dev-mode Cordova HTML was missing /__rspack__/client-rspack.js (${urlPath})`
                                 );
                             }
 

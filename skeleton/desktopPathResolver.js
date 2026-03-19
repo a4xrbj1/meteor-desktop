@@ -7,6 +7,26 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default class DesktopPathResolver {
     /**
+     * Returns the initial bundle file paths used to resolve runtime bundle metadata.
+     * Falls back to the unpacked meteor/ directory when meteor.asar does not exist.
+     *
+     * @returns {{asarPath: string, manifestPath: string, indexPath: string, desktopSettingsPath: string}}
+     */
+    static getInitialBundlePaths() {
+        const asarPath = path.resolve(join(__dirname, '..', 'meteor.asar'));
+        const meteorRoot = fs.existsSync(asarPath)
+            ? asarPath
+            : path.resolve(join(__dirname, '..', 'meteor'));
+
+        return {
+            asarPath,
+            manifestPath: path.join(meteorRoot, 'program.json'),
+            indexPath: path.join(meteorRoot, 'index.html'),
+            desktopSettingsPath: path.resolve(join(__dirname, '..', 'desktop.asar', 'settings.json'))
+        };
+    }
+
+    /**
      * Reads a json file.
      * @returns {Object}
      */
@@ -26,10 +46,7 @@ export default class DesktopPathResolver {
      * @returns {string|undefined}
      */
     static readInitialAssetBundleVersion() {
-        const asarPath = path.resolve(join(__dirname, '..', 'meteor.asar'));
-        const manifestPath = fs.existsSync(asarPath)
-            ? path.join(asarPath, 'program.json')
-            : path.resolve(join(__dirname, '..', 'meteor', 'program.json'));
+        const { manifestPath } = DesktopPathResolver.getInitialBundlePaths();
 
         let content;
         try {
@@ -57,6 +74,85 @@ export default class DesktopPathResolver {
             + ` — using derived hash version: ${derivedHash}`
         );
         return derivedHash;
+    }
+
+    /**
+     * Reads a stable signature for the embedded bootstrap state.
+     * It covers the files that decide startup semantics:
+     * - meteor program.json
+     * - meteor index.html
+     * - desktop.asar settings.json
+     *
+     * This is stricter than the manifest version/hash alone and lets us invalidate
+     * stale persisted autoupdate state when the embedded bootstrap changes without
+     * producing a distinct downloaded-bundle version.
+     *
+     * @returns {string|undefined}
+     */
+    static readInitialAssetBundleSignature() {
+        const {
+            manifestPath,
+            indexPath,
+            desktopSettingsPath
+        } = DesktopPathResolver.getInitialBundlePaths();
+
+        return DesktopPathResolver.readAssetBundleSignatureFromPaths(
+            manifestPath,
+            indexPath,
+            desktopSettingsPath
+        );
+    }
+
+    /**
+     * Reads a stable bootstrap signature for any asset bundle root.
+     * The bundle root can be either a directory or an asar archive path.
+     *
+     * @param {string} bundleRootPath - Root directory or asar archive containing the bundle.
+     * @param {string} [desktopSettingsPath] - Optional desktop settings file to fold into the signature.
+     *
+     * @returns {string|undefined}
+     */
+    static readAssetBundleSignature(bundleRootPath, desktopSettingsPath) {
+        const manifestPath = path.join(bundleRootPath, 'program.json');
+        const indexPath = path.join(bundleRootPath, 'index.html');
+
+        return DesktopPathResolver.readAssetBundleSignatureFromPaths(
+            manifestPath,
+            indexPath,
+            desktopSettingsPath
+        );
+    }
+
+    /**
+     * Reads a stable signature for the supplied bootstrap files.
+     *
+     * @param {string} manifestPath - Path to program.json.
+     * @param {string} indexPath - Path to index.html.
+     * @param {string} [desktopSettingsPath] - Optional desktop settings file.
+     *
+     * @returns {string|undefined}
+     */
+    static readAssetBundleSignatureFromPaths(manifestPath, indexPath, desktopSettingsPath) {
+        const parts = [];
+        const files = [manifestPath, indexPath, desktopSettingsPath].filter(Boolean);
+
+        files.forEach((filePath) => {
+            try {
+                parts.push(fs.readFileSync(filePath, 'UTF-8'));
+            } catch (e) {
+                // Skip unreadable files so dev/test environments without desktop.asar still get
+                // a stable signature from the bootstrap files that do exist.
+            }
+        });
+
+        if (parts.length === 0) {
+            return undefined;
+        }
+
+        return crypto
+            .createHash('sha256')
+            .update(parts.join('\n---meteor-desktop-bootstrap-boundary---\n'))
+            .digest('hex');
     }
 
     /**
@@ -89,6 +185,7 @@ export default class DesktopPathResolver {
 
         // Read meteor's initial asset bundle version.
         const initialVersion = DesktopPathResolver.readInitialAssetBundleVersion();
+        const initialSignature = DesktopPathResolver.readInitialAssetBundleSignature();
 
         this.autoupdate = null;
         const autoupdateConfig = DesktopPathResolver.readJsonFile(join(userDataDir, 'autoupdate.json'));
@@ -96,6 +193,15 @@ export default class DesktopPathResolver {
         if (autoupdateConfig.lastSeenInitialVersion !== initialVersion) {
             log.info('will use desktop.asar from initial version because the initial version '
             + `of meteor app has changed: ${desktopPath}`);
+            return desktopPath;
+        }
+
+        if (autoupdateConfig.lastSeenInitialSignature
+            && initialSignature
+            && autoupdateConfig.lastSeenInitialSignature !== initialSignature
+        ) {
+            log.info('will use desktop.asar from initial version because the embedded bootstrap '
+                + `signature of meteor app has changed: ${desktopPath}`);
             return desktopPath;
         }
 

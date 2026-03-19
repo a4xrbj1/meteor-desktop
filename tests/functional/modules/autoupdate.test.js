@@ -318,6 +318,26 @@ describe('autoupdate', () => {
                 await expectVersionServedToEqual('version2');
             }, 'version2');
         });
+
+        it('should invalidate persisted versions when the embedded bootstrap signature changes', async () => {
+            const autoupdate = await setUpAutoupdate(false, Function.prototype, 'version1');
+            const staleVersionDir = path.join(paths.autoUpdateVersionsPath, 'versions', 'stale-version');
+
+            fs.mkdirSync(staleVersionDir, { recursive: true });
+
+            autoupdate.config.lastSeenInitialVersion = autoupdate.currentAssetBundle.getVersion();
+            autoupdate.config.lastSeenInitialSignature = 'stale-signature';
+            autoupdate.config.lastDownloadedVersion = 'stale-version';
+            autoupdate.config.lastKnownGoodVersion = 'stale-version';
+            autoupdate.config.blacklistedVersions = ['stale-version'];
+
+            autoupdate.initializeAssetBundles();
+
+            expect(autoupdate.config.lastSeenInitialSignature).to.not.equal('stale-signature');
+            expect(autoupdate.config.lastDownloadedVersion).to.equal(null);
+            expect(autoupdate.config.blacklistedVersions).to.deep.equal([]);
+            expect(exists(staleVersionDir)).to.be.false();
+        });
     });
 
     describe('when updating from a downloaded app version to another downloaded version', () => {
