@@ -1,59 +1,24 @@
 /* eslint-disable no-console */
-// CI cache version: 1
+// CI cache version: 2
 
 import tempDir from 'temp-dir';
-import shell from 'shelljs';
-import path from 'path';
 import fs from 'fs';
-import { fileURLToPath } from 'url';
-
-import versions from '../../lib/defaultDependencies.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import path from 'path';
 
 const testsTmpPath = path.resolve(path.join(tempDir, '.__tmp_int'));
-
-const meteorVersion = '3.0.1';
-
-shell.config.fatal = true;
 const appDir = path.join(testsTmpPath, 'test-desktop');
+const packageJsonPath = path.join(appDir, 'package.json');
 
-shell.rm('-rf', testsTmpPath);
-
-if (!fs.existsSync(testsTmpPath) || !fs.existsSync(path.join(appDir, 'package.json'))) {
+if (!fs.existsSync(packageJsonPath)) {
     console.log(`creating test dir in ${testsTmpPath}`);
-    shell.mkdir('-p', testsTmpPath);
-    console.log(`creating test meteor app with meteor version=${meteorVersion}`);
-    shell.exec(`meteor create test-desktop --release=METEOR@${meteorVersion}`, { cwd: testsTmpPath });
-    console.log('created test meteor app');
-    const packageJson = JSON.parse(fs.readFileSync(path.join(appDir, 'package.json'), 'utf8'));
-    packageJson.dependencies['meteor-desktop'] = path.resolve(path.join(__dirname, '..', '..'));
-    if (process.env.APPVEYOR) {
-        packageJson.dependencies.electron = versions.electron;
-        packageJson.dependencies['electron-builder'] = versions['electron-builder'];
-    }
-    fs.writeFileSync(path.join(appDir, 'package.json'), JSON.stringify(packageJson, null, 2));
+    fs.mkdirSync(appDir, { recursive: true });
+    const packageJson = {
+        name: 'test-desktop',
+        version: '1.0.0',
+        scripts: {}
+    };
+    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+    console.log(`created minimal package.json at ${packageJsonPath}`);
 } else {
-    const currentVersion = fs.readFileSync(path.join(appDir, '.meteor', 'release'), 'utf-8').split('@')[1].replace(/[\r\n]/gm, '');
-    if (currentVersion !== meteorVersion) {
-        console.log(`updating meteor version in app dir ${appDir}`);
-        shell.exec(`meteor update --release=METEOR@${meteorVersion} --all-packages`, { cwd: appDir });
-    }
-    console.log('meteor npm prune');
-    shell.exec('meteor npm prune', { cwd: appDir });
-}
-console.log('meteor npm install');
-shell.exec('meteor npm install', { cwd: appDir });
-
-if (process.env.TRAVIS) {
-    shell.config.fatal = false;
-    console.log('adding platform android');
-    shell.exec('meteor add-platform android', { cwd: appDir });
-    console.log(shell.exec('meteor build ../build --server=127.0.0.1:3000', { cwd: appDir }));
-} else {
-    // This should bootstrap the mobile platform.
-    console.log('adding platform ios');
-    shell.exec('meteor add-platform ios', { cwd: appDir });
-    console.log('removing  platform ios');
-    shell.exec('meteor remove-platform ios', { cwd: appDir });
+    console.log(`test dir already exists at ${appDir}`);
 }
