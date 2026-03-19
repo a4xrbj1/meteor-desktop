@@ -694,7 +694,6 @@ export default class App {
                 this.l.warn(`[canary:A5] ${msg} — ensure injectEsm() applies same fix in prod build`);
             }
         };
-
         try {
             const meteorDevPort = this.settings.meteorDevServerPort;
             this.webContents.session.protocol.handle(
@@ -714,8 +713,6 @@ export default class App {
                             || urlPathname === '/cordova.js'
                             || urlPathname.startsWith('/___desktop/')
                             || urlPathname.startsWith('/local-filesystem/');
-                        const isRspackClientRequest = urlPathname === '/__rspack__/client-rspack.js';
-
                         if (!isLocalOnly) {
                             // Meteor package JS files exist only in the dev server's memory
                             // (INDEX_FROM_RUNNING_SERVER mode) — fetch them from there.
@@ -723,11 +720,11 @@ export default class App {
                             // /build-chunks/* live on the dev server outside /__browser and must
                             // be fetched from their exact public paths.
                             try {
-                                const devRequestPath = (
-                                    urlPathname.startsWith('/__rspack__/')
+                                const isRspackAssetRequest = urlPathname.startsWith('/__rspack__/')
                                     || urlPathname.startsWith('/build-assets/')
-                                    || urlPathname.startsWith('/build-chunks/')
-                                )
+                                    || urlPathname.startsWith('/build-chunks/');
+                                const isRspackClientRequest = urlPathname === '/__rspack__/client-rspack.js';
+                                const devRequestPath = isRspackAssetRequest
                                     ? urlPath
                                     : `/__browser${urlPath}`;
                                 const devResponse = await net.fetch(
@@ -744,7 +741,6 @@ export default class App {
                                     // undefined, breaking 'var global = this;' patterns.
                                     if (ct.includes('javascript')) {
                                         let js = await devResponse.text();
-                                        // A5: track which patch types fire so we can warn once per type.
                                         const jsOrig = js;
                                         js = js.replace(/var global = this;/g, 'var global = this || window;');
                                         js = js.replace(/global\s*=\s*this;/g, 'global = this || window;');
@@ -827,7 +823,6 @@ wrapConsoleMethod('log');
                                             );
                                             js = js.replace(/var maxRetries = 10;/g, 'var maxRetries = 0;');
                                         }
-                                        // A5: canary — warn (once per type) when patches were actually needed.
                                         if (js !== jsOrig) {
                                             warnOnce(
                                                 'js-patches',
@@ -844,7 +839,7 @@ wrapConsoleMethod('log');
                                     }
                                     return devResponse;
                                 }
-                            } catch (e) {
+                            } catch {
                                 // Dev server unreachable, fall through to local server.
                             }
                         }
