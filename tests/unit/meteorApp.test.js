@@ -114,4 +114,77 @@ describe('meteorApp', () => {
             expect(fs.readFileSync(dynamicFilePath, 'UTF-8')).to.include('({url: location.href}).url');
         });
     });
+
+    describe('#copyBuild', () => {
+        it('should reconcile downloaded index scripts with authoritative manifest urls', async () => {
+            if (readFileSyncStub) {
+                readFileSyncStub.restore();
+                readFileSyncStub = null;
+            }
+
+            tempDirToRemove = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-copy-build-'));
+            const webBrowserDir = path.join(tempDirToRemove, 'web.browser');
+            const meteorAppDir = path.join(tempDirToRemove, 'desktop-build', 'meteor');
+            const meteorAppIndex = path.join(meteorAppDir, 'index.html');
+            const webBrowserProgramJson = path.join(webBrowserDir, 'program.json');
+            const buildIndex = path.join(webBrowserDir, 'index.html');
+            const bundleFilePath = path.join(webBrowserDir, 'app.js');
+            const sessionFilePath = path.join(webBrowserDir, 'packages', 'session.js');
+
+            fs.mkdirSync(path.join(webBrowserDir, 'packages'), { recursive: true });
+            fs.mkdirSync(meteorAppDir, { recursive: true });
+            fs.writeFileSync(buildIndex, '<html><head></head><body>local build</body></html>');
+            fs.writeFileSync(bundleFilePath, 'console.log("app");');
+            fs.writeFileSync(sessionFilePath, 'console.log("session");');
+            fs.writeFileSync(
+                webBrowserProgramJson,
+                JSON.stringify({
+                    manifest: [
+                        { path: 'packages/session.js', url: '/packages/session.js?hash=new-session', type: 'js' },
+                        { path: 'app.js', url: '/app.js?hash=new-app', type: 'js' }
+                    ]
+                })
+            );
+
+            const instance = new MeteorApp({
+                env: {
+                    os: { isWindows: false },
+                    paths: {
+                        electronApp: {
+                            meteorApp: meteorAppDir,
+                            meteorAppIndex,
+                            meteorAppProgramJson: path.join(meteorAppDir, 'program.json')
+                        },
+                        meteorApp: {
+                            release: 'release.file',
+                            webBrowser: webBrowserDir,
+                            webBrowserProgramJson,
+                            legacyBuild: path.join(tempDirToRemove, 'legacy'),
+                            legacyBuildIndex: path.join(tempDirToRemove, 'legacy', 'index.html')
+                        }
+                    }
+                },
+                utils: {
+                    exists: (filePath) => fs.existsSync(filePath),
+                    rmWithRetries: async function () {
+                        fs.rmSync(meteorAppDir, { recursive: true, force: true });
+                    }
+                },
+                electronApp: { validationGatesPassed: [] }
+            });
+
+            instance.indexHTMLstrategy = instance.indexHTMLStrategies.INDEX_FROM_RUNNING_SERVER;
+            instance.acquireIndex = function () {
+                return Promise.resolve('<html><head></head><body><script src="/app.js?hash=stale-app"></script></body></html>');
+            };
+            instance.validateBundleStructure = function () {};
+
+            await instance.copyBuild();
+
+            const copiedIndex = fs.readFileSync(meteorAppIndex, 'UTF-8');
+            expect(copiedIndex).to.include('/packages/session.js?hash=new-session');
+            expect(copiedIndex).to.include('/app.js?hash=new-app');
+            expect(copiedIndex).to.not.include('stale-app');
+        });
+    });
 });
