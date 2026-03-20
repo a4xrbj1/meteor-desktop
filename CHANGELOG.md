@@ -1,3 +1,19 @@
+## v5.1.1 <sup>20.03.2026</sup>
+
+Minor stability release focused on Electron dev boot correctness for Meteor 3.x + rspack apps.
+
+### Electron Dev Boot & Routing Fixes
+
+* Fix white-window startup in Electron dev mode by injecting the missing `__rspack__/client-rspack.js` when Cordova HTML includes rspack assets but omits the client bundle script.
+* Restore full route registration in `flow-router-extra` during desktop startup (`home`, `sign-in`, discuss routes, etc.) by ensuring the rspack client app actually executes.
+* Add focused unit coverage for HTML patching logic in `skeleton/app.js` to prevent regressions in dev-mode script injection.
+
+### Bootstrap/Asset Coherence Hardening
+
+* Preserve and reconcile bootstrap script references against authoritative `program.json` during dev bootstrap handling to avoid stale manifest/script drift.
+* Improve embedded bootstrap invalidation behavior so stale persisted autoupdate state is dropped when the initial bootstrap signature changes.
+* Add targeted tests for bootstrap signature invalidation and desktop path resolution behavior.
+
 ## v5.1.0 <sup>18.03.2026</sup>
 
 Adds full rspack bundler support alongside existing Babel builds, renames plugins to the `@a4xrbj1` namespace, and hardens build validation gates.
