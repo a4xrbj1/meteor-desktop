@@ -7,6 +7,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { createRequire } from 'module';
+import { pathToFileURL } from 'url';
 
 // need for running test
 import * as asar from '@electron/asar'; // eslint-disable-line no-unused-vars
@@ -30,12 +31,39 @@ const METEOR_RELEASES = [
 ];
 
 let MeteorApp;
+let meteorAppTestExports;
 let readFileSyncStub;
 let tempDirToRemove;
+
+const meteorAppModulePath = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../lib/meteorApp.js');
+const meteorAppLibDir = path.dirname(meteorAppModulePath);
+
+const loadMeteorAppTestExports = async function () {
+    const sourcePath = path.join(meteorAppLibDir, 'meteorApp.js');
+    const tempModulePath = path.join(meteorAppLibDir, '__meteorApp.test.mjs');
+    const originalSource = fs.readFileSync(sourcePath, 'UTF-8');
+    const testableSource = `${originalSource}
+
+export {
+    patchClientBundleJs,
+    hasResidualClientEsmPatterns,
+    reconcileIndexHtmlScriptsWithManifest
+};
+`;
+
+    fs.writeFileSync(tempModulePath, testableSource, 'UTF-8');
+
+    try {
+        return await import(`${pathToFileURL(tempModulePath).href}?ts=${Date.now()}`);
+    } finally {
+        fs.rmSync(tempModulePath, { force: true });
+    }
+};
 
 describe('meteorApp', () => {
     before(async () => {
         MeteorApp = (await import('../../lib/meteorApp.js')).default;
+        meteorAppTestExports = await loadMeteorAppTestExports();
     });
 
     after(() => {
@@ -112,6 +140,148 @@ describe('meteorApp', () => {
 
             expect(fs.readFileSync(dynamicFilePath, 'UTF-8')).to.not.include('import.meta');
             expect(fs.readFileSync(dynamicFilePath, 'UTF-8')).to.include('({url: location.href}).url');
+        });
+    });
+
+    describe('meteorApp helper functions', () => {
+        it('should patch global scope and import.meta usages in client bundles', () => {
+            const { patchClientBundleJs, hasResidualClientEsmPatterns } = meteorAppTestExports;
+            const originalSource = [
+                'var global = this;',
+                'global = this;',
+                '}).call(this)',
+                'console.log(import.meta.url);'
+            ].join('\n');
+
+            const patchedSource = patchClientBundleJs(originalSource);
+
+            expect(patchedSource).to.include('var global = window;');
+            expect(patchedSource).to.include('global = window;');
+            expect(patchedSource).to.include('}).call(this || window)');
+            expect(patchedSource).to.include('({url: location.href}).url');
+            expect(hasResidualClientEsmPatterns(patchedSource)).to.be.false();
+        });
+
+        it('should patch bare Package assignments and app safe-init globals when requested', () => {
+            const { patchClientBundleJs, hasResidualClientEsmPatterns } = meteorAppTestExports;
+            const originalSource = [
+                'CollectionExtensions = Package["omega:collection-extensions"].CollectionExtensions;',
+                "if (typeof CollectionExtensions === 'undefined') { CollectionExtensions = {}; }",
+                'var require = meteorInstall;'
+            ].join('\n');
+
+            const patchedSource = patchClientBundleJs(originalSource, true, true);
+
+            expect(patchedSource).to.include('window.CollectionExtensions = Package');
+            expect(patchedSource).to.include("if (typeof window.CollectionExtensions === 'undefined') { window.CollectionExtensions =");
+            expect(patchedSource).to.include('var require = window.meteorInstall');
+            expect(hasResidualClientEsmPatterns(patchedSource, true)).to.be.false();
+        });
+
+        it('should detect residual bare Package assignments when requested', () => {
+            const { hasResidualClientEsmPatterns } = meteorAppTestExports;
+            const originalSource = 'CollectionExtensions = Package["omega:collection-extensions"].CollectionExtensions;';
+
+            expect(hasResidualClientEsmPatterns(originalSource)).to.be.false();
+            expect(hasResidualClientEsmPatterns(originalSource, true)).to.be.true();
+        });
+
+        it('should leave already aligned index.html script tags untouched', () => {
+            const { reconcileIndexHtmlScriptsWithManifest } = meteorAppTestExports;
+            const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-reconcile-aligned-'));
+            const indexHtmlPath = path.join(tempDir, 'index.html');
+            const logger = { info: sinon.stub() };
+
+            fs.writeFileSync(
+                indexHtmlPath,
+                '<html><head></head><body><script>window.inline = true;</script><script src="https://cdn.example.com/runtime.js"></script><script src="/packages/session.js?hash=1"></script><script src="/app.js?hash=2"></script></body></html>'
+            );
+
+            try {
+                const result = reconcileIndexHtmlScriptsWithManifest(indexHtmlPath, {
+                    manifest: [
+                        { type: 'js', url: '/packages/session.js?hash=1' },
+                        { type: 'js', url: '/app.js?hash=2' }
+                    ]
+                }, logger);
+
+                expect(result).to.deep.equal({
+                    changed: false,
+                    localScriptCount: 2,
+                    manifestScriptCount: 2,
+                    reason: 'already aligned'
+                });
+                expect(logger.info).to.not.have.been.called();
+            } finally {
+                fs.rmSync(tempDir, { recursive: true, force: true });
+            }
+        });
+
+        it('should rewrite only the local script block when manifest urls drift', () => {
+            const { reconcileIndexHtmlScriptsWithManifest } = meteorAppTestExports;
+            const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-reconcile-rewrite-'));
+            const indexHtmlPath = path.join(tempDir, 'index.html');
+            const logger = { info: sinon.stub() };
+
+            fs.writeFileSync(
+                indexHtmlPath,
+                '<html><head></head><body><script>window.inline = true;</script><script src="https://cdn.example.com/runtime.js"></script><script src="/app.js?hash=stale"></script></body></html>'
+            );
+
+            try {
+                const result = reconcileIndexHtmlScriptsWithManifest(indexHtmlPath, {
+                    manifest: [
+                        { type: 'js', url: '/packages/session.js?hash=new-session' },
+                        { type: 'js', url: '/app.js?hash=new-app' }
+                    ]
+                }, logger);
+                const reconciledHtml = fs.readFileSync(indexHtmlPath, 'UTF-8');
+
+                expect(result).to.deep.equal({
+                    changed: true,
+                    localScriptCount: 1,
+                    manifestScriptCount: 2,
+                    reason: 'rewrote local script block'
+                });
+                expect(reconciledHtml).to.include('<script>window.inline = true;</script>');
+                expect(reconciledHtml).to.include('<script src="https://cdn.example.com/runtime.js"></script>');
+                expect(reconciledHtml).to.include('/packages/session.js?hash=new-session');
+                expect(reconciledHtml).to.include('/app.js?hash=new-app');
+                expect(reconciledHtml).to.not.include('stale');
+                expect(logger.info).to.have.been.calledOnce();
+            } finally {
+                fs.rmSync(tempDir, { recursive: true, force: true });
+            }
+        });
+
+        it('should skip reconciliation when the index has no local script tags', () => {
+            const { reconcileIndexHtmlScriptsWithManifest } = meteorAppTestExports;
+            const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-reconcile-remote-'));
+            const indexHtmlPath = path.join(tempDir, 'index.html');
+            const logger = { info: sinon.stub() };
+
+            fs.writeFileSync(
+                indexHtmlPath,
+                '<html><head></head><body><script>window.inline = true;</script><script src="https://cdn.example.com/runtime.js"></script></body></html>'
+            );
+
+            try {
+                const result = reconcileIndexHtmlScriptsWithManifest(indexHtmlPath, {
+                    manifest: [
+                        { type: 'js', url: '/app.js?hash=new-app' }
+                    ]
+                }, logger);
+
+                expect(result).to.deep.equal({
+                    changed: false,
+                    localScriptCount: 0,
+                    manifestScriptCount: 1,
+                    reason: 'index has no local script tags'
+                });
+                expect(logger.info).to.not.have.been.called();
+            } finally {
+                fs.rmSync(tempDir, { recursive: true, force: true });
+            }
         });
     });
 

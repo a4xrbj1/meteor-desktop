@@ -338,6 +338,20 @@ describe('autoupdate', () => {
             expect(autoupdate.config.blacklistedVersions).to.deep.equal([]);
             expect(exists(staleVersionDir)).to.be.false();
         });
+
+        it('should fall back to the initial bundle when the last known good version is missing on disk', async () => {
+            const autoupdate = await setUpAutoupdate(false, Function.prototype, 'version1');
+
+            autoupdate.config.lastSeenInitialVersion = autoupdate.currentAssetBundle.getVersion();
+            autoupdate.config.lastDownloadedVersion = 'broken-version';
+            autoupdate.config.lastKnownGoodVersion = 'missing-version';
+            autoupdate.config.blacklistedVersions = ['broken-version'];
+
+            autoupdate.initializeAssetBundles();
+
+            expect(autoupdate.currentAssetBundle.getVersion()).to.equal('version1');
+            expect(autoupdate.getDirectory()).to.include('bundledWww');
+        });
     });
 
     describe('when updating from a downloaded app version to another downloaded version', () => {

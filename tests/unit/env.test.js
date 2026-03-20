@@ -1,5 +1,6 @@
 /* eslint-disable import-x/extensions */
 import * as chai from 'chai';
+import path from 'path';
 
 const { describe, it, afterEach } = global;
 const { expect } = chai;
@@ -39,5 +40,15 @@ describe('env', () => {
         expect(instance.paths.meteorApp.localDir).to.equal('/tmp/sample-app/.meteor/local-start');
         expect(instance.paths.meteorApp.webBrowser).to.equal('/tmp/sample-app/.meteor/local-start/build/programs/web.browser');
         expect(instance.paths.cache).to.equal('/tmp/sample-app/.meteor/local-start/desktop-cache');
+    });
+
+    it('should preserve absolute METEOR_LOCAL_DIR values', () => {
+        process.env.METEOR_LOCAL_DIR = path.join('/tmp', 'shared-meteor-local');
+
+        const instance = new Env('/tmp/sample-app', null, {});
+
+        expect(instance.paths.meteorApp.localDir).to.equal('/tmp/shared-meteor-local');
+        expect(instance.paths.meteorApp.webBrowser).to.equal('/tmp/shared-meteor-local/build/programs/web.browser');
+        expect(instance.paths.cache).to.equal('/tmp/shared-meteor-local/desktop-cache');
     });
 });

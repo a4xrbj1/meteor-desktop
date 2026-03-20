@@ -142,34 +142,79 @@ describe('App', () => {
         });
     });
 
-        describe('#injectRspackClientScript', () => {
-            it('should inject the Rspack client bundle into Cordova HTML when missing', () => {
-                const app = new App();
-                const html = '<html><head><link href="/build-chunks/main.css" rel="stylesheet"></head><body><script src="/app.js"></script></body></html>';
+    describe('#injectRspackClientScript', () => {
+        it('should inject the Rspack client bundle into Cordova HTML when missing', () => {
+            const app = new App();
+            const html = '<html><head><link href="/build-chunks/main.css" rel="stylesheet"></head><body><script src="/app.js"></script></body></html>';
 
-                const patchedHtml = app.injectRspackClientScript(html);
+            const patchedHtml = app.injectRspackClientScript(html);
 
-                expect(patchedHtml).to.include('/__rspack__/client-rspack.js');
-                expect((patchedHtml.match(/__rspack__\/client-rspack\.js/g) || []).length).to.equal(1);
-                expect(patchedHtml.indexOf('/app.js')).to.be.below(patchedHtml.indexOf('/__rspack__/client-rspack.js'));
-            });
+            expect(patchedHtml).to.include('/__rspack__/client-rspack.js');
+            expect((patchedHtml.match(/__rspack__\/client-rspack\.js/g) || []).length).to.equal(1);
+            expect(patchedHtml.indexOf('/app.js')).to.be.below(patchedHtml.indexOf('/__rspack__/client-rspack.js'));
+        });
 
-            it('should leave HTML unchanged when the Rspack client bundle is already present', () => {
-                const app = new App();
-                const html = '<html><head><link href="/build-chunks/main.css" rel="stylesheet"></head><body><script src="/app.js"></script><script src="/__rspack__/client-rspack.js"></script></body></html>';
+        it('should append the Rspack client bundle when the html has no closing body tag', () => {
+            const app = new App();
+            const html = '<html><head><link href="/build-chunks/main.css" rel="stylesheet"></head><script src="/app.js"></script>';
 
-                const patchedHtml = app.injectRspackClientScript(html);
+            const patchedHtml = app.injectRspackClientScript(html);
 
-                expect(patchedHtml).to.equal(html);
-            });
+            expect(patchedHtml).to.equal(`${html}<script src="/__rspack__/client-rspack.js"></script>`);
+        });
 
-            it('should leave HTML unchanged when no Rspack assets are present', () => {
-                const app = new App();
-                const html = '<html><head></head><body><script src="/app.js"></script></body></html>';
+        it('should leave HTML unchanged when the Rspack client bundle is already present', () => {
+            const app = new App();
+            const html = '<html><head><link href="/build-chunks/main.css" rel="stylesheet"></head><body><script src="/app.js"></script><script src="/__rspack__/client-rspack.js"></script></body></html>';
 
-                const patchedHtml = app.injectRspackClientScript(html);
+            const patchedHtml = app.injectRspackClientScript(html);
 
-                expect(patchedHtml).to.equal(html);
+            expect(patchedHtml).to.equal(html);
+        });
+
+        it('should leave HTML unchanged when no Rspack assets are present', () => {
+            const app = new App();
+            const html = '<html><head></head><body><script src="/app.js"></script></body></html>';
+
+            const patchedHtml = app.injectRspackClientScript(html);
+
+            expect(patchedHtml).to.equal(html);
+        });
+    });
+
+    describe('#prepareAutoupdateSettings', () => {
+        it('should use defaults when optional autoupdate settings are absent', () => {
+            const app = new App();
+            app.userDataDir = '/tmp/meteor-desktop-user-data';
+            app.settings = {};
+            app.resolveInitialBundlePath = sinon.stub().returns('/tmp/bootstrap/meteor');
+
+            const autoupdateSettings = app.prepareAutoupdateSettings();
+
+            expect(autoupdateSettings).to.deep.equal({
+                dataPath: '/tmp/meteor-desktop-user-data',
+                desktopBundlePath: '/tmp/meteor-desktop-user-data',
+                bundleStorePath: '/tmp/meteor-desktop-user-data',
+                customHCPUrl: null,
+                initialBundlePath: '/tmp/bootstrap/meteor',
+                webAppStartupTimeout: 20000
             });
         });
+
+        it('should pass through configured autoupdate overrides', () => {
+            const app = new App();
+            app.userDataDir = '/tmp/meteor-desktop-user-data';
+            app.settings = {
+                customHCPUrl: 'https://updates.example.com/__cordova/',
+                webAppStartupTimeout: 45000
+            };
+            app.resolveInitialBundlePath = sinon.stub().returns('/tmp/bootstrap/meteor.asar');
+
+            const autoupdateSettings = app.prepareAutoupdateSettings();
+
+            expect(autoupdateSettings.customHCPUrl).to.equal('https://updates.example.com/__cordova/');
+            expect(autoupdateSettings.initialBundlePath).to.equal('/tmp/bootstrap/meteor.asar');
+            expect(autoupdateSettings.webAppStartupTimeout).to.equal(45000);
+        });
+    });
 });
