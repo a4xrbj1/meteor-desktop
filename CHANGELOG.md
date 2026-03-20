@@ -1,3 +1,23 @@
+## v5.1.2 <sup>20.03.2026</sup>
+
+Patch release expanding regression test coverage.
+
+### Test Coverage Expansion
+
+* Add unit tests for `meteorApp` private helpers: `patchClientBundleJs`,
+  `hasResidualClientEsmPatterns`, and `reconcileIndexHtmlScriptsWithManifest`,
+  using an ESM-safe temp-module export pattern without touching production exports.
+* Add unit test for `Env`: absolute `METEOR_LOCAL_DIR` values are preserved
+  as-is (not joined under `meteorApp.root`).
+* Add unit test for `App#injectRspackClientScript`: appends the rspack client script
+  at the end of the string when no `</body>` tag is present.
+* Add unit tests for `App#prepareAutoupdateSettings`: verifies default values and
+  per-setting override passthrough (`customHCPUrl`, `webAppStartupTimeout`,
+  `initialBundlePath`).
+* Add functional test for autoupdate: falls back to the initial bundle when
+  `lastKnownGoodVersion` is recorded in `autoupdate.json` but the corresponding
+  version directory is missing from disk.
+
 ## v5.1.1 <sup>20.03.2026</sup>
 
 Minor stability release focused on Electron dev boot correctness for Meteor 3.x + rspack apps.
