@@ -1,3 +1,13 @@
+## v5.1.3 <sup>23.03.2026</sup>
+
+Patch release improving rspack bundling reliability and module compatibility.
+
+### Rspack and Module Fixes
+
+* Recursively patch all JS files for module.link safety and silence HTML template errors that could break Blaze template initialization in the desktop bundle.
+* Enhance rspack chunk scraper to use localhost with better priority ordering, and add A2.7 bundling gate to validate rspack assets before packaging.
+* Add extension-less asset fallback for integrity validation, preventing false negatives when program.json entries omit file extensions.
+
 ## v5.1.2 <sup>20.03.2026</sup>
 
 Patch release expanding regression test coverage.
