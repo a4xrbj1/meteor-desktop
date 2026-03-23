@@ -782,6 +782,15 @@ export default class App {
                                         js = js.replace('isCordova: false,', 'isCordova: false, isDesktop: true,');
                                         js = js.replace('isCordova:!1,', 'isCordova:!1,isDesktop:!0,');
                                         js = js.replace('isCordova:false,', 'isCordova:false,isDesktop:!0,');
+                                        // Neutralize client-meteor.js require: the rspack bundle
+                                        // (client-rspack.js) already loads everything. client-meteor.js
+                                        // uses module.link() for HTML templates that aren't all in the
+                                        // meteorInstall tree → "Cannot find module" errors.
+                                        // Wrap module.link calls for .html templates in try/catch so missing ones don't abort execution
+                                        js = js.replace(
+                                            /(module\.link\(['"][^'"]+\.html['"][^)]*\);?)/g,
+                                            'try { $1 } catch(e) { console.warn("Missing HTML template:", e); }'
+                                        );
                                         // Also fix the startupDidComplete condition so it fires on isDesktop.
                                         js = js.replace(
                                             /(\(\w+\.)(?:isCordova)(\)[\S\s]*?startupDidComplete\()/gm,
