@@ -41,7 +41,7 @@
   "license": "MIT",
   "devDependencies": {
     "@babel/register": "7.28.6",
-    "@electron/packager": "^19.0.5",
+    "@electron/packager": "^19.1.0",
     "@types/fs-extra": "11.0.4",
     "babel-plugin-istanbul": "^7.0.1",
     "chai": "^6.2.2",
@@ -71,7 +71,7 @@
     "serve-static": "^2.2.1",
     "server-destroy": "1.0.1",
     "sha1-file": "^3.0.0",
-    "sinon": "^21.0.2",
+    "sinon": "^21.0.3",
     "sinon-chai": "^4.0.1",
     "temp-dir": "^3.0.0",
     "typescript": "^5.9.3",
@@ -80,16 +80,16 @@
   },
   "dependencies": {
     "@babel/core": "7.29.0",
-    "@babel/preset-env": "7.29.0",
-    "@babel/runtime": "7.28.6",
-    "@electron/asar": "^4.1.0",
-    "cacache": "^20.0.3",
+    "@babel/preset-env": "7.29.2",
+    "@babel/runtime": "7.29.2",
+    "@electron/asar": "^4.1.2",
+    "cacache": "^20.0.4",
     "commander": "^14.0.3",
     "cross-spawn": "7.0.6",
     "install-local": "^4.1.0",
     "path-exists-cli": "^2.0.0",
     "semver": "^7.7.4",
-    "terser": "^5.46.0"
+    "terser": "^5.46.1"
   },
   "peerDependencies": {
     "app-builder-lib": "*",
