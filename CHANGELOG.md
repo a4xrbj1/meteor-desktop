@@ -1,3 +1,21 @@
+## v5.1.4 <sup>31.03.2026</sup>
+
+Patch release with an isolated build directory for desktop builds and dependency updates.
+
+### Build Isolation
+
+* Use a dedicated `.meteor/local-desktop` directory for desktop/Electron builds instead of the shared `.meteor/local`, preventing race conditions when a dev server runs concurrently with a production build.
+
+### Dependency Updates
+
+* `@babel/preset-env` 7.29.0 → 7.29.2
+* `@babel/runtime` 7.28.6 → 7.29.2
+* `@electron/asar` ^4.1.0 → ^4.1.2
+* `@electron/packager` ^19.0.5 → ^19.1.0
+* `cacache` ^20.0.3 → ^20.0.4
+* `sinon` ^21.0.2 → ^21.0.3
+* `terser` ^5.46.0 → ^5.46.1
+
 ## v5.1.3 <sup>23.03.2026</sup>
 
 Patch release improving rspack bundling reliability and module compatibility.
