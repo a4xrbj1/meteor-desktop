@@ -1,3 +1,11 @@
+## v5.1.5 <sup>01.04.2026</sup>
+
+Patch release fixing a regression in dev mode introduced by the v5.1.4 build isolation change.
+
+### Bug Fix
+
+* Only redirect to `.meteor/local-desktop` when meteor-desktop builds Meteor itself (production/package builds). In dev mode (`skipMobileBuild`), Meteor runs externally and writes to the default `.meteor/local/` — the v5.1.4 change unconditionally redirected to `.meteor/local-desktop/` which doesn't exist in dev, breaking `npm run desktop`.
+
 ## v5.1.4 <sup>31.03.2026</sup>
 
 Patch release with an isolated build directory for desktop builds and dependency updates.
