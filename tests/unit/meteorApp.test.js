@@ -81,7 +81,7 @@ describe('meteorApp', () => {
         }
         readFileSyncStub = sinon.stub(fs, 'readFileSync');
         readFileSyncStub
-            .withArgs(sinon.match('release.file'), 'UTF-8')
+            .withArgs(sinon.match('release.file'), 'utf8')
             .returns(release);
     }
 

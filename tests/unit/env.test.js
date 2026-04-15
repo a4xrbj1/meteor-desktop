@@ -1,6 +1,5 @@
 /* eslint-disable import-x/extensions */
 import * as chai from 'chai';
-import path from 'path';
 
 const { describe, it, afterEach } = global;
 const { expect } = chai;
@@ -22,33 +21,32 @@ describe('env', () => {
         Env = (await import('../../lib/env.js')).default;
     });
 
-    it('should default build paths to .meteor/local', () => {
+    it('should default build paths to .meteor/local in dev mode', () => {
         delete process.env.METEOR_LOCAL_DIR;
 
-        const instance = new Env('/tmp/sample-app', null, {});
+        const instance = new Env('/tmp/sample-app', null, { skipMobileBuild: true });
 
         expect(instance.paths.meteorApp.localDir).to.equal('/tmp/sample-app/.meteor/local');
         expect(instance.paths.meteorApp.webBrowser).to.equal('/tmp/sample-app/.meteor/local/build/programs/web.browser');
         expect(instance.paths.cache).to.equal('/tmp/sample-app/.meteor/local/desktop-cache');
     });
 
-    it('should honor METEOR_LOCAL_DIR for build paths', () => {
-        process.env.METEOR_LOCAL_DIR = '.meteor/local-start';
+    it('should use .meteor/local-desktop in production build mode', () => {
+        delete process.env.METEOR_LOCAL_DIR;
 
         const instance = new Env('/tmp/sample-app', null, {});
 
-        expect(instance.paths.meteorApp.localDir).to.equal('/tmp/sample-app/.meteor/local-start');
-        expect(instance.paths.meteorApp.webBrowser).to.equal('/tmp/sample-app/.meteor/local-start/build/programs/web.browser');
-        expect(instance.paths.cache).to.equal('/tmp/sample-app/.meteor/local-start/desktop-cache');
+        expect(instance.paths.meteorApp.localDir).to.equal('/tmp/sample-app/.meteor/local-desktop');
+        expect(instance.paths.meteorApp.webBrowser).to.equal('/tmp/sample-app/.meteor/local-desktop/build/programs/web.browser');
+        expect(instance.paths.cache).to.equal('/tmp/sample-app/.meteor/local-desktop/desktop-cache');
     });
 
-    it('should preserve absolute METEOR_LOCAL_DIR values', () => {
-        process.env.METEOR_LOCAL_DIR = path.join('/tmp', 'shared-meteor-local');
+    it('should set METEOR_LOCAL_DIR env var in production build mode', () => {
+        delete process.env.METEOR_LOCAL_DIR;
 
+        // eslint-disable-next-line no-unused-vars
         const instance = new Env('/tmp/sample-app', null, {});
 
-        expect(instance.paths.meteorApp.localDir).to.equal('/tmp/shared-meteor-local');
-        expect(instance.paths.meteorApp.webBrowser).to.equal('/tmp/shared-meteor-local/build/programs/web.browser');
-        expect(instance.paths.cache).to.equal('/tmp/shared-meteor-local/desktop-cache');
+        expect(process.env.METEOR_LOCAL_DIR).to.equal('.meteor/local-desktop');
     });
 });
