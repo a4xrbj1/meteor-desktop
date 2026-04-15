@@ -1,3 +1,22 @@
+## v5.1.7 <sup>15.04.2026</sup>
+
+Patch release fixing three build failures in dev mode (`skipMobileBuild`) and hardening validation gates for rspack-based Meteor 3.x projects.
+
+### Bug Fixes
+
+* **Fixed `_build/` deletion crashing running dev server:** `build()` unconditionally deleted the `_build/` directory, destroying the rspack entry points (`_build/main-dev/server-meteor.js`) used by the running Meteor dev server. This caused a cascade: the dev server entered error state, `copyBuild()` got corrupt web.browser output, and the A3 setImmediate polyfill injection silently failed. The cleanup is now gated on `!skipMobileBuild` so it only runs for production builds where `buildMobileTarget()` regenerates it.
+* **Fixed rspack main bundle missing from `program.json` manifest:** The `/__rspack__/client-rspack.js` script tag was injected *after* HTML scraping built `chunksRefs`, so it was never added to the manifest. The A3.5 manifest-asset coherence gate correctly caught this. The main bundle URL is now explicitly included in the manifest update loop.
+* **Fixed false-positive A3.5 failure on favicon `<link>` tags:** The manifest coverage check scraped all `<link href>` tags, including `rel="shortcut icon"` and `rel="apple-touch-icon"`. These static assets do not need manifest entries. The check now only validates `<link rel="stylesheet">` tags.
+
+### Validation Improvements
+
+* **A3.5 rspack placeholder check is now dev-mode aware:** In `skipMobileBuild` mode, the HMR placeholder in `__rspack__/client-rspack.js` is expected — the real bundle is served by the rspack dev server at runtime. The check now logs a warning instead of throwing in dev mode, while still blocking production builds with stale placeholders.
+
+### CI & Tests
+
+* Repaired 5 failing unit tests: Env tests updated for hardcoded `.meteor/local-desktop` vs `.meteor/local` paths; meteorApp tests fixed for sinon stub encoding mismatch (`'UTF-8'` vs `'utf8'`).
+* Upgraded CI actions: `checkout` v4→v6, `setup-node` v4→v6, `cache` v4→v5 to resolve Node.js 20 runner deprecation warnings. Pinned node to 22.22.0.
+
 ## v5.1.6 <sup>15.04.2026</sup>
 
 Patch release preventing stale rspack dev artifacts from breaking production builds and adding a new build validation gate.
