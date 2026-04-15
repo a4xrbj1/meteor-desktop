@@ -26,6 +26,9 @@
 
  This file is based on:
  /cordova-plugin-meteor-webapp/blob/master/src/android/WebAppLocalServer.java
+
+ desktopHCP was removed in v6.0.0. Fork v5.1.7 if you need .desktop hot code push.
+ Meteor's standard web.browser HCP continues to work via this module.
  */
 
 import path from 'path';
@@ -89,7 +92,6 @@ export default class HCPClient {
 
         this.configFile = join(this.settings.dataPath, 'autoupdate.json');
         this.versionsDir = join(this.settings.bundleStorePath, 'versions');
-        this.desktopBundlePath = this.settings.desktopBundlePath;
     }
 
     /**
@@ -187,7 +189,6 @@ export default class HCPClient {
             this.config,
             initialAssetBundle,
             this.versionsDir,
-            this.desktopBundlePath,
             this.appSettings
         );
 
@@ -259,10 +260,6 @@ export default class HCPClient {
      * @private
      */
     checkForUpdates() {
-        if (('desktopHCP' in this.appSettings) && !this.appSettings.desktopHCP) {
-            this.log.verbose('Skipping checking for updates because desktopHCP is disabled');
-            return;
-        }
         const rootUrl = this.settings.customHCPUrl
             ? this.settings.customHCPUrl : this.currentAssetBundle.getRootUrlString();
 
@@ -525,33 +522,28 @@ export default class HCPClient {
         this.config.lastDownloadedVersion = assetBundle.getVersion();
         this.saveConfig();
         this.pendingAssetBundle = assetBundle;
-        this.notifyNewVersionReady(assetBundle.getVersion(), assetBundle.desktopVersion);
+        this.notifyNewVersionReady(assetBundle.getVersion());
     }
 
     /**
      * Notify meteor that a new version is ready.
-     * @param {string} version        - version string
-     * @param {Object} desktopVersion - object with desktop version and compatibility
-     *                                  version
+     * @param {string} version - version string
+     *
      * @private
      */
-    notifyNewVersionReady(version, desktopVersion) {
-        this.eventsBus.emit('newVersionReady', version, desktopVersion.version);
-        this.module.send(
-            'onNewVersionReady',
-            version,
-            desktopVersion.version
-        );
+    notifyNewVersionReady(version) {
+        this.eventsBus.emit('newVersionReady', version);
+        this.module.send('onNewVersionReady', version);
     }
 
     /**
      * Method that decides whether we are interested in the new bundle that we were notified about.
      * Called by assetBundleManager.
-     * @param {AssetManifest} manifest     - manifest of the new bundle
-     * @param {null|Object} desktopVersion - version information about the desktop part
+     * @param {AssetManifest} manifest - manifest of the new bundle
+     *
      * @returns {boolean}
      */
-    shouldDownloadBundleForManifest(manifest, desktopVersion = {}) {
+    shouldDownloadBundleForManifest(manifest) {
         const { version } = manifest;
 
         // No need to redownload the current version.
@@ -574,34 +566,6 @@ export default class HCPClient {
             return false;
         }
 
-        if (desktopVersion) {
-            this.log.debug(`got desktop version information: ${desktopVersion.version} `
-                + `(compatibility: ${desktopVersion.compatibilityVersion})`);
-
-            let ignoreCompatibilityVersion = false;
-
-            if ('desktopHCPIgnoreCompatibilityVersion' in this.appSettings) {
-                ignoreCompatibilityVersion = this.appSettings.desktopHCPIgnoreCompatibilityVersion;
-            }
-
-            if (this.appSettings.compatibilityVersion !== desktopVersion.compatibilityVersion) {
-                if (!ignoreCompatibilityVersion) {
-                    this.log.warn('Skipping downloading new version because the .desktop '
-                        + 'compatibility version have changed and is potentially incompatible.');
-                    this.notifyError('Skipping downloading new version because the .desktop '
-                        + 'compatibility version have changed and is potentially incompatible '
-                        + `(${this.appSettings.compatibilityVersion} != `
-                        + `${desktopVersion.compatibilityVersion})`);
-                    return false;
-                }
-                this.log.warn('Allowing download of new meteor app version with '
-                    + 'potentially incompatible .desktop. (ignoreCompatibilityVersion)');
-                this.notifyWarning('Allowing download of new meteor app version with '
-                    + 'potentially incompatible .desktop. (ignoreCompatibilityVersion)'
-                    + `(${this.appSettings.compatibilityVersion} != `
-                    + `${desktopVersion.compatibilityVersion})`);
-            }
-        }
         return true;
     }
 }

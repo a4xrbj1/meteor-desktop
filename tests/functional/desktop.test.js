@@ -62,7 +62,7 @@ describe('desktop', () => {
             const logStub = new StubLog(MeteorDesktop.desktop, ['info']);
             MeteorDesktop.env.paths.desktop.root = paths.fixtures.desktop;
             const version = await MeteorDesktop.desktop.getHashVersion();
-            expect(version).to.be.equal('ab8e701a7b8951681479a95a9c1b47e2d3e784bb');
+            expect(version).to.be.equal('6cc4370c9597b72cf1656880c93392866f6aa71c');
             logStub.restore();
         });
     });

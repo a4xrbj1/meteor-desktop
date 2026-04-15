@@ -993,28 +993,4 @@ describe('autoupdate', () => {
         });
     });
 
-    describe('when desktopHCP', () => {
-        beforeEach(async () => {
-            meteorServer = await serveVersion('version2');
-            cleanup();
-        });
-        afterEach(async () => {
-            await shutdownMeteorServer();
-            await shutdownLocalServer();
-        });
-
-        it('is set to false then should not emit new version', (done) => {
-            const timeout = waitForTestToFail(1000, done);
-            runAutoUpdateTests(done, () => {
-                clearTimeout(timeout);
-                done('onVersionReady invoked unexpectedly');
-            }, 'version2', 'version1', true, false, true, { desktopHCP: false });
-        });
-
-        it('is set to true then should emit new version', (done) => {
-            runAutoUpdateTests(done, Function.prototype, 'version2', 'version1', false, false, true, {
-                desktopHCP: true
-            });
-        });
-    });
 });

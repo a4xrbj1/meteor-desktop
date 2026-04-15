@@ -135,11 +135,9 @@ export default class App {
         this.prepareWindowSettings();
 
         this.meteorAppVersionChange = false;
-        this.pendingDesktopVersion = null;
-        this.eventsBus.on('newVersionReady', (version, desktopVersion) => {
-            this.l.debug(`received newVersionReady ${desktopVersion ? '(desktop update present)' : ''}`);
+        this.eventsBus.on('newVersionReady', (version) => {
+            this.l.debug(`received newVersionReady for version ${version}`);
             this.meteorAppVersionChange = true;
-            this.pendingDesktopVersion = desktopVersion;
         });
         this.eventsBus.on('startupDidComplete', this.handleAppStartup.bind(this, true));
         this.eventsBus.on('revertVersionReady', () => { this.meteorAppVersionChange = true; });
@@ -596,13 +594,12 @@ export default class App {
 
     /**
      * Returns prepared autoupdate module settings.
-     * @returns {{dataPath: *, desktopBundlePath: String, bundleStorePath: *, initialBundlePath,
+     * @returns {{dataPath: *, bundleStorePath: *, initialBundlePath,
       * webAppStartupTimeout: number}}
      */
     prepareAutoupdateSettings() {
         return {
             dataPath: this.userDataDir,
-            desktopBundlePath: this.userDataDir,
             bundleStorePath: this.userDataDir,
             customHCPUrl: this.settings.customHCPUrl || null,
             initialBundlePath: this.resolveInitialBundlePath(),
@@ -1030,34 +1027,21 @@ wrapConsoleMethod('log');
     updateToNewVersion() {
         this.l.verbose('entering update to new HCP version procedure');
 
-        this.l.verbose(`${this.settings.desktopVersion} !== ${this.pendingDesktopVersion}`);
-
-        const desktopUpdate = this.settings.desktopHCP && this.settings.desktopVersion !== this.pendingDesktopVersion;
-
         this.emit(
-            'beforeReload', this.modules.autoupdate.getPendingVersion(), desktopUpdate
+            'beforeReload', this.modules.autoupdate.getPendingVersion()
         );
 
-        if (desktopUpdate) {
-            this.l.info('relaunching to use different version of desktop.asar');
-            // Give winston a chance to write the logs.
-            setImmediate(() => {
-                app.relaunch({ args: process.argv.slice(1).concat('--hcp') });
-                app.quit();
-            });
-        } else {
-            // Firing reset routine.
-            this.l.debug('firing onReset from autoupdate');
-            this.modules.autoupdate.onReset();
+        // Firing reset routine.
+        this.l.debug('firing onReset from autoupdate');
+        this.modules.autoupdate.onReset();
 
-            // Reinitialize the local server.
-            this.l.debug('resetting local server');
-            this.localServer.init(
-                this.modules.autoupdate.getCurrentAssetBundle(),
-                this.desktopPath,
-                true
-            );
-        }
+        // Reinitialize the local server.
+        this.l.debug('resetting local server');
+        this.localServer.init(
+            this.modules.autoupdate.getCurrentAssetBundle(),
+            this.desktopPath,
+            true
+        );
     }
 }
 

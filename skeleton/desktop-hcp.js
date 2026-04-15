@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 /**
- * This is based on:
- * https://github.com/meteor/cordova-plugin-meteor-webapp/blob/master/www/webapp_local_server.js
+ * Historical name — this file defines WebAppLocalServer for Meteor's standard web HCP.
+ * Based on: https://github.com/meteor/cordova-plugin-meteor-webapp/blob/master/www/webapp_local_server.js
  */
 
 WebAppLocalServer = {

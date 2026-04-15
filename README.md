@@ -2,7 +2,7 @@
 
 # Meteor Desktop
 ###### aka Meteor Electron Desktop Client
-> Build desktop apps with Meteor & Electron. Full integration with hot code push implementation.
+> Build desktop apps with Meteor & Electron. Full integration with Meteor's hot code push for web content.
 
 
 
@@ -131,9 +131,6 @@ Documentation
   * [<code>Desktop</code> and <code>Module</code> - communication between Meteor and Electron](#desktop-and-module)
      * [Module - desktop side](#module---desktop-side)
      * [Desktop - Meteor side](#desktop---meteor-side)
-  * [desktopHCP - .desktop hot code push](#desktophcp---desktop-hot-code-push)
-     * [How this works](#how-this-works)
-     * [Caveats](#caveats)
   * [How to write plugins](#how-to-write-plugins)
      * [meteorDependencies in <code>package.json</code>](#meteordependencies-in-packagejson)
         * [List of known plugins:](#list-of-known-plugins)
@@ -246,10 +243,6 @@ field|description
 `projectName`|this will be used as a `name` in the generated app's package.json
 `devTools`|whether to install and open `devTools`, set automatically to false when building with `--production`
 `singleInstance`|sets the single instance mode - [more](https://www.electronjs.org/docs/latest/api/app#apprequestsingleinstancelockadditionaldata)
-`desktopHCP`|whether to use `.desktop` hot code push module - **recommended: `false`** for rspack builds - [more](#-hot-code-push-does-not-cover-rspack-bundled-code)
-<sup>`desktopHCPIgnoreCompatibilityVersion`</sup>|ignore the `.desktop` compatibility version and install new versions even if they can be incompatible
-`desktopHCPCompatibilityVersion`|allows to override `.desktop` compatibility version
-
 `rebuildNativeNodeModules`|turn on or off recompiling native modules, [more](#native-modules-support)
 `webAppStartupTimeout`|amount of time after which the downloaded version is considered faulty if Meteor app did not start - [more](#hot-code-push-support)
 `exposeLocalFilesystem`|turns on or off local filesystem exposure over url alias, [more](#accessing-local-filesystem-in-meteor)
@@ -383,12 +376,8 @@ export default class Desktop {
 
 ## Hot code push support
 
-> **Warning**
-> **We recommend setting `desktopHCP` to `false` in your `settings.json`.** See the [important limitations](#-hot-code-push-does-not-cover-rspack-bundled-code) section below.
-
-Applications produced by this integration are fully compatible with `Meteor`'s hot code push
-mechanism.
-The faulty version recovery is also in place - [more about it here](https://guide.meteor.com/mobile.html#recovering-from-faulty-versions). You can configure the timeout via
+Applications produced by this integration are fully compatible with Meteor's hot code push
+mechanism for **web.browser content** (packages, templates, styles). The faulty version recovery is also in place - [more about it here](https://guide.meteor.com/mobile.html#recovering-from-faulty-versions). You can configure the timeout via
 `webAppStartupTimeout` field in `settings.json`.
 
 Versions are downloaded and served from [`userData`](https://www.electronjs.org/docs/latest/api/app#appgetpathname) directory.
@@ -397,33 +386,7 @@ bundled version just delete them.
 
 You can also analyze `autoupdate.log` if you are experiencing any issues.
 
----
-
-### Hot code push does not cover rspack-bundled code
-
-> **Important — Read before enabling `desktopHCP`**
->
-> If your Meteor app uses **rspack** (Meteor 3.x default bundler), HCP has fundamental limitations that make it **unreliable for production use**. We strongly recommend setting `"desktopHCP": false` in your `settings.json`.
-
-**Why HCP does not work with rspack builds:**
-
-1. **Rspack code is not delivered by HCP.** HCP downloads the Meteor `web.browser` manifest and its assets (packages, `app.js`, `global-imports.js`). However, rspack-bundled application code (`__rspack__/client-rspack.js`, `build-chunks/*`) is injected into the Electron build by `meteor-desktop` at build time — it is **not part of the Meteor manifest** and therefore **never downloaded by HCP**. This means the majority of your UI code, routes, components, and styles will remain at the version that was embedded when the app was built, regardless of how many HCP updates are applied.
-
-2. **HCP requires the production server to already be deployed.** HCP fetches the manifest from `ROOT_URL/__browser/manifest.json` — your live production Meteor server. For HCP to pick up your commits, you must first deploy the new code to production. If you're deploying anyway, building and distributing a new desktop app version is more reliable.
-
-3. **HCP adds startup complexity for zero practical benefit.** With `desktopHCP` enabled, the autoupdate module runs version resolution, fallback logic, a startup timer, and compatibility version checks on every app launch. Each of these is a potential failure point. With rspack-bundled code not being covered, this complexity delivers no meaningful update capability.
-
-4. **Version mismatches cause silent failures.** If HCP downloads a new Meteor `web.browser` bundle but the rspack bundle remains at the old version, the two can be incompatible — leading to runtime errors, missing templates, or broken UI that is difficult to diagnose.
-
-**Recommended configuration:**
-
-```json
-{
-    "desktopHCP": false
-}
-```
-
-With HCP disabled, the app always uses the embedded `meteor.asar` bundle. The startup path becomes deterministic: embedded bundle &rarr; local server &rarr; load. To ship updates, build and distribute a new version of the desktop app.
+> **Note:** `.desktop` hot code push (desktopHCP) was removed in v6.0.0 because it is incompatible with rspack-based Meteor 3.x projects. Meteor's standard web.browser HCP continues to work. If you need desktopHCP, fork [v5.1.7](https://github.com/a4xrbj1/meteor-desktop/tree/v5.1.7).
 
 ---
 
@@ -487,49 +450,6 @@ There are two extra methods:
 
 Example of `send` and `fetch` usage - [here](https://github.com/a4xrbj1/meteor-desktop-localstorage/blob/master/plugins/localstorage/localstorage.js#L9).  
 
-## desktopHCP - `.desktop` hot code push
-
-> **Warning**
-> **`desktopHCP` does not cover rspack-bundled code.** If your Meteor app uses rspack (Meteor 3.x default), most of your application code is invisible to HCP. See [Hot code push does not cover rspack-bundled code](#-hot-code-push-does-not-cover-rspack-bundled-code) for details. **We recommend `"desktopHCP": false`.**
-
-There is support for hot code push of the `.desktop` directory.
-It works similarly to the `Meteor`'s builtin one. It also produces a `version` and
-`compatibilityVersion` to detect whether the update can be made.
-In `Meteor` whenever you change any of your desktop dependencies (add/remove/change version)
-you will make an incompatible change meaning that a new version will not be hot code pushed.
-In this case your desktop dependencies are npm packages.
-To make it clear, **npm packages are not hot code pushed** - only contents of `.desktop` are.
-
-The `compatibilityVersion` is calculated from combined list of:
- - dependencies from `settings.json`
- - plugins from `settings.json`
- - dependencies from all modules in `.desktop/modules`
- - major version of `meteor-desktop` (X.Y.Z - only X is taken)
- - major version from `settings.json` (X.Y.Z - only X is taken).
-
-Be aware that when it comes to linked packages (via `linkPackages` in `settings.json`) the
-explicitly declared version (the one in `settings.json` or modules) is taken into account, not the
-actual one from package's package.json. The same applies to packages added from local paths.  
-Generally, it is a bad idea to build production app with linked/local packages. Changes in those will not trigger a compatibility version change so you migh accidentally push a new version with `desktopHCP` that will not work.
-
-
-#### How this works
-Two Meteor plugins are added to your project - bundler and watcher. Bundler prepares the `desktop.asar` which is then added to you project as an asset.   
-Watcher just watches for file changes and triggers project rebuilds.   
-
-#### Caveats
-- desktop app needs to be restarted when a new bundle is applied
-- the bundled desktop app goes over normal HCP mechanism meaning that a `desktop.asar` file will
-also be
-distributed to your mobile clients and cause unnecessary updates in case you only made changes in
- `.desktop`
-- files that are excluded from `desktop.asar` (via `extract` settings in a desktop module) are
-not updated, nor checked for changes!
-- if you had errors (i.e. syntax) in `.desktop` which prevented startup, watcher might not work correctly and further changes
- in `.desktop` will not trigger rebuilds, in that case you need to make any
-change in `version` field in the `desktop.version` to trigger rebuild (this file is in the root of
-your project) - this can be any change like just adding random char to the hash
-- after reload logs will no longer be shown in the console
 
 ## How to write plugins
 

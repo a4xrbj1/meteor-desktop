@@ -41,11 +41,9 @@ export default class AssetBundle {
      * @param {string}         directoryUri      - Where the bundle lies in the file system.
      * @param {AssetManifest=} manifest          - Bundle's manifest.
      * @param {AssetBundle=}   parentAssetBundle - Parent asset bundle.
-     * @param {Object=}        desktopVersion    - Object with desktop version and compatibility
-     *                                             version.
      * @constructor
      */
-    constructor(log, directoryUri, manifest, parentAssetBundle, desktopVersion = {}) {
+    constructor(log, directoryUri, manifest, parentAssetBundle) {
         this.log = log.getLoggerFor('AssetBundle');
         this.log.verbose(`making bundle object for ${directoryUri}`);
 
@@ -53,7 +51,6 @@ export default class AssetBundle {
 
         this.runtimeConfig = null;
         this.appId = null;
-        this.desktopVersion = desktopVersion;
         this.rootUrlString = null;
         this.rootUrlString = null;
         this.matcher = /__meteor_runtime_config__ = JSON.parse\(decodeURIComponent\("([^"]*)"\)\)/;
@@ -72,13 +69,6 @@ export default class AssetBundle {
         }
 
         this.version = this.manifest.version;
-        if (!desktopVersion.version) {
-            this.log.verbose(`trying to read desktop version for ${this.version}`);
-            this.desktopVersion = this.loadDesktopVersion();
-            this.log.verbose(`the desktop version is ${this.desktopVersion.version}`);
-        } else {
-            this.log.debug(`the desktop version was provided by constructor and is ${this.desktopVersion.version}`);
-        }
 
         this.ownAssetsByURLPath = {};
 
@@ -121,34 +111,6 @@ export default class AssetBundle {
         const indexFile = new Asset('index.html', '/', 'html', false, null, null, null, this);
         this.addAsset(indexFile);
         this.indexFile = indexFile;
-    }
-
-    /**
-     * Load this bundle's desktop version if present.
-     *
-     * @private
-     */
-    loadDesktopVersion() {
-        const desktopVersionPath = path.join(this.directoryUri, '_desktop.json');
-        const desktopVersionFallbackPath = path.join(this.directoryUri, 'app', 'version.desktop.json');
-        try {
-            return JSON.parse(fs.readFileSync(desktopVersionPath, 'UTF-8'));
-        } catch (e) {
-            try {
-                return JSON.parse(fs.readFileSync(desktopVersionFallbackPath, 'UTF-8'));
-            } catch (err) {
-                return {};
-            }
-        }
-    }
-
-    writeDesktopVersion() {
-        if (this.desktopVersion.version) {
-            fs.writeFileSync(
-                path.join(this.directoryUri, '_desktop.json'),
-                JSON.stringify(this.desktopVersion, null, '\t')
-            );
-        }
     }
 
     /**

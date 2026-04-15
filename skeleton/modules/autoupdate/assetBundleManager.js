@@ -24,12 +24,11 @@ class AssetBundleManager {
      * @param {object}      configuration      - Configuration object.
      * @param {AssetBundle} initialAssetBundle - Parent asset bundle.
      * @param {string}      versionsDirectory  - Path to versions dir.
-     * @param {string}      desktopBundlePath  - Path to dir with desktop bundles.
      * @param {Object}      appSettings        - Settings from desktop.json.
      * @constructor
      */
     constructor(
-        log, configuration, initialAssetBundle, versionsDirectory, desktopBundlePath, appSettings
+        log, configuration, initialAssetBundle, versionsDirectory, appSettings
     ) {
         this.log = log.getLoggerFor('AssetBundleManager');
 
@@ -38,7 +37,6 @@ class AssetBundleManager {
         this.initialAssetBundle = initialAssetBundle;
 
         this.versionsDirectory = versionsDirectory;
-        this.desktopBundlePath = desktopBundlePath;
 
         this.downloadDirectory = path.join(versionsDirectory, 'Downloading');
         this.partialDownloadDirectory = path.join(versionsDirectory, 'PartialDownload');
@@ -76,41 +74,6 @@ class AssetBundleManager {
     }
 
     /**
-     * Tries to download the desktop version manifest.
-     * @param {string} desktopVersionUrl - The url to the version.desktop.json
-     * @param {function} callback - Function to run after.
-     */
-    getDesktopVersion(desktopVersionUrl, callback) {
-        if ('desktopHCP' in this.appSettings && this.appSettings.desktopHCP) {
-            this.httpClient(desktopVersionUrl)
-                .then((response) => Promise.all([response, response.text()]))
-                .then(([response, body]) => {
-                    let desktopVersion = {};
-
-                    if (response.status !== 200) {
-                        this.didFail(
-                            `non-success status code ${response.status} for version.desktop.json`
-                        );
-                        return;
-                    }
-
-                    try {
-                        desktopVersion = JSON.parse(body);
-                    } catch (e) {
-                        this.didFail(`error parsing version.desktop.json: ${e.message}`);
-                        return;
-                    }
-                    callback(desktopVersion);
-                })
-                .catch((error) => {
-                    this.didFail(`error downloading version.desktop.json: ${error}`);
-                });
-        } else {
-            callback(null);
-        }
-    }
-
-    /**
      * Starts checking for available update.
      *
      * @param {string} baseUrl - Url of meteor server.
@@ -119,7 +82,6 @@ class AssetBundleManager {
         let manifest;
         // Meteor 3.x web.browser manifest endpoint (webapp package: /__<arch>/manifest.json).
         const manifestUrl = url.resolve(baseUrl, '__browser/manifest.json');
-        const desktopVersionUrl = url.resolve(baseUrl, 'version.desktop.json?meteor_dont_serve_index=true');
 
         this.log.info(`trying to query ${manifestUrl}`);
 
@@ -150,74 +112,69 @@ class AssetBundleManager {
                     return;
                 }
 
-                // At this point we will check if we need to download the desktop version information.
-                this.getDesktopVersion(desktopVersionUrl, (desktopVersion) => {
-                    // Give the callback a chance to decide whether the version should be downloaded.
-                    if (
-                        this.callback !== null
-                        && !this.callback.shouldDownloadBundleForManifest(manifest, desktopVersion)
-                    ) {
+                // Give the callback a chance to decide whether the version should be downloaded.
+                if (
+                    this.callback !== null
+                    && !this.callback.shouldDownloadBundleForManifest(manifest)
+                ) {
+                    return;
+                }
+
+                // Cancel download in progress if there is one.
+                if (this.assetBundleDownloader !== null) {
+                    this.assetBundleDownloader.cancel();
+                }
+                this.assetBundleDownloader = null;
+
+                // There is no need to re-download the initial version.
+                if (this.initialAssetBundle.getVersion() === version) {
+                    this.log.debug('No redownload of initial version.');
+                    this.didFinishDownloadingAssetBundle(this.initialAssetBundle, true);
+                    return;
+                }
+
+                // If there is a previously downloaded asset bundle with the requested
+                // version, use that.
+                if (version in this.downloadedAssetBundlesByVersion) {
+                    const downloadedAssetBundle = this.downloadedAssetBundlesByVersion[version];
+                    if (downloadedAssetBundle !== null) {
+                        this.didFinishDownloadingAssetBundle(downloadedAssetBundle);
                         return;
                     }
+                }
 
-                    // Cancel download in progress if there is one.
-                    if (this.assetBundleDownloader !== null) {
-                        this.assetBundleDownloader.cancel();
-                    }
-                    this.assetBundleDownloader = null;
+                // Else, get ready to download the new asset bundle
+                this.moveExistingDownloadDirectoryIfNeeded();
 
-                    // There is no need to re-download the initial version.
-                    if (this.initialAssetBundle.getVersion() === version) {
-                        this.log.debug('No redownload of initial version.');
-                        this.didFinishDownloadingAssetBundle(this.initialAssetBundle, true);
-                        return;
-                    }
+                // Create download directory
+                if (!this.makeDownloadDirectory()) {
+                    this.didFail('could not create download directory');
+                    return;
+                }
 
-                    // If there is a previously downloaded asset bundle with the requested
-                    // version, use that.
-                    if (version in this.downloadedAssetBundlesByVersion) {
-                        const downloadedAssetBundle = this.downloadedAssetBundlesByVersion[version];
-                        downloadedAssetBundle.desktopVersion = desktopVersion;
-                        if (downloadedAssetBundle !== null) {
-                            this.didFinishDownloadingAssetBundle(downloadedAssetBundle);
-                            return;
-                        }
-                    }
+                // Copy downloaded asset manifest to file.
+                try {
+                    fs.writeFileSync(path.join(this.downloadDirectory, 'program.json'), body);
+                } catch (e) {
+                    this.didFail(e.message);
+                    return;
+                }
+                this.log.debug('manifest copied to new Download dir');
 
-                    // Else, get ready to download the new asset bundle
-                    this.moveExistingDownloadDirectoryIfNeeded();
+                let assetBundle = null;
+                try {
+                    assetBundle = new AssetBundle(
+                        this.log,
+                        this.downloadDirectory,
+                        manifest,
+                        this.initialAssetBundle
+                    );
+                } catch (e) {
+                    this.didFail(e.message);
+                    return;
+                }
 
-                    // Create download directory
-                    if (!this.makeDownloadDirectory()) {
-                        this.didFail('could not create download directory');
-                        return;
-                    }
-
-                    // Copy downloaded asset manifest to file.
-                    try {
-                        fs.writeFileSync(path.join(this.downloadDirectory, 'program.json'), body);
-                    } catch (e) {
-                        this.didFail(e.message);
-                        return;
-                    }
-                    this.log.debug('manifest copied to new Download dir');
-
-                    let assetBundle = null;
-                    try {
-                        assetBundle = new AssetBundle(
-                            this.log,
-                            this.downloadDirectory,
-                            manifest,
-                            this.initialAssetBundle,
-                            desktopVersion === null ? undefined : desktopVersion
-                        );
-                    } catch (e) {
-                        this.didFail(e.message);
-                        return;
-                    }
-
-                    this.downloadAssetBundle(assetBundle, baseUrl);
-                });
+                this.downloadAssetBundle(assetBundle, baseUrl);
             });
     }
 
@@ -228,33 +185,17 @@ class AssetBundleManager {
      * @returns {Promise}
      */
     removeAllDownloadedAssetBundlesExceptForVersion(assetBundleToKeep) {
-        const desktopVersionToKeep = assetBundleToKeep.desktopVersion;
         const promises = [];
         Object.keys(this.downloadedAssetBundlesByVersion).forEach(
             (assetVersion) => {
                 const assetBundle = this.downloadedAssetBundlesByVersion[assetVersion];
                 const version = assetBundle.getVersion();
                 if (version !== assetBundleToKeep.getVersion()) {
-                    const { desktopVersion } = assetBundle;
-                    if (desktopVersion.version && desktopVersionToKeep.version
-                        && desktopVersion.version !== desktopVersionToKeep.version) {
-                        this.log.info(`pruned old ${desktopVersion.version}_desktop.asar`);
-
-                        try {
-                            originalFs.unlinkSync(
-                                path.join(this.desktopBundlePath,
-                                    `${desktopVersion.version}_desktop.asar`)
-                            );
-                        } catch (e) {
-                            // Theoretically no harm if we could not delete it...
-                        }
-                    }
                     // Using rimraf specifically instead of shelljs.rm because despite using
                     // process.noAsar shelljs tried to remove files inside asar instead of just
                     // deleting the archive. `del` also could not delete asar archive. Rimraf is ok
                     // because it accepts custom fs object.
                     promises.push(
-                        // This will be an array of Promises that always are resolved.
                         new Promise((resolve) => {
                             const pathToDelete = path.join(this.versionsDirectory, version);
                             rimrafWithRetries(pathToDelete, originalFs)
@@ -345,61 +286,11 @@ class AssetBundleManager {
      * @param {boolean} isInitialAssetBundle - whether this is the initial asset bundle
      * @private
      */
-    didFinishDownloadingAssetBundle(assetBundle, isInitialAssetBundle = false) {
+    didFinishDownloadingAssetBundle(assetBundle) {
         this.assetBundleDownloader = null;
-
-        this.handleDesktopBundle(assetBundle, isInitialAssetBundle);
 
         if (this.callback !== null) {
             this.callback.onFinishedDownloadingAssetBundle(assetBundle);
-        }
-    }
-
-    /**
-     * @param {AssetBundle} assetBundle - Asset bundle which was downloaded.
-     * @param {boolean} isInitialAssetBundle - whether this is the initial asset bundle
-     * @private
-     */
-    handleDesktopBundle(assetBundle, isInitialAssetBundle = false) {
-        if (assetBundle.desktopVersion.version) {
-            // We will not be able to write into meteor.asar. Avoid that. It is not necessary for
-            // initial bundle.
-            if (!isInitialAssetBundle) {
-                assetBundle.writeDesktopVersion();
-            } else {
-                this.log.debug('skipping writing desktop version into'
-                    + ' initial version');
-            }
-            // If there is a new version of desktop.asar copy it to desktop bundle path.
-            const desktopPath = path.join(
-                this.desktopBundlePath,
-                `${assetBundle.desktopVersion.version}_desktop.asar`
-            );
-
-            if (!fs.existsSync(desktopPath)) {
-                if (isInitialAssetBundle) {
-                    const initialDesktopPath = path.resolve(path.join(__dirname, '..', '..', '..', 'desktop.asar'));
-                    originalFs.writeFileSync(
-                        desktopPath, originalFs.readFileSync(initialDesktopPath)
-                    );
-                    this.log.debug('copied initial desktop.asar to', desktopPath);
-                } else {
-                    assetBundle.getOwnAssets().some((asset) => {
-                        if (~asset.filePath.indexOf('desktop.asar')) {
-                            // TODO: need more efficient way of copying asar archive
-                            originalFs.writeFileSync(
-                                desktopPath, originalFs.readFileSync(asset.getFile())
-                            );
-                            this.log.debug('copied desktop.asar to', desktopPath);
-                            return true;
-                        }
-                        return false;
-                    });
-                }
-            } else {
-                this.log.debug('skipping copying desktop.asar because the version is already'
-                    + ' downloaded');
-            }
         }
     }
 

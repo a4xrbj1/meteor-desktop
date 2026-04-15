@@ -193,7 +193,6 @@ describe('App', () => {
 
             expect(autoupdateSettings).to.deep.equal({
                 dataPath: '/tmp/meteor-desktop-user-data',
-                desktopBundlePath: '/tmp/meteor-desktop-user-data',
                 bundleStorePath: '/tmp/meteor-desktop-user-data',
                 customHCPUrl: null,
                 initialBundlePath: '/tmp/bootstrap/meteor',

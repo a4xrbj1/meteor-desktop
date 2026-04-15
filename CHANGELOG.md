@@ -1,3 +1,30 @@
+## v6.0.0 <sup>15.04.2026</sup>
+
+### BREAKING CHANGES
+
+* **Removed desktopHCP** (`.desktop` hot code push). The `desktopHCP`, `desktopHCPIgnoreCompatibilityVersion`, and `desktopHCPCompatibilityVersion` settings are no longer recognized. The `plugins/watcher` and `plugins/bundler` Meteor build plugins have been removed. Meteor's standard web.browser HCP continues to work as before. If you need desktopHCP support, fork [v5.1.7](https://github.com/a4xrbj1/meteor-desktop/tree/v5.1.7).
+
+### Removed
+
+* `plugins/watcher/` — Meteor build plugin that watched `.desktop` for changes
+* `plugins/bundler/` — Meteor build plugin that created `desktop.asar` bundles
+* `ensureDesktopHCPPackages()` — build-time symlink orchestration for the above plugins
+* `getDesktopVersion()` — runtime desktop manifest fetcher in autoupdate module
+* `handleDesktopBundle()` — runtime desktop bundle copy/write logic
+* `loadDesktopVersion()` / `writeDesktopVersion()` — asset bundle desktop version I/O
+* `readDesktopVersionInfoFromBundle()` — desktop path resolver helper
+* Desktop version resolution logic in `desktopPathResolver.js` — always uses embedded `desktop.asar` now
+* `--hcp` relaunch path in `app.js` — no longer needed without desktop bundle updates
+* `desktopHCP*` settings from scaffold `settings.json` template
+* desktopHCP test suite and `version.desktop.json` test server endpoint
+
+### Simplified
+
+* `resolveDesktopPath()` always returns the embedded `desktop.asar` path
+* `shouldDownloadBundleForManifest()` no longer checks desktop compatibility version
+* `checkForUpdates()` always proceeds to fetch web manifest (no `desktopHCP` gate)
+* A2.5 / injectEsm validation skip sets reduced to `mongo-dev-server.js` only
+
 ## v5.1.7 <sup>15.04.2026</sup>
 
 Patch release fixing three build failures in dev mode (`skipMobileBuild`) and hardening validation gates for rspack-based Meteor 3.x projects.

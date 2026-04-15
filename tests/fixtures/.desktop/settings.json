@@ -3,8 +3,6 @@
     "version": "0.0.1",
     "projectName": "MyMeteorApp",
     "devTools": true,
-    "desktopHCP": true,
-    "desktopHCPIgnoreCompatibilityVersion": false,
     "autoUpdateFeedUrl": "http://127.0.0.1/update/:platform/:version",
     "autoUpdateFeedHeaders": {},
     "autoUpdateCheckOnStart": true,
