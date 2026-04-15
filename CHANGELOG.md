@@ -1,3 +1,25 @@
+## v5.1.6 <sup>15.04.2026</sup>
+
+Patch release preventing stale rspack dev artifacts from breaking production builds and adding a new build validation gate.
+
+### Bug Fix
+
+* **Fixed stale rspack build contamination:** `injectEsm()` previously iterated `['main-dev', 'main-prod']` and picked the first match. If a stale `_build/main-dev/` directory existed from a prior dev session, the 945-byte HMR placeholder was used instead of the production rspack bundle, shipping broken macOS builds with empty UI code and `Unexpected token '<'` errors.
+* **`_build/` cleanup at build start:** The `_build/` directory is now deleted at the beginning of `build()` before Meteor runs, ensuring no stale dev rspack artifacts can contaminate the production build.
+* **Reversed rspack build type priority:** `injectEsm()` now iterates `['main-prod', 'main-dev']`, always preferring the production rspack output as defense-in-depth.
+
+### New Validation Gate
+
+* **A3.5 Manifest-Asset Coherence:** New build-blocking validation gate that runs after `packToAsar` and checks the packed `meteor.asar` for:
+  1. Every `<script src>` and `<link href>` in `index.html` is resolvable via the `program.json` manifest (preventing runtime `AssetHandler` misses that serve HTML instead of JS/CSS).
+  2. Every matched manifest entry's `path` field resolves to a real file in the asar.
+  3. `__rspack__/client-rspack.js` is not a dev HMR placeholder (must be >10KB).
+  4. CSS files in `build-chunks/` contain actual CSS content, not HTML.
+
+### Documentation
+
+* **Documented HCP limitations with rspack builds:** Added prominent warnings in README explaining that Desktop HCP cannot update rspack-bundled code and recommending `"desktopHCP": false` for rspack-based Meteor 3.x projects.
+
 ## v5.1.5 <sup>01.04.2026</sup>
 
 Patch release fixing a regression in dev mode introduced by the v5.1.4 build isolation change.
