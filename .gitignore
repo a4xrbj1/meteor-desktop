@@ -21,8 +21,6 @@ tests/.__tmp/meteorProject
 AGENTS.md
 
 # Tool state dirs
-.overstory/
 .seeds/
 .mulch/
-.canopy/
 .claude/
