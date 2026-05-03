@@ -1,3 +1,12 @@
+## v6.0.4 <sup>04.05.2026</sup>
+
+Patch release fixing two issues that together caused production desktop builds on Meteor 3.x apps to silently pack Meteor's "App Error" page instead of the real index.html.
+
+### Bug Fixes
+
+* **Set `NODE_ENV=production` when spawning Meteor for a production build:** `buildMobileTarget()` previously spawned `meteor run --verbose --production -p 3080` without setting `NODE_ENV`. The `--production` flag flips minification but does not change `Meteor.isDevelopment`, so the atmosphere `rspack@1.0.0` plugin's `isMeteorAppDevelopment()` returned `true` and resolved `meteor.mainModule` entrypoints to `_build/main-dev/{client,server}-meteor.js` — the dev paths. With `_build/main-dev/server-meteor.js` missing (because the production rspack run only writes to `_build/main-prod/`), Meteor served its error page from port 3080. `acquireIndex()` then fetched the error HTML and the build proceeded with garbage. The spawn env now adds `NODE_ENV=production` whenever `isProductionBuild()` is true, so the rspack plugin treats the build as production and writes the right entrypoints.
+* **Refuse to pack Meteor's error page in `acquireIndex()`:** when the response from the running Meteor server contains `<title>Meteor App - Error</title>`, `acquireIndex()` now extracts the `<code class="log-content">` block, decodes the Meteor error message, and throws with the real Meteor error included. Previously the error HTML flowed through `injectEsm` (whose `replace(/<script/i, …)` silently no-op'd because the error page has no `<script>` tag), got packed into `meteor.asar`, and surfaced two gates later as a misleading "A3: index.html missing setImmediate polyfill — injectEsm did not run or was skipped". The new guard fails at the right layer with the actual upstream Meteor error.
+
 ## v6.0.3 <sup>04.05.2026</sup>
 
 Patch release stopping `checkPreconditions()` from auto-adding an iOS Cordova platform on Meteor 3.x desktop-only builds.
