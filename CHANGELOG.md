@@ -1,3 +1,15 @@
+## v6.0.3 <sup>04.05.2026</sup>
+
+Patch release stopping `checkPreconditions()` from auto-adding an iOS Cordova platform on Meteor 3.x desktop-only builds.
+
+### Bug Fix
+
+* **Gate the `.meteor/platforms` auto-add on `INDEX_FROM_LOCAL_BUILD`:** `checkPreconditions()` previously added `ios` to `.meteor/platforms` for every production build (`!skipMobileBuild`) that lacked both `ios` and `android`. The auto-add dates from the legacy `INDEX_FROM_LOCAL_BUILD` strategy (Meteor < 1.3.4.2), where the Electron client bundle came from `web.cordova` and a Cordova platform was actually required. Under the modern `INDEX_FROM_RUNNING_SERVER` strategy (Meteor ≥ 1.3.4.2), `copyBuild()` reads `web.browser` and downloads `index.html` from the spawned `meteor run --production` — no Cordova platform is ever consulted. The auto-add was dead-but-active code that on macOS triggered a `cordova-ios@7.1.1` install plus a CocoaPods prerequisite check that failed builds for desktop-only apps. The block is now gated on `this.indexHTMLstrategy === this.indexHTMLStrategies.INDEX_FROM_LOCAL_BUILD`, preserving legacy behavior while no-op'ing for Meteor 3.x.
+
+### Tests
+
+* Added `#checkPreconditions mobile platform auto-add` describe block in `tests/unit/meteorApp.test.js` covering both strategies: asserts no `addMobilePlatform` call and an unchanged `.meteor/platforms` file under `INDEX_FROM_RUNNING_SERVER`, and a single `addMobilePlatform('ios')` call under `INDEX_FROM_LOCAL_BUILD`.
+
 ## v6.0.2 <sup>03.05.2026</sup>
 
 Patch release adding a fast-fail guard so production builds refuse to wipe a `_build/` directory still owned by a parallel Meteor dev server.

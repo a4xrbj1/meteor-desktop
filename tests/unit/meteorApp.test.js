@@ -16,7 +16,7 @@ chai.use(sinonChai);
 chai.use(dirty);
 
 const {
-    describe, it, before, after
+    describe, it, before, after, afterEach
 } = global;
 const { expect } = chai;
 const require = createRequire(import.meta.url);
@@ -282,6 +282,64 @@ describe('meteorApp', () => {
             } finally {
                 fs.rmSync(tempDir, { recursive: true, force: true });
             }
+        });
+    });
+
+    describe('#checkPreconditions mobile platform auto-add', () => {
+        let preconditionTempDir;
+
+        const setupInstance = function (chosenStrategy) {
+            if (readFileSyncStub) {
+                readFileSyncStub.restore();
+                readFileSyncStub = null;
+            }
+            preconditionTempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-precond-'));
+            const platformsPath = path.join(preconditionTempDir, 'platforms');
+            fs.writeFileSync(platformsPath, 'browser\nserver\n', 'utf8');
+
+            const instance = new MeteorApp({
+                env: {
+                    options: { skipMobileBuild: false },
+                    paths: {
+                        meteorApp: {
+                            release: path.join(preconditionTempDir, 'release'),
+                            platforms: platformsPath
+                        }
+                    }
+                }
+            });
+            instance.checkMeteorVersion = sinon.stub();
+            instance.chooseStrategy = sinon.stub().returns(chosenStrategy);
+            instance.addMobilePlatform = sinon.stub().resolves();
+            return { instance, platformsPath };
+        };
+
+        afterEach(() => {
+            if (preconditionTempDir) {
+                fs.rmSync(preconditionTempDir, { recursive: true, force: true });
+                preconditionTempDir = null;
+            }
+        });
+
+        it('does not auto-add a mobile platform when strategy is INDEX_FROM_RUNNING_SERVER', async () => {
+            const probeInstance = new MeteorApp({ env: { paths: { meteorApp: { release: 'release.file' } } } });
+            const { instance, platformsPath } = setupInstance(probeInstance.indexHTMLStrategies.INDEX_FROM_RUNNING_SERVER);
+
+            await instance.checkPreconditions();
+
+            expect(instance.addMobilePlatform).to.not.have.been.called();
+            expect(instance.mobilePlatform).to.equal(null);
+            expect(fs.readFileSync(platformsPath, 'utf8')).to.equal('browser\nserver\n');
+        });
+
+        it('auto-adds iOS when strategy is INDEX_FROM_LOCAL_BUILD and no mobile platform is present', async () => {
+            const probeInstance = new MeteorApp({ env: { paths: { meteorApp: { release: 'release.file' } } } });
+            const { instance } = setupInstance(probeInstance.indexHTMLStrategies.INDEX_FROM_LOCAL_BUILD);
+
+            await instance.checkPreconditions();
+
+            expect(instance.addMobilePlatform).to.have.been.calledOnceWithExactly('ios');
+            expect(instance.mobilePlatform).to.equal('ios');
         });
     });
 
