@@ -1,3 +1,15 @@
+## v6.0.2 <sup>03.05.2026</sup>
+
+Patch release adding a fast-fail guard so production builds refuse to wipe a `_build/` directory still owned by a parallel Meteor dev server.
+
+### Bug Fix
+
+* **Refuse `_build/` wipe when dev-server rspack artifacts are present:** `build()` previously deleted `_build/` unconditionally for production runs. If a `meteor run` (e.g. `npm run start`) was running in another terminal, the wipe destroyed `_build/main-dev/{server,client}-meteor.js` and `_build/test/{server,client}-meteor.js`, sending the dev server into a `Could not resolve meteor.mainModule "_build/main-dev/server-meteor.js"` restart loop. The cleanup now scans for those four artifacts up-front and aborts with `process.exit(1)` and an actionable message if any are found, rather than silently corrupting the parallel session.
+
+## v6.0.1 <sup>30.04.2026</sup>
+
+Version-only bump.
+
 ## v6.0.0 <sup>15.04.2026</sup>
 
 ### BREAKING CHANGES
