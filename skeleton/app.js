@@ -743,10 +743,20 @@ export default class App {
                             // Rspack-managed assets such as /__rspack__/client-rspack.js and
                             // /build-chunks/* live on the dev server outside /__browser and must
                             // be fetched from their exact public paths.
+                            // Under @meteorjs/rspack 2.x the local-build variant emits chunks
+                            // under /build-chunks-local/* and /build-assets-local/*; the Meteor
+                            // dev server 307-redirects those to /__rspack__/build-chunks-local/*
+                            // (Electron's net.fetch follows the redirect transparently). Both
+                            // suffix-variants are whitelisted so the protocol handler doesn't
+                            // route the request through /__browser/ where the SPA fallback would
+                            // return HTML and break dynamic chunk loading with
+                            // 'Uncaught SyntaxError: Unexpected token <' in the renderer.
                             try {
                                 const isRspackAssetRequest = urlPathname.startsWith('/__rspack__/')
                                     || urlPathname.startsWith('/build-assets/')
-                                    || urlPathname.startsWith('/build-chunks/');
+                                    || urlPathname.startsWith('/build-assets-local/')
+                                    || urlPathname.startsWith('/build-chunks/')
+                                    || urlPathname.startsWith('/build-chunks-local/');
                                 const isRspackClientRequest = urlPathname === '/__rspack__/client-rspack.js';
                                 const devRequestPath = isRspackAssetRequest
                                     ? urlPath
@@ -846,15 +856,37 @@ wrapConsoleMethod('warn');
 wrapConsoleMethod('log');
 })();\n`;
                                             js = `${rspackLogThrottlePreamble}${js}`;
+                                            // Neutralize rspack-dev-server live-reload at its actual call sites.
+                                            // window.location.reload is [LegacyUnforgeable] in Chromium:
+                                            // it is a non-configurable own property of the location instance,
+                                            // so no Location.prototype shim or executeJavaScript override can
+                                            // intercept it. The reload-loop diagnostic (May 2026) confirmed
+                                            // Meteor's autoupdate / Reload._reload is NOT the trigger — the
+                                            // rspack client's reloadApp() drives the loop via
+                                            // rootWindow.location.reload() and self.location.reload().
+                                            // Patch those two call sites so live-reload becomes a no-op in
+                                            // the Electron renderer (the dev server still rebuilds; we just
+                                            // don't honour its "please reload" signal).
+                                            // NOTE: the prior patches that targeted webpack-dev-server-style
+                                            // `var allowToHot`/`var allowToLiveReload`/`var maxRetries = 10`
+                                            // identifiers were removed (Rule 32): modern rspack-dev-server
+                                            // emits `const`-style options-object code, and those regexes
+                                            // matched nothing in the current 758 KB client bundle.
+                                            const jsBeforeLiveReloadPatch = js;
                                             js = js.replace(
-                                                /var allowToHot = search\.indexOf\('webpack-dev-server-hot=false'\) === -1;/g,
-                                                'var allowToHot = false;'
+                                                /rootWindow\.location\.reload\(\);/g,
+                                                'console.warn("[meteor-desktop] rspack rootWindow.location.reload() suppressed");'
                                             );
                                             js = js.replace(
-                                                /var allowToLiveReload = search\.indexOf\('webpack-dev-server-live-reload=false'\) === -1;/g,
-                                                'var allowToLiveReload = false;'
+                                                /self\.location\.reload\(\);/g,
+                                                'console.warn("[meteor-desktop] rspack self.location.reload() suppressed");'
                                             );
-                                            js = js.replace(/var maxRetries = 10;/g, 'var maxRetries = 0;');
+                                            if (js === jsBeforeLiveReloadPatch) {
+                                                warnOnce(
+                                                    'rspack-live-reload-patch-miss',
+                                                    `rspack live-reload patches matched nothing (${urlPath}) — check upstream rspack-dev-server client source for changed call patterns`
+                                                );
+                                            }
                                         }
                                         if (js !== jsOrig) {
                                             warnOnce(
