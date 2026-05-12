@@ -1039,6 +1039,7 @@ wrapConsoleMethod('log');
         if (!this.windowAlreadyLoaded) {
             if (this.meteorAppVersionChange) {
                 this.l.verbose('there is a new version downloaded already, performing HCP reset');
+                this.meteorAppVersionChange = false;
                 this.updateToNewVersion();
             } else {
                 this.windowAlreadyLoaded = true;
@@ -1048,7 +1049,13 @@ wrapConsoleMethod('log');
                 this.window.focus();
             }
         } else {
-            this.l.debug('window already loaded');
+            if (this.meteorAppVersionChange) {
+                this.l.verbose('new version ready after initial load, performing HCP reset');
+                this.meteorAppVersionChange = false;
+                this.updateToNewVersion();
+            } else {
+                this.l.debug('window already loaded');
+            }
         }
         this.emit('loadingFinished');
     }
