@@ -3,7 +3,6 @@ import globals from 'globals';
 
 const FILES = [
     'lib/**/*.js',
-    'plugins/**/*.js',
     'scaffold/**/*.js',
     'skeleton/**/*.js',
     'tests/**/*.js',
@@ -16,7 +15,6 @@ export default [
             '**/*{.,-}min.js',
             'tests/.__tmp/**',
             'tests/fixtures/**',
-            'plugins/bundler/version._desktop_.js',
         ],
     },
 
