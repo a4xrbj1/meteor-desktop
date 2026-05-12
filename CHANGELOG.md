@@ -1,3 +1,11 @@
+## v6.0.6 <sup>12.05.2026</sup>
+
+Patch release extending the build-time asset URL scraper to recognise `@meteorjs/rspack@^2.0.1`'s new `/build-chunks-local/*` URL prefix, completing the dev/build parity introduced in v6.0.5.
+
+### Bug Fixes
+
+* **Scrape `/build-chunks-local/*` asset URLs from `combinedHtmlForScraping`.** `@meteorjs/rspack@^2.0.1` emits its dynamic chunks under both `/build-chunks/*` and `/build-chunks-local/*`, and the v6.0.5 protocol-handler whitelist made the runtime side route both prefixes correctly. The build-time scraper in `meteorApp.js#scrapeAndCacheAssets` was still matching only `/build-chunks/` (no `-local` variant), so production desktop builds against a Meteor 3.4.1 / `@meteorjs/rspack@^2.0.1` app silently skipped every `-local` URL in the scraped `index.html` and aborted with `build-chunks-local/main.css missing` once `acquireIndex()` tried to package the index. The regex at `lib/meteorApp.js:1509` now matches `/build-chunks(?:-local)?/` (and continues to match `/__rspack__/`), restoring full asset coverage across both prefix variants for the desktop production build pipeline.
+
 ## v6.0.5 <sup>12.05.2026</sup>
 
 Patch release adding dev-mode compatibility for consumer apps on Meteor 3.4.x with `@meteorjs/rspack@^2.0.1` + `@rspack/dev-server@^2.0.1`, plus a fix for hot code push detected after the initial window load.
