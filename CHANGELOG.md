@@ -1,3 +1,19 @@
+## v6.0.7 <sup>14.05.2026</sup>
+
+Patch release making the rspack build-context, chunks-context and assets-context paths dynamic so meteor-desktop tracks `@meteorjs/rspack@^2.x`'s `METEOR_LOCAL_DIR`-derived output directories. Closes the silent-fallthrough failure mode that v5.1.6 / v5.1.7 / v6.0.6 partially patched: prod desktop builds wrote rspack output to `_build-local-desktop/main-prod/` while `injectEsm()` still looked under `_build/main-prod/` and shipped the 945-byte HMR placeholder as the client bundle.
+
+### Bug Fixes
+
+* **Resolve `injectEsm`'s rspack bundle directory dynamically.** Prior versions hardcoded `_build/main-prod/` and `_build/main-dev/`. Under `@meteorjs/rspack@^2.x` the directory name is derived from `path.basename(METEOR_LOCAL_DIR)` (`rspack.config.js:247-261`) — production desktop builds emit to `_build-local-desktop/main-prod/`. `lib/env.js` now mirrors that algorithm and exposes `paths.meteorApp.rspack.{buildContext,chunksContext,assetsContext,buildDir}`. `injectEsm()` probes the v2.x-derived path AND the v1.x fallback `_build/` (first-found-wins); when neither resolves to a real `client-rspack.js`, the function throws with the candidate path list and the actionable `RSPACK_BUILD_CONTEXT` escape hatch instead of silently shipping a broken bundle.
+* **Match `build-chunks-<suffix>/` and `build-assets-<suffix>/` URLs in the chunk scraper, the A3.5 CSS gate and the runtime protocol-handler whitelist.** A single shared regex (`/\/build-(?:chunks|assets)(?:-[^/]+)?\//`) admits the v1.x default names AND any `METEOR_LOCAL_DIR`-derived suffix (`-local`, `-local-desktop`, …). Retires v6.0.6's `(?:-local)?` special case, which only covered the dev-mode basename and silently missed every `-local-desktop` URL in prod desktop builds.
+* **Inject the `<script src="/__rspack__/client-rspack.js">` tag in dev-mode HTML that uses suffixed chunk URLs.** `skeleton/app.js#injectRspackClientScript` previously gated on a literal `/build-chunks/` substring and silently no-op'd when the dev server emitted only `/build-chunks-local/` or `/build-chunks-local-desktop/` URLs. The new dynamic-suffix regex restores rspack-client-script injection across every emitted URL shape.
+* **Clean every candidate `_build*` directory at the start of a production build.** `build()`'s rspack-artifact wipe now iterates the candidate context list (v2.x-derived AND v1.x `_build/`), preserving the v6.0.2 dev-server safety check on each. A leftover `_build/` from a prior v1.x build no longer orphans across the v1→v2 transition.
+
+### Tests
+
+* `tests/unit/env.test.js` — four new cases covering the prod `METEOR_LOCAL_DIR`-derived defaults, the dev-mode `.meteor/local` fallback basename, the `RSPACK_BUILD_CONTEXT` env-var override, and an inherited `METEOR_LOCAL_DIR` overriding the dev-mode default.
+* `tests/unit/skeleton/app.test.js` — one new case asserting `injectRspackClientScript` rewrites HTML whose only chunk URL is `/build-chunks-local-desktop/main.css`.
+
 ## v6.0.6 <sup>12.05.2026</sup>
 
 Patch release extending the build-time asset URL scraper to recognise `@meteorjs/rspack@^2.0.1`'s new `/build-chunks-local/*` URL prefix, completing the dev/build parity introduced in v6.0.5.

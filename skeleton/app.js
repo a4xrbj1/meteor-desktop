@@ -34,6 +34,14 @@ const {
 } = electron;
 const { join } = path;
 
+// Pathname shape of every rspack-emitted chunk/asset URL across @meteorjs/rspack
+// @1.x defaults (build-chunks/, build-assets/) and @^2.x METEOR_LOCAL_DIR-derived
+// suffixes (build-chunks-local/, build-chunks-local-desktop/, build-assets-…).
+// Mirrors lib/meteorApp.js RSPACK_CHUNK_URL_RE on the pathname-only surface so the
+// runtime protocol handler and the build-time scraper agree on the URL space.
+// See @meteorjs/rspack/rspack.config.js:247-261 for the upstream algorithm.
+const RSPACK_CHUNK_PATHNAME_RE = /^\/build-(?:chunks|assets)(?:-[^/]+)?\//;
+
 /**
  * This is the main app which is a skeleton for the whole integration.
  * Here all the plugins/modules are loaded, local server is spawned and autoupdate is initialized.
@@ -476,7 +484,11 @@ export default class App {
             return html;
         }
 
-        if (!html.includes('/build-chunks/')) {
+        // Match v1.x /build-chunks/* AND any v2.x METEOR_LOCAL_DIR-derived suffix
+        // (/build-chunks-local/*, /build-chunks-local-desktop/*, …).
+        // Use a global flag clone to scan the whole HTML — the module-level constant
+        // is non-global so .test() resumes from its previous lastIndex on /g regexes.
+        if (!/\/build-(?:chunks|assets)(?:-[^/]+)?\//.test(html)) {
             return html;
         }
 
@@ -741,22 +753,23 @@ export default class App {
                             // Meteor package JS files exist only in the dev server's memory
                             // (INDEX_FROM_RUNNING_SERVER mode) — fetch them from there.
                             // Rspack-managed assets such as /__rspack__/client-rspack.js and
-                            // /build-chunks/* live on the dev server outside /__browser and must
-                            // be fetched from their exact public paths.
-                            // Under @meteorjs/rspack 2.x the local-build variant emits chunks
-                            // under /build-chunks-local/* and /build-assets-local/*; the Meteor
-                            // dev server 307-redirects those to /__rspack__/build-chunks-local/*
-                            // (Electron's net.fetch follows the redirect transparently). Both
-                            // suffix-variants are whitelisted so the protocol handler doesn't
-                            // route the request through /__browser/ where the SPA fallback would
-                            // return HTML and break dynamic chunk loading with
-                            // 'Uncaught SyntaxError: Unexpected token <' in the renderer.
+                            // /build-chunks*/* live on the dev server outside /__browser and
+                            // must be fetched from their exact public paths.
+                            // @meteorjs/rspack@^2.x derives chunk/asset directory names from
+                            // path.basename(METEOR_LOCAL_DIR) — '-local' under the dev-mode
+                            // default '.meteor/local', '-local-desktop' when meteor-desktop
+                            // overrides METEOR_LOCAL_DIR for prod builds, and so on. The
+                            // Meteor dev server 307-redirects /build-chunks-<suffix>/* to
+                            // /__rspack__/build-chunks-<suffix>/* (Electron's net.fetch
+                            // follows the redirect transparently). RSPACK_CHUNK_PATHNAME_RE
+                            // admits any v1.x default + v2.x suffix shape so the protocol
+                            // handler doesn't route the request through /__browser/ where
+                            // the SPA fallback returns HTML and breaks dynamic chunk loading
+                            // with 'Uncaught SyntaxError: Unexpected token <' in the
+                            // renderer. See @meteorjs/rspack/rspack.config.js:247-261.
                             try {
                                 const isRspackAssetRequest = urlPathname.startsWith('/__rspack__/')
-                                    || urlPathname.startsWith('/build-assets/')
-                                    || urlPathname.startsWith('/build-assets-local/')
-                                    || urlPathname.startsWith('/build-chunks/')
-                                    || urlPathname.startsWith('/build-chunks-local/');
+                                    || RSPACK_CHUNK_PATHNAME_RE.test(urlPathname);
                                 const isRspackClientRequest = urlPathname === '/__rspack__/client-rspack.js';
                                 const devRequestPath = isRspackAssetRequest
                                     ? urlPath

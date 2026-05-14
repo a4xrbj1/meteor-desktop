@@ -180,6 +180,23 @@ describe('App', () => {
 
             expect(patchedHtml).to.equal(html);
         });
+
+        it('should inject the Rspack client bundle when only a v2.x suffixed chunk URL is present', () => {
+            // Under METEOR_LOCAL_DIR=.meteor/local-desktop rspack 2.x emits
+            // /build-chunks-local-desktop/*. Without the dynamic-suffix regex
+            // the v6.0.6 literal /build-chunks/ guard would early-return here
+            // and silently skip the <script src="/__rspack__/client-rspack.js"> tag.
+            const app = new App();
+            const html = '<html><head>'
+                + '<link href="/build-chunks-local-desktop/main.css" rel="stylesheet">'
+                + '</head><body><script src="/app.js"></script></body></html>';
+
+            const patchedHtml = app.injectRspackClientScript(html);
+
+            expect(patchedHtml).to.include('/__rspack__/client-rspack.js');
+            expect(patchedHtml.indexOf('/app.js'))
+                .to.be.below(patchedHtml.indexOf('/__rspack__/client-rspack.js'));
+        });
     });
 
     describe('#prepareAutoupdateSettings', () => {
