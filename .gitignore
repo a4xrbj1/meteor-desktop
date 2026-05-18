@@ -24,3 +24,6 @@ AGENTS.md
 .seeds/
 .mulch/
 .claude/
+
+# macOS
+.DS_Store
