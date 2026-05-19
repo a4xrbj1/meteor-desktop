@@ -143,6 +143,111 @@ describe('meteorApp', () => {
         });
     });
 
+    describe('#validateHashCoherence stylesheet links', () => {
+        const writeFixture = function (files) {
+            const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-a25-css-'));
+            Object.keys(files).forEach((rel) => {
+                const target = path.join(tempDir, rel);
+                fs.mkdirSync(path.dirname(target), { recursive: true });
+                fs.writeFileSync(target, files[rel]);
+            });
+            return tempDir;
+        };
+
+        const newInstance = function (tempDir) {
+            return new MeteorApp({
+                env: {
+                    paths: {
+                        electronApp: {
+                            meteorApp: tempDir,
+                            meteorAppIndex: path.join(tempDir, 'index.html')
+                        },
+                        meteorApp: { release: 'release.file' }
+                    }
+                }
+            });
+        };
+
+        const desktopCssManifest = JSON.stringify({
+            manifest: [{
+                url: '/build-chunks-local-desktop/main.50dab1a8aa8e6b42.css',
+                path: 'app/build-chunks-local-desktop/main.50dab1a8aa8e6b42.css',
+                type: 'asset'
+            }]
+        });
+
+        it('rewrites an unhashed rspack stylesheet href to its hashed manifest url', () => {
+            const tempDir = writeFixture({
+                'index.html': '<html><head><link href="/build-chunks-local-desktop/main.css" '
+                    + 'rel="stylesheet"></head><body></body></html>',
+                'program.json': desktopCssManifest
+            });
+
+            try {
+                newInstance(tempDir).validateHashCoherence();
+                const html = fs.readFileSync(path.join(tempDir, 'index.html'), 'UTF-8');
+                expect(html).to.include('href="/build-chunks-local-desktop/main.50dab1a8aa8e6b42.css"');
+                expect(html).to.not.include('href="/build-chunks-local-desktop/main.css"');
+            } finally {
+                fs.rmSync(tempDir, { recursive: true, force: true });
+            }
+        });
+
+        it('prunes a foreign-context stylesheet link that has no bundled asset', () => {
+            const tempDir = writeFixture({
+                'index.html': '<html><head>\n'
+                    + '<link href="/build-chunks-local/main.css" rel="stylesheet">\n'
+                    + '<link href="/build-chunks-local-desktop/main.css" rel="stylesheet">\n'
+                    + '</head><body></body></html>',
+                'program.json': desktopCssManifest
+            });
+
+            try {
+                newInstance(tempDir).validateHashCoherence();
+                const html = fs.readFileSync(path.join(tempDir, 'index.html'), 'UTF-8');
+                expect(html).to.include('href="/build-chunks-local-desktop/main.50dab1a8aa8e6b42.css"');
+                expect(html).to.not.include('/build-chunks-local/main.css');
+                expect(html).to.not.include('href="/build-chunks-local-desktop/main.css"');
+            } finally {
+                fs.rmSync(tempDir, { recursive: true, force: true });
+            }
+        });
+
+        it('throws when every stylesheet link is unresolvable', () => {
+            const tempDir = writeFixture({
+                'index.html': '<html><head><link href="/build-chunks-local/main.css" '
+                    + 'rel="stylesheet"></head><body></body></html>',
+                'program.json': JSON.stringify({ manifest: [] })
+            });
+
+            try {
+                expect(() => newInstance(tempDir).validateHashCoherence())
+                    .to.throw(/style-less desktop build/);
+            } finally {
+                fs.rmSync(tempDir, { recursive: true, force: true });
+            }
+        });
+
+        it('leaves non-stylesheet <link> tags (favicons) untouched', () => {
+            const tempDir = writeFixture({
+                'index.html': '<html><head>\n'
+                    + '<link rel="shortcut icon" type="image/png" href="/favicon-194x194.png">\n'
+                    + '<link href="/build-chunks-local-desktop/main.css" rel="stylesheet">\n'
+                    + '</head><body></body></html>',
+                'program.json': desktopCssManifest
+            });
+
+            try {
+                newInstance(tempDir).validateHashCoherence();
+                const html = fs.readFileSync(path.join(tempDir, 'index.html'), 'UTF-8');
+                expect(html).to.include('<link rel="shortcut icon" type="image/png" href="/favicon-194x194.png">');
+                expect(html).to.include('href="/build-chunks-local-desktop/main.50dab1a8aa8e6b42.css"');
+            } finally {
+                fs.rmSync(tempDir, { recursive: true, force: true });
+            }
+        });
+    });
+
     describe('meteorApp helper functions', () => {
         it('should patch global scope and import.meta usages in client bundles', () => {
             const { patchClientBundleJs, hasResidualClientEsmPatterns } = meteorAppTestExports;

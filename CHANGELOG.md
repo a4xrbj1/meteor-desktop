@@ -1,3 +1,16 @@
+## v6.0.8 <sup>19.05.2026</sup>
+
+Patch release fixing the `injectEsm` build abort on Meteor 3.x apps whose rspack stylesheet `<link>` tags reference the extracted main CSS by an unhashed, web-root URL while the asset is content-hashed under `app/`.
+
+### Bug Fixes
+
+* **Resolve content-hashed rspack CSS `<link>` assets in the A2.5 hash-coherence gate and `injectEsm`.** `@meteorjs/rspack` content-hashes the extracted main CSS and places it under `app/` (e.g. `app/build-chunks-local-desktop/main.<hash>.css`), but Meteor's generated `head.html` — and `injectEsm`'s own chunk scraper, reading rspack's `index.html` — reference it unhashed at the web root (`/build-chunks-local-desktop/main.css`). The desktop runtime `AssetHandler` resolves assets by exact `program.json` manifest URL, so an unhashed href is unserveable; `injectEsm`'s `<link>` validator only probed two literal disk paths, never the manifest, and aborted the build with `injectEsm: … script/link asset(s) missing on disk after A2.5 hash coherence gate`. `validateHashCoherence()` (A2.5) now rewrites every unhashed rspack `<link rel="stylesheet">` href to its content-hashed manifest URL and prunes a stylesheet link that has no bundled asset at all (a foreign non-desktop build-context artifact such as a stray `/build-chunks-local/main.css`); it throws if *every* stylesheet is unresolvable rather than packaging a style-less build. `injectEsm` applies the same resolution to the CSS URLs it scrapes from rspack's `index.html` — A2.5 alone is insufficient because `injectEsm`'s step 2.5 injects its own `<link>` *after* A2.5 has run.
+* **Skip manifest-resident assets in `injectEsm`'s chunk scraper and the A2.7 gateway check.** Assets already listed in `program.json` are bundled under `app/` and served by the runtime `AssetHandler`. The scraper previously treated their `app/`-relative location as "missing", created empty `build-chunks-*/` directories, and the A2.7 gate raised a false `A2.7: rspack asset … missing from build`. Both now skip any chunk URL present in the manifest (or resolvable under `app/`), and unhashed CSS chunk URLs are resolved to their hashed manifest counterpart before the scraper, the A2.7 gate and the injected `<link>` tag consume them.
+
+### Tests
+
+* `tests/unit/meteorApp.test.js` — four new cases under `#validateHashCoherence stylesheet links`: the unhashed→hashed rewrite, pruning a foreign-context stylesheet link, the all-stylesheets-unresolvable safety throw, and leaving non-stylesheet `<link>` tags (favicons) untouched.
+
 ## v6.0.7 <sup>14.05.2026</sup>
 
 Patch release making the rspack build-context, chunks-context and assets-context paths dynamic so meteor-desktop tracks `@meteorjs/rspack@^2.x`'s `METEOR_LOCAL_DIR`-derived output directories. Closes the silent-fallthrough failure mode that v5.1.6 / v5.1.7 / v6.0.6 partially patched: prod desktop builds wrote rspack output to `_build-local-desktop/main-prod/` while `injectEsm()` still looked under `_build/main-prod/` and shipped the 945-byte HMR placeholder as the client bundle.
