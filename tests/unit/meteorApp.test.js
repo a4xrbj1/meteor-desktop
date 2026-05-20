@@ -230,6 +230,39 @@ describe('meteorApp', () => {
                 fs.rmSync(tempDir, { recursive: true, force: true });
             }
         });
+
+        // A2.7 GATEWAY CHECK: if a discovered rspack chunk url has no on-disk file
+        // (neither at meteorAppDir/<rel> nor at meteorAppDir/app/<rel>) and is absent
+        // from program.json's manifest, injectEsm MUST abort the build. The inner
+        // try/catch around the chunk scraper used to swallow this throw (see seed
+        // meteor-desktop-5204); this test pins the rethrow contract.
+        it('throws past the inner catch when the A2.7 gate finds a missing rspack asset', async () => {
+            const missingFixture = {
+                'dynamic/foo.js': 'var global = this;',
+                'index.html': '<html><head></head><body>'
+                    + '<script src="/__rspack__/missing-chunk.js"></script>'
+                    + '<script src="/bundle.js"></script></body></html>',
+                'bundle.js': 'var global = this;',
+                // PATCH 2b probes _build/{main-prod,main-dev}/client-rspack.js BEFORE
+                // the chunk scraper runs — supply the main bundle so we reach A2.7.
+                '_build/main-prod/client-rspack.js': '// rspack client bundle\n',
+                'program.json': JSON.stringify({ manifest: [] })
+            };
+            const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-a27-'));
+            writeFixture(tempDir, missingFixture);
+            try {
+                let thrown = null;
+                try {
+                    await newInstance(tempDir).injectEsm();
+                } catch (e) {
+                    thrown = e;
+                }
+                expect(thrown, 'A2.7 must abort the build').to.not.equal(null);
+                expect(thrown.message).to.match(/A2\.7: rspack asset .*missing-chunk\.js missing/);
+            } finally {
+                fs.rmSync(tempDir, { recursive: true, force: true });
+            }
+        });
     });
 
     describe('#validateHashCoherence stylesheet links', () => {
