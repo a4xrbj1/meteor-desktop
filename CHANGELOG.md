@@ -1,3 +1,17 @@
+## v6.0.9 <sup>21.05.2026</sup>
+
+Patch release closing the residual `app/`-prefix gap in `injectEsm`'s chunk scraper. v6.0.8 (commit `4cfc617`) skips the scraper write when a chunk URL is already registered in `program.json` (`bundledManifestUrls.has(chunkUrl)`), but the scraper still wrote a redundant root-level copy when the same URL was orphan-bundled — present on disk under `app/<rel>` but absent from the manifest's URL set. The redundant copy bloated `meteor.asar` and let the downstream manifest re-write loop register a duplicate entry pointing at the wrong (root-level) path.
+
+### Bug Fixes
+
+* **Probe `meteorAppDir/app/<rel>` in `injectEsm`'s chunk-scraper guard.** The outer existence check at the scraper write block now skips the write when the chunk is already present at its `app/`-relative location, complementing the URL-set check added in v6.0.8. The two mechanisms together guarantee no redundant root-level copy regardless of how the file reached `app/`: `bundledManifestUrls` covers manifest-registered URLs (the typical case), and the disk probe covers the orphan-bundled case admitted by the chunksRefs validator at `lib/meteorApp.js:1683-1685` but not previously enforced at the scraper.
+* **Fall back to `app/<rel>` in `injectEsm`'s manifest re-write loop.** When a chunksRefs URL is missing from `program.json` and the scraper skips its write because the `app/`-relative copy already exists, the manifest re-write loop now probes the `app/<rel>` candidate after the root-level check and registers the entry with its authoritative path. Without this co-change the URL would be left out of the manifest entirely and A3.5 Check 1 would throw "index.html references N asset(s) not in program.json manifest" for the same orphan-bundled case.
+* **Resolve A3.5 Check 4 CSS validations through the manifest's authoritative path.** The CSS content-type validator in `validateManifestAssetCoherence()` previously looked the asar file up by the root-level URL path and silently returned early ("Already caught by Check 2") whenever the asset was bundled under `app/`. Check 4 now reads `manifestByUrl.get(hrefPath).path` and inspects the file at that location, restoring the integrity check for every `app/`-bundled `build-chunks*` CSS.
+
+### Tests
+
+* `tests/unit/meteorApp.test.js` — two new cases under `#injectEsm chunk scraper`: the scraper skips the redundant root-level write when only the `app/` copy exists (fixture stages a stale `_build/main-prod/build-chunks-local-desktop/main.css` so the test actually exercises the new guard rather than passing because the network fallback failed silently), and the manifest gains an entry pointing at the authoritative `app/<rel>` path when the URL was missing from `program.json`. Inversion checks (Rule 44): reverting the new `appLocalPath` clause fails the first test; reverting the manifest-loop probe fails the second.
+
 ## v6.0.8 <sup>19.05.2026</sup>
 
 Patch release fixing the `injectEsm` build abort on Meteor 3.x apps whose rspack stylesheet `<link>` tags reference the extracted main CSS by an unhashed, web-root URL while the asset is content-hashed under `app/`.

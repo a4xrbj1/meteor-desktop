@@ -143,6 +143,95 @@ describe('meteorApp', () => {
         });
     });
 
+    describe('#injectEsm chunk scraper', () => {
+        const writeFixture = function (tempDir, files) {
+            Object.keys(files).forEach((rel) => {
+                const target = path.join(tempDir, rel);
+                fs.mkdirSync(path.dirname(target), { recursive: true });
+                fs.writeFileSync(target, files[rel]);
+            });
+        };
+
+        const newInstance = function (tempDir) {
+            return new MeteorApp({
+                env: {
+                    options: {},
+                    paths: {
+                        electronApp: {
+                            meteorApp: tempDir,
+                            meteorAppIndex: path.join(tempDir, 'index.html')
+                        },
+                        meteorApp: {
+                            release: 'release.file',
+                            root: tempDir,
+                            rspack: { buildContext: '_build' }
+                        }
+                    }
+                }
+            });
+        };
+
+        // A chunksRefs URL whose file is bundled under app/ but whose URL is not
+        // present in program.json (orphan-bundled) must not trigger a redundant
+        // root-level copy. The original app/ file must remain untouched and the
+        // manifest must gain an entry pointing at the authoritative app/ path so
+        // the runtime AssetHandler can resolve the URL. The fixture also stages
+        // a stale disk source at _build/main-prod/build-chunks-local-desktop/main.css
+        // so the scraper's diskSource probe WOULD copy a redundant root-level
+        // file without the app/ short-circuit — this forces the test to exercise
+        // the actual changed guard rather than passing because all sources missed.
+        const orphanFixture = {
+            'dynamic/foo.js': 'var global = this;',
+            'index.html': '<html><head>'
+                + '<link href="/build-chunks-local-desktop/main.css" rel="stylesheet">'
+                + '</head><body><script src="/bundle.js"></script></body></html>',
+            'bundle.js': 'var global = this;',
+            '_build/main-prod/client-rspack.js': '// rspack client bundle\n'.repeat(500),
+            '_build/main-prod/index.html': '<html><head>'
+                + '<link href="/build-chunks-local-desktop/main.css" rel="stylesheet">'
+                + '</head><body></body></html>',
+            '_build/main-prod/build-chunks-local-desktop/main.css': '.stale-disk { color: blue; }',
+            'app/build-chunks-local-desktop/main.css': '.real-css { color: red; }',
+            'program.json': JSON.stringify({ manifest: [] })
+        };
+
+        it('skips writing a redundant root-level copy when only the app/ copy exists', async () => {
+            const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-scraper-'));
+            writeFixture(tempDir, orphanFixture);
+            try {
+                await newInstance(tempDir).injectEsm();
+                expect(fs.existsSync(path.join(tempDir, 'build-chunks-local-desktop/main.css')))
+                    .to.equal(false);
+                const appCopy = fs.readFileSync(
+                    path.join(tempDir, 'app/build-chunks-local-desktop/main.css'), 'UTF-8'
+                );
+                expect(appCopy).to.equal('.real-css { color: red; }');
+            } finally {
+                fs.rmSync(tempDir, { recursive: true, force: true });
+            }
+        });
+
+        it('adds a manifest entry pointing at app/ when the URL is missing from program.json', async () => {
+            const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-scraper-'));
+            writeFixture(tempDir, orphanFixture);
+            try {
+                await newInstance(tempDir).injectEsm();
+                const pj = JSON.parse(
+                    fs.readFileSync(path.join(tempDir, 'program.json'), 'UTF-8')
+                );
+                const entry = pj.manifest.find(
+                    (e) => e.url === '/build-chunks-local-desktop/main.css'
+                );
+                expect(entry).to.not.equal(undefined);
+                expect(entry.path).to.equal('app/build-chunks-local-desktop/main.css');
+                expect(entry.type).to.equal('css');
+                expect(entry.where).to.equal('client');
+            } finally {
+                fs.rmSync(tempDir, { recursive: true, force: true });
+            }
+        });
+    });
+
     describe('#validateHashCoherence stylesheet links', () => {
         const writeFixture = function (files) {
             const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-a25-css-'));
