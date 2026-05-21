@@ -1,3 +1,11 @@
+## v6.0.12 <sup>21.05.2026</sup>
+
+Patch release fixing a latent argument-order bug in `MeteorApp#buildMobileTarget` that silently undid v6.0.4's `NODE_ENV=production` override (seed `meteor-desktop-7691`). Surfaced as an A3.5 Check 3 abort during the v6.0.11 frontend verification build: rspack wrote its prod output to `_build-local-desktop/main-dev/` instead of `main-prod/`, and the scraper packed the 923-byte HMR placeholder for `__rspack__/client-rspack.js`.
+
+### Bug Fixes
+
+* **Reverse `Object.assign` order when composing the spawned Meteor env (`lib/meteorApp.js:624`).** `Object.assign(env, process.env)` overwrites our explicit overrides with whatever the parent shell exposes; for a fresh shell with `NODE_ENV` unset, that wipes the `env.NODE_ENV = 'production'` set on line 613, the atmosphere `@meteorjs/rspack` plugin sees `Meteor.isDevelopment === true`, and the entire production build goes through the dev-mode resolver. The corrected merge `Object.assign({}, process.env, env)` inherits the parent environment but lets the explicit `METEOR_PRETTY_OUTPUT=0`, `METEOR_NO_RELEASE_CHECK=1`, `NODE_ENV=production` and `METEOR_DESKOP_PROD_DEBUG` overrides win as intended. Bug latent since 2018 (`e105f22`); v6.0.4 added the `NODE_ENV` statement believing the merge order placed `env` after `process.env`. The fix only stays silent in shells where `NODE_ENV=production` is already set (e.g. CI matrices), which is why it survived for so long.
+
 ## v6.0.11 <sup>21.05.2026</sup>
 
 Patch release relaxing the `app-builder-lib` peer chain that forced every meteor-desktop consumer to install with `--legacy-peer-deps` (seed `meteor-desktop-e286`, surfaced from frontend seed `frontend-d64e`).
