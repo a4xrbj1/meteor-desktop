@@ -88,8 +88,8 @@
     "terser": "^5.47.1"
   },
   "peerDependencies": {
-    "app-builder-lib": "*",
-    "electron-builder": "*"
+    "app-builder-lib": "^26.9.0",
+    "electron-builder": "^26.9.0"
   },
   "repository": {
     "type": "git",

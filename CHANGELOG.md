@@ -1,3 +1,12 @@
+## v6.0.11 <sup>21.05.2026</sup>
+
+Patch release relaxing the `app-builder-lib` peer chain that forced every meteor-desktop consumer to install with `--legacy-peer-deps` (seed `meteor-desktop-e286`, surfaced from frontend seed `frontend-d64e`).
+
+### Bug Fixes
+
+* **Narrow `app-builder-lib` and `electron-builder` peerDep ranges from `*` to `^26.9.0`.** Every released `app-builder-lib@26.x` declares its sibling peers `electron-builder-squirrel-windows` and `dmg-builder` as a strict-equal version (`{ "electron-builder-squirrel-windows": "26.X.Y" }` for each X.Y from 26.7.0 through 26.11.0 — verified via `npm view app-builder-lib@<v> peerDependencies`). With meteor-desktop's previous `app-builder-lib: '*'` peer, npm was free to resolve `app-builder-lib` to its `latest` dist-tag (26.8.1) while the consumer's own `electron-builder-squirrel-windows: ^26.9.0` range resolved to 26.11.0, producing `ERESOLVE` on every fresh install. The new `^26.9.0` floor excludes the broken sub-26.9 versions from npm's resolution space; npm picks the highest version satisfying both meteor-desktop's range and the consumer's electron-builder-squirrel-windows range (currently 26.11.0), and the strict-equal peer is satisfied because both sides converge on the same number. Consumers on `electron-builder@<26.9.0` were already in the broken zone; the new floor makes the requirement explicit rather than introducing a regression.
+* **Bump `lib/defaultDependencies.js` `electron-builder` / `app-builder-lib` fallbacks from 26.8.2 to 26.9.0.** `lib/index.js#getDependency` auto-installs these versions when the consumer's `package.json` doesn't declare them. Keeping the fallbacks below the new peer floor would have meant the auto-install path would itself fail meteor-desktop's own peer constraint.
+
 ## v6.0.10 <sup>21.05.2026</sup>
 
 Maintenance release refreshing all transitive and direct npm dependencies to their latest versions. No production code changes; the full unit suite (193 tests) passes against the bumped tree.
