@@ -231,6 +231,72 @@ describe('meteorApp', () => {
             }
         });
 
+        // Seed meteor-desktop-4a0d: the network-fetch branch of the scraper trusted
+        // res.ok alone. Meteor's dev server returns HTTP 200 + text/html for any path
+        // it does not serve, so a missing chunk got written into the asar as HTML and
+        // was only caught post-hoc by A3.5 Check 4's magic-byte scan. The guard
+        // checks res.headers.get('content-type') against the URL extension before
+        // writing — these two tests pin that contract on the network branch.
+        const networkFixture = {
+            'dynamic/foo.js': 'var global = this;',
+            'index.html': '<html><head></head><body>'
+                + '<script src="/__rspack__/dynamic-chunk.js"></script>'
+                + '<script src="/bundle.js"></script></body></html>',
+            'bundle.js': 'var global = this;',
+            '_build/main-prod/client-rspack.js': '// rspack client bundle\n',
+            'program.json': JSON.stringify({ manifest: [] })
+        };
+
+        it('rejects a network response whose content-type does not match the URL extension', async () => {
+            const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-net-ct-'));
+            writeFixture(tempDir, networkFixture);
+            const fetchStub = sinon.stub(global, 'fetch').resolves(
+                new Response('<!DOCTYPE html><html>Meteor App - Error</html>', {
+                    status: 200,
+                    headers: { 'content-type': 'text/html; charset=utf-8' }
+                })
+            );
+            try {
+                let thrown = null;
+                try {
+                    await newInstance(tempDir).injectEsm();
+                } catch (e) {
+                    thrown = e;
+                }
+                expect(thrown, 'A2.7 must fire when no port returns a matching content-type')
+                    .to.not.equal(null);
+                expect(thrown.message).to.match(/A2\.7: rspack asset .*dynamic-chunk\.js missing/);
+                expect(fs.existsSync(path.join(tempDir, '__rspack__/dynamic-chunk.js')),
+                    'HTML must not be written under a .js path')
+                    .to.equal(false);
+                expect(fetchStub.called).to.equal(true);
+            } finally {
+                fetchStub.restore();
+                fs.rmSync(tempDir, { recursive: true, force: true });
+            }
+        });
+
+        it('writes the buffer when content-type matches the URL extension', async () => {
+            const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-net-ok-'));
+            writeFixture(tempDir, networkFixture);
+            const body = 'export const chunk = 1;\n';
+            const fetchStub = sinon.stub(global, 'fetch').resolves(
+                new Response(body, {
+                    status: 200,
+                    headers: { 'content-type': 'application/javascript' }
+                })
+            );
+            try {
+                await newInstance(tempDir).injectEsm();
+                const written = path.join(tempDir, '__rspack__/dynamic-chunk.js');
+                expect(fs.existsSync(written), 'chunk must be written to localPath').to.equal(true);
+                expect(fs.readFileSync(written, 'UTF-8')).to.equal(body);
+            } finally {
+                fetchStub.restore();
+                fs.rmSync(tempDir, { recursive: true, force: true });
+            }
+        });
+
         // A2.7 GATEWAY CHECK: if a discovered rspack chunk url has no on-disk file
         // (neither at meteorAppDir/<rel> nor at meteorAppDir/app/<rel>) and is absent
         // from program.json's manifest, injectEsm MUST abort the build. The inner
