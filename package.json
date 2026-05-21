@@ -37,7 +37,6 @@
   "license": "MIT",
   "devDependencies": {
     "@babel/register": "7.29.3",
-    "@electron/packager": "^20.0.0",
     "@types/fs-extra": "11.0.4",
     "babel-plugin-istanbul": "^8.0.0",
     "chai": "^6.2.2",
@@ -71,7 +70,6 @@
     "sinon": "^22.0.0",
     "sinon-chai": "^4.0.1",
     "temp-dir": "^3.0.0",
-    "typescript": "^6.0.3",
     "watch": "1.0.2"
   },
   "dependencies": {
@@ -79,7 +77,6 @@
     "@babel/preset-env": "7.29.5",
     "@babel/runtime": "7.29.2",
     "@electron/asar": "^4.1.2",
-    "cacache": "^21.0.0",
     "commander": "^14.0.3",
     "cross-spawn": "7.0.6",
     "install-local": "^4.1.0",

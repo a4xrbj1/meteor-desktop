@@ -1,3 +1,13 @@
+## v6.0.13 <sup>21.05.2026</sup>
+
+Patch release removing three dependencies that have **zero imports anywhere** in the meteor-desktop repo: `cacache`, `typescript`, and `@electron/packager`. v6.0.10's "refresh deps to latest" bumped all three to majors (`cacache` 20 → 21, `typescript` 5 → 6, `@electron/packager` 19 → 20) despite their unused status; `cacache@21` then pulled in `engines.node: '^22.22.2 || ^24.15.0 || >=26.0.0'`, producing `EBADENGINE` warnings on Meteor 3.4's bundled Node 22.22.1 in every downstream consumer install (the warning is harmless because cacache is unused, but unnecessary noise that confused the v6.0.12 verification run).
+
+### Maintenance
+
+* **Drop unused `cacache` from `dependencies`.** Verified zero imports across `lib/`, `skeleton/`, `scaffold/`, `scripts/`, and `tests/` via `grep -rn cacache --include='*.js' --include='*.mjs' --include='*.cjs' --include='*.json'`. Only reference outside `node_modules/` was the `package.json` declaration itself.
+* **Drop unused `typescript` from `devDependencies`.** No `.ts` files, no `tsconfig*`, no `typescript` imports — verified by `find . -name '*.ts'` and `grep -rn typescript --include='*.js'`. `@types/fs-extra` (kept) is a type-only artifact and does not require the typescript compiler.
+* **Drop unused `@electron/packager` from `devDependencies`.** The active electron-packager wiring is `lib/packager.js#L20`, which fetches `electron-packager@17.1.2` via `lib/index.js#getDependency` at runtime against the user's project. The devDep at the workspace level was never imported.
+
 ## v6.0.12 <sup>21.05.2026</sup>
 
 Patch release fixing a latent argument-order bug in `MeteorApp#buildMobileTarget` that silently undid v6.0.4's `NODE_ENV=production` override (seed `meteor-desktop-7691`). Surfaced as an A3.5 Check 3 abort during the v6.0.11 frontend verification build: rspack wrote its prod output to `_build-local-desktop/main-dev/` instead of `main-prod/`, and the scraper packed the 923-byte HMR placeholder for `__rspack__/client-rspack.js`.
