@@ -1,3 +1,37 @@
+## v6.0.15 <sup>26.05.2026</sup>
+
+Adds A2.6 — a new validation gate that runs between `changeDdpUrl()` and `packToAsar()` (`lib/meteorApp.js:~2237`) and refuses to seal a `meteor.asar` whose `__meteor_runtime_config__` ships with a non-deployable `ROOT_URL` / `DDP_DEFAULT_CONNECTION_URL`. Filed upstream by frontend seed `e2e-4193` after a production-bound build silently shipped Meteor's `http://build/` placeholder as ROOT_URL: meteor-desktop's inner `meteor run` (`lib/meteorApp.js:476-505 acquireIndex()`) raced with a leftover meteor-desktop / rspack watcher from a prior incomplete build, the fetched index.html came back with Meteor's "no `--server` provided" placeholder, and at runtime the renderer's sockjs client failed with `GET http://build/sockjs/info net::ERR_NAME_NOT_RESOLVED`. A downstream mitigation already existed in `e2e/global-setup.js:212-243` (reads packed asar bytes, refuses to launch Electron when the baked ROOT_URL host is not `localhost` / `127.0.0.1`) — A2.6 is the upstream counterpart that fails the build itself, so consumers that don't run the e2e harness are equally protected.
+
+### Bug Fixes
+
+* **A2.6 runtime-config URL gate (`lib/meteorApp.js:~2237 validateRuntimeConfigUrls()` + wiring in `build()` ~line 2196).** After `changeDdpUrl()` and before `packToAsar()`, re-reads the staged `electronApp.meteorAppIndex`, extracts `__meteor_runtime_config__` via the existing `this.matcher` regex (`lib/meteorApp.js:210`), decodes + JSON-parses it, and for both `ROOT_URL` and `DDP_DEFAULT_CONNECTION_URL` asserts the value is a parseable URL whose hostname is not `'build'`. When `--ddpUrl` was supplied, additionally asserts both values exactly equal the configured ddpUrl (trailing-slash normalised the same way `updateDdpUrl@802-803` normalises). On failure, throws with a Rule 27-compliant diagnostic message naming both URL values, the on-disk index.html path, the configured `--ddpUrl`, and the watcher-contention root cause hinted by the seed. Passes are logged at info level (`A2.6: runtime-config URLs OK (...)`) and `'A2.6 runtime-config URLs'` is appended to `electronApp.validationGatesPassed` so it appears in `A7 build summary`.
+
+### Covered slip paths (Rule 35 — idempotency / coverage audit)
+
+The gate catches three distinct ways `meteor.asar` can have ended up with a poisoned ROOT_URL despite `changeDdpUrl()` appearing to succeed:
+
+1. **`ddpUrl === null`** — `changeDdpUrl()` early-returns silently (`lib/meteorApp.js:2226-2235`), so whatever the inner meteor served is whatever ships. If the inner server was contended, that's `http://build/`.
+2. **Multiple `__meteor_runtime_config__` assignments in HTML** — `updateDdpUrl@809-811` uses `content.replace(this.replacer, ...)` without a `/g` flag, so only the first occurrence is rewritten; a second assignment (injected by a Meteor package, an extension, or a malformed inner-server response) keeps the placeholder.
+3. **`matcher` regex didn't recognise the runtime-config encoding** — already throws loudly today at `updateDdpUrl@791-793`; A2.6 strengthens this by re-asserting the same invariant even when `ddpUrl === null` (path 1 above) so the assertion is contract-uniform regardless of CLI flags.
+
+### Rationale (Rule 32 — when adding a mechanism, retire what it replaces)
+
+A2.6 and `e2e/global-setup.js:212-243` enforce the same invariant — "the packed `meteor.asar` must ship with a deployable `ROOT_URL`" — but cover non-identical surfaces, so both layers coexist:
+- **A2.6** covers every asar produced through `MeteorApp.build()` in `@a4xrbj1/meteor-desktop ≥ 6.0.15`. It fails at build time (no asar produced) and gives the consumer the seed-referenced root-cause hint.
+- **`e2e/global-setup.js`** covers asars produced by older meteor-desktop versions, manual `@electron/asar` invocations, downloaded prebuilt asars, and any other path outside `MeteorApp.build()`. It fails at e2e launch time (asar exists but Electron is never spawned).
+
+Neither replaces the other: removing A2.6 would re-expose the bug to all consumers without the e2e harness; removing the e2e gate would let an asar from an older meteor-desktop version slip past the e2e suite. Both gates name the seed and the contention root cause in their failure messages so a future operator can trace the failure to the correct upstream code.
+
+### What is intentionally not changed
+
+- `acquireIndex()` (`lib/meteorApp.js:476-505`) — the inner-meteor contention root cause is out of scope (the seed asks for a gate, not a fix to the race). A2.6 is the gate.
+- `updateDdpUrl()` / `changeDdpUrl()` / `packToAsar()` — the rewrite logic is correct as-is; the v6.0.14 gap was the missing post-condition verification, which A2.6 supplies.
+- `validateMeteorAsar()` (`lib/meteorApp.js:~2265 A3`) — A2.6 runs against on-disk `meteorAppIndex` BEFORE `packToAsar`, matching the seed's "gate `packToAsar`" fix direction. Re-checking inside the packed asar would be redundant because `packToAsar` is a pure copy (`asar.createPackage`) — no transform applies between A2.6 and the asar bytes.
+
+### Verification
+
+`npx mocha tests/unit/meteorApp.test.js --grep validateRuntimeConfigUrls` — 6 new unit tests pass (happy paths with configured + null ddpUrl, the e2e-4193 ROOT_URL failure mode, an analogous DDP_DEFAULT_CONNECTION_URL failure mode, the multi-assignment regex-miss scenario where ROOT_URL doesn't match the configured ddpUrl, and the missing-runtime-config scenario). Each "throws" test was inversion-checked per Rule 44 by temporarily editing `'build'` → `'buildx'` in `validateRuntimeConfigUrls()` and confirming the two hostname tests fail with the expected message-shape mismatch before reverting. The pre-existing `validateHashCoherence stylesheet links: throws when every stylesheet link is unresolvable` failure on master is unrelated and was confirmed to pre-date this change via `git stash` cross-check.
+
 ## v6.0.14 <sup>25.05.2026</sup>
 
 Patch release fixing three sibling validation gates that all enforced the same on-disk invariant for stylesheet `<link>` hrefs, blocking every `skipMobileBuild` (i.e. `npm run desktop` / `npm run desktop-debug`) build whose served `<link rel="stylesheet">` pointed at an rspack-dev-server-only path. The runtime AssetHandler at `skeleton/app.js:770-779` already proxies `/build-chunks-*/*` and `/__rspack__/*` requests to the running dev server (which 307-redirects them to rspack-dev-server's in-memory bundle) — so the on-disk miss is by design, not a packaging bug, and the gates should mirror the same dev-mode tolerance A3.5 already grants to the `__rspack__/client-rspack.js` HMR placeholder (~line 2440) and to `build-chunks*/*.css` containing HTML (~line 2502). Surfaced from frontend seed `e2e-773b` after the v6.0.13 A2.5 hardening hit the dev-mode case head-on: rebuilding with `npm run desktop` aborted with `A2.5: every <link rel="stylesheet"> in index.html is unresolvable — refusing to package a style-less desktop build: /build-chunks-local/main.css`, even though the same URL resolves with full CSS content (`HTTP 200 / 312 KB`) at runtime via the dev-server proxy.

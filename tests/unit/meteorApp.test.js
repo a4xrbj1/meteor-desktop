@@ -708,4 +708,103 @@ describe('meteorApp', () => {
             expect(copiedIndex).to.not.include('stale-app');
         });
     });
+
+    describe('#validateRuntimeConfigUrls', () => {
+        // Seed e2e-4193 — A2.6 gate: catches the 'http://build/' placeholder Meteor
+        // emits when the inner 'meteor run' is contended by a leftover meteor-desktop
+        // or rspack watcher and acquireIndex() got back half-initialised HTML.
+
+        const writeIndexWithRuntimeConfig = function (dir, runtimeConfig) {
+            const encoded = encodeURIComponent(JSON.stringify(runtimeConfig));
+            const html = '<html><head>'
+                + `<script>__meteor_runtime_config__ = JSON.parse(decodeURIComponent("${encoded}"))</script>`
+                + '</head><body></body></html>';
+            const indexPath = path.join(dir, 'index.html');
+            fs.writeFileSync(indexPath, html);
+            return indexPath;
+        };
+
+        const buildInstance = function (indexPath, ddpUrl) {
+            return new MeteorApp({
+                env: {
+                    paths: {
+                        electronApp: { meteorAppIndex: indexPath },
+                        meteorApp: { release: 'release.file' }
+                    },
+                    options: { ddpUrl }
+                }
+            });
+        };
+
+        let dir;
+        afterEach(() => {
+            if (dir) {
+                fs.rmSync(dir, { recursive: true, force: true });
+                dir = null;
+            }
+        });
+
+        it('passes when ROOT_URL is the configured ddpUrl', () => {
+            dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-a26-'));
+            const indexPath = writeIndexWithRuntimeConfig(dir, {
+                ROOT_URL: 'http://127.0.0.1:3000/',
+                DDP_DEFAULT_CONNECTION_URL: 'http://127.0.0.1:3000/'
+            });
+            const instance = buildInstance(indexPath, 'http://127.0.0.1:3000');
+            expect(() => instance.validateRuntimeConfigUrls()).to.not.throw();
+        });
+
+        it('passes when ROOT_URL has a localhost-style host and ddpUrl is null', () => {
+            dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-a26-'));
+            const indexPath = writeIndexWithRuntimeConfig(dir, {
+                ROOT_URL: 'http://localhost:3000/',
+                DDP_DEFAULT_CONNECTION_URL: 'http://localhost:3000/'
+            });
+            const instance = buildInstance(indexPath, null);
+            expect(() => instance.validateRuntimeConfigUrls()).to.not.throw();
+        });
+
+        it("throws when ROOT_URL hostname is 'build' (the e2e-4193 failure mode)", () => {
+            dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-a26-'));
+            const indexPath = writeIndexWithRuntimeConfig(dir, {
+                ROOT_URL: 'http://build/',
+                DDP_DEFAULT_CONNECTION_URL: 'http://build/'
+            });
+            const instance = buildInstance(indexPath, 'http://127.0.0.1:3000');
+            expect(() => instance.validateRuntimeConfigUrls())
+                .to.throw(/A2\.6 runtime-config URL gate failed.*ROOT_URL hostname is 'build'/s)
+                .and.to.match(/meteor-desktop or rspack watcher/);
+        });
+
+        it("throws when DDP_DEFAULT_CONNECTION_URL hostname is 'build' but ROOT_URL is fine", () => {
+            dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-a26-'));
+            const indexPath = writeIndexWithRuntimeConfig(dir, {
+                ROOT_URL: 'http://127.0.0.1:3000/',
+                DDP_DEFAULT_CONNECTION_URL: 'http://build/'
+            });
+            const instance = buildInstance(indexPath, 'http://127.0.0.1:3000');
+            expect(() => instance.validateRuntimeConfigUrls())
+                .to.throw(/DDP_DEFAULT_CONNECTION_URL hostname is 'build'/);
+        });
+
+        it('throws when ROOT_URL differs from configured ddpUrl (multi-assignment regex-miss scenario)', () => {
+            dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-a26-'));
+            const indexPath = writeIndexWithRuntimeConfig(dir, {
+                ROOT_URL: 'http://127.0.0.1:4000/',
+                DDP_DEFAULT_CONNECTION_URL: 'http://127.0.0.1:4000/'
+            });
+            const instance = buildInstance(indexPath, 'http://127.0.0.1:3000');
+            expect(() => instance.validateRuntimeConfigUrls())
+                .to.throw(/does not match configured --ddpUrl=http:\/\/127\.0\.0\.1:3000\//);
+        });
+
+        it('throws when __meteor_runtime_config__ block is absent', () => {
+            dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-a26-'));
+            const indexPath = path.join(dir, 'index.html');
+            fs.writeFileSync(indexPath, '<html><head></head><body>no runtime config here</body></html>');
+            const instance = buildInstance(indexPath, 'http://127.0.0.1:3000');
+            expect(() => instance.validateRuntimeConfigUrls())
+                .to.throw(/A2\.6: __meteor_runtime_config__ not found/);
+        });
+    });
 });
