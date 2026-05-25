@@ -754,17 +754,24 @@ describe('meteorApp', () => {
             expect(() => instance.validateRuntimeConfigUrls()).to.not.throw();
         });
 
-        it('passes when ROOT_URL has a localhost-style host and ddpUrl is null', () => {
+        it('passes in dev mode (ddpUrl null) when only ROOT_URL is present — real shape: DDP key absent from JSON', () => {
+            // Real shape captured from frontend/.meteor/desktop-build/meteor/index.html
+            // after a passing `meteor run` (dev mode): the serialised __meteor_runtime_config__
+            // contains ROOT_URL but no DDP_DEFAULT_CONNECTION_URL key at all. The runtime
+            // recovery layer at skeleton/app.js:953-960 sets DDP at request time.
             dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-a26-'));
             const indexPath = writeIndexWithRuntimeConfig(dir, {
+                meteorRelease: 'METEOR@3.4.1',
                 ROOT_URL: 'http://localhost:3000/',
-                DDP_DEFAULT_CONNECTION_URL: 'http://localhost:3000/'
+                ROOT_URL_PATH_PREFIX: '',
+                appId: 'pzkp2619zyzxgsarhim',
+                isModern: false
             });
             const instance = buildInstance(indexPath, null);
             expect(() => instance.validateRuntimeConfigUrls()).to.not.throw();
         });
 
-        it("throws when ROOT_URL hostname is 'build' (the e2e-4193 failure mode)", () => {
+        it("throws when ROOT_URL hostname is 'build' (the e2e-4193 failure mode) with watcher-contention hint", () => {
             dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-a26-'));
             const indexPath = writeIndexWithRuntimeConfig(dir, {
                 ROOT_URL: 'http://build/',
@@ -776,7 +783,7 @@ describe('meteorApp', () => {
                 .and.to.match(/meteor-desktop or rspack watcher/);
         });
 
-        it("throws when DDP_DEFAULT_CONNECTION_URL hostname is 'build' but ROOT_URL is fine", () => {
+        it("throws when DDP_DEFAULT_CONNECTION_URL hostname is 'build' but ROOT_URL is fine — with watcher hint", () => {
             dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-a26-'));
             const indexPath = writeIndexWithRuntimeConfig(dir, {
                 ROOT_URL: 'http://127.0.0.1:3000/',
@@ -784,18 +791,54 @@ describe('meteorApp', () => {
             });
             const instance = buildInstance(indexPath, 'http://127.0.0.1:3000');
             expect(() => instance.validateRuntimeConfigUrls())
-                .to.throw(/DDP_DEFAULT_CONNECTION_URL hostname is 'build'/);
+                .to.throw(/DDP_DEFAULT_CONNECTION_URL hostname is 'build'/)
+                .and.to.match(/meteor-desktop or rspack watcher/);
         });
 
-        it('throws when ROOT_URL differs from configured ddpUrl (multi-assignment regex-miss scenario)', () => {
+        it("throws when DDP_DEFAULT_CONNECTION_URL hostname is 'build' even when ddpUrl is null (absence-is-OK is not poison-is-OK)", () => {
+            dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-a26-'));
+            const indexPath = writeIndexWithRuntimeConfig(dir, {
+                ROOT_URL: 'http://localhost:3000/',
+                DDP_DEFAULT_CONNECTION_URL: 'http://build/'
+            });
+            const instance = buildInstance(indexPath, null);
+            expect(() => instance.validateRuntimeConfigUrls())
+                .to.throw(/DDP_DEFAULT_CONNECTION_URL hostname is 'build'/)
+                .and.to.match(/meteor-desktop or rspack watcher/);
+        });
+
+        it('throws and suppresses the watcher hint when ROOT_URL differs from configured ddpUrl (mismatch != contention)', () => {
             dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-a26-'));
             const indexPath = writeIndexWithRuntimeConfig(dir, {
                 ROOT_URL: 'http://127.0.0.1:4000/',
                 DDP_DEFAULT_CONNECTION_URL: 'http://127.0.0.1:4000/'
             });
             const instance = buildInstance(indexPath, 'http://127.0.0.1:3000');
-            expect(() => instance.validateRuntimeConfigUrls())
+            const err = expect(() => instance.validateRuntimeConfigUrls())
                 .to.throw(/does not match configured --ddpUrl=http:\/\/127\.0\.0\.1:3000\//);
+            err.and.to.not.match(/meteor-desktop or rspack watcher/);
+        });
+
+        it('throws when ddpUrl is set but DDP_DEFAULT_CONNECTION_URL is absent (production-path post-condition of updateDdpUrl)', () => {
+            dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-a26-'));
+            const indexPath = writeIndexWithRuntimeConfig(dir, {
+                ROOT_URL: 'http://127.0.0.1:3000/'
+            });
+            const instance = buildInstance(indexPath, 'http://127.0.0.1:3000');
+            const err = expect(() => instance.validateRuntimeConfigUrls())
+                .to.throw(/DDP_DEFAULT_CONNECTION_URL is missing or empty \(expected http:\/\/127\.0\.0\.1:3000\/ via --ddpUrl\)/);
+            err.and.to.not.match(/meteor-desktop or rspack watcher/);
+        });
+
+        it('throws when ROOT_URL is absent entirely (structurally required, no watcher hint)', () => {
+            dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-a26-'));
+            const indexPath = writeIndexWithRuntimeConfig(dir, {
+                DDP_DEFAULT_CONNECTION_URL: 'http://127.0.0.1:3000/'
+            });
+            const instance = buildInstance(indexPath, null);
+            const err = expect(() => instance.validateRuntimeConfigUrls())
+                .to.throw(/ROOT_URL is missing or empty/);
+            err.and.to.not.match(/meteor-desktop or rspack watcher/);
         });
 
         it('throws when __meteor_runtime_config__ block is absent', () => {
