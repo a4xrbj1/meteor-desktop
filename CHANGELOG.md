@@ -1,3 +1,19 @@
+## v6.0.18 <sup>30.05.2026</sup>
+
+Patch release fixing a regression introduced by v6.0.17's own CLI refactor: `npm run desktop` (and every other invocation through the `node_modules/.bin/meteor-desktop` symlink) silently did nothing — exit 0, no banner, no Electron. v6.0.17 guarded the top-level `program.parse` behind a main-check `import.meta.url === pathToFileURL(process.argv[1]).href` (the "test seam" refactor). Under ESM, when the entry is reached through a symlink, Node sets `import.meta.url` to the **resolved realpath** of the file but leaves `process.argv[1]` as the **symlink path** on the command line — so the two URLs never match, `isMain` is `false`, and the entire `addOptions`/`registerCommands`/`program.parse` block is skipped. Because npm always invokes bins via the `.bin` symlink, the CLI became a no-op for the primary consumer (`frontend`'s `npm run desktop`). v6.0.17's Rule 48 consumer exercise ran `lib/bin/cli.js` by its **realpath** (`isMain` true), never through the symlink, which is exactly why the mismatch shipped undetected.
+
+### Bug Fixes
+
+* **Make the main-check symlink-safe (`lib/bin/cli.js`).** Replaced the raw URL compare with a realpath compare: `const isMain = fileURLToPath(import.meta.url) === fs.realpathSync(process.argv[1]);`. `fs.realpathSync` resolves the `.bin` symlink in `process.argv[1]` to the same real path `import.meta.url` already reports, so the guard is `true` for both symlink and realpath invocations while still being `false` when the module is `import`-ed (test seam preserved — `addOptions`/`registerCommands`/`actions` remain importable without triggering `program.parse`). Dropped the now-unused `pathToFileURL` from the `url` import.
+
+### Verification (Rule 48)
+
+* **Real-binary consumer exercise through the failing path.** Ran the actual `.bin` symlink (`./node_modules/.bin/meteor-desktop --remote-debugging-port=9333 …`) in `frontend` — pre-fix: zero output, exit 0; post-fix: `METEOR-DESKTOP v6.0.18` banner followed by `electronApp: scaffolding`, i.e. the guard now executes. `node --check` parse-clean on the changed file; `eslint lib/bin/cli.js` clean. Consumer confirmed end-to-end: `frontend` `npm run desktop` builds and launches Electron again.
+
+### Known gap
+
+* `tests/unit/cli.test.js` imports `addOptions`/`registerCommands` directly and therefore bypasses the `isMain` guard — it structurally cannot catch a symlink-main regression. A test that exercises the guard via a real symlink invocation is not yet added (deferred with the consumer exercise above standing in). Filed as seed `meteor-desktop-4e12`.
+
 ## v6.0.17 <sup>30.05.2026</sup>
 
 Patch release fixing a latent CLI argv-routing bug (`lib/bin/cli.js`, present since the 2016 initial commit `b6b10cc`) that produced the poisoned `ROOT_URL=build/` the v6.0.15 A2.6 gate now catches (seed `meteor-desktop-e7c2`). The CLI used a hand-rolled "prefix-rewriter" that decided whether a subcommand was given by substring-checking **only `process.argv[2]`** against a known-commands string. When global options preceded the subcommand — `meteor-desktop --build-meteor --production --meteor-settings X build …` — `argv[2]` was `--build-meteor` (not a known command), so the rewriter injected `run` ahead of everything and re-parsed. Commander then matched `run [ddp_url]`, consumed the options, and the user's intended `build` positional became `run`'s `ddp_url`. `getDdpUrl('build')` short-circuited (truthy) and returned `'build'` unchanged, writing `ROOT_URL=build/` and `DDP_DEFAULT_CONNECTION_URL=build/` into the staged `index.html`. Pre-A2.6 this shipped silently and surfaced at runtime as `net::ERR_NAME_NOT_RESOLVED` on `/sockjs/info` (seed `e2e-4193`).
