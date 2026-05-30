@@ -10,9 +10,9 @@ Patch release fixing a regression introduced by v6.0.17's own CLI refactor: `npm
 
 * **Real-binary consumer exercise through the failing path.** Ran the actual `.bin` symlink (`./node_modules/.bin/meteor-desktop --remote-debugging-port=9333 …`) in `frontend` — pre-fix: zero output, exit 0; post-fix: `METEOR-DESKTOP v6.0.18` banner followed by `electronApp: scaffolding`, i.e. the guard now executes. `node --check` parse-clean on the changed file; `eslint lib/bin/cli.js` clean. Consumer confirmed end-to-end: `frontend` `npm run desktop` builds and launches Electron again.
 
-### Known gap
+### Regression coverage (Rules 35, 41)
 
-* `tests/unit/cli.test.js` imports `addOptions`/`registerCommands` directly and therefore bypasses the `isMain` guard — it structurally cannot catch a symlink-main regression. A test that exercises the guard via a real symlink invocation is not yet added (deferred with the consumer exercise above standing in). Filed as seed `meteor-desktop-4e12`.
+* `tests/unit/cli.test.js` imports `addOptions`/`registerCommands` directly and so bypasses the `isMain` guard — it structurally cannot catch a symlink-main regression. Added `tests/functional/cli-bin.test.js`, which spawns the bin through a `node_modules/.bin`-style symlink and asserts `--version` prints; inversion-checked (reintroducing the symlink mismatch makes it fail with empty stdout). A `prepublishOnly` smoke gate (`scripts/prepublish-smoke.js`) runs the same symlink invocation so a no-op CLI can never be published. Closes seed `meteor-desktop-4e12`.
 
 ## v6.0.17 <sup>30.05.2026</sup>
 

@@ -25,6 +25,7 @@
     "lint": "eslint lib scaffold skeleton tests",
     "prepare-integration-tests": "node tests/integration/prepare.js",
     "coverage-html": "nyc report --reporter=lcov",
+    "prepublishOnly": "node scripts/prepublish-smoke.js",
     "postversion": "npm run publish-npm",
     "postinstall": "path-exists lib/scripts/addToScripts.js && node lib/scripts/addToScripts || echo",
     "publish-npm": "npm publish && git push origin master --tags",
