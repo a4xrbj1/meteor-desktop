@@ -1,3 +1,22 @@
+## v6.0.19 <sup>08.06.2026</sup>
+
+Patch release making the build pipeline compatible with **electron-builder / app-builder-lib 26**, which this release also adopts (`lib/defaultDependencies.js` → `electron-builder: 26.9.0`; `package.json` devDep `app-builder-lib: ^26.9.0`). app-builder-lib 26.x **removed** `out/util/packageDependencies.createLazyProductionDeps` (the module is now an empty stub) and stopped consuming the `productionDeps` field entirely — `installOrRebuild`/`rebuild` (`out/util/yarn.js`) now collect production deps internally via `node-module-collector`. `InstallerBuilder.prepareLastRebuildObject` (`lib/electronBuilder.js`) still called the removed helper unconditionally, so on app-builder-lib 26 it threw `TypeError: this.packageDependencies.createLazyProductionDeps is not a function`, breaking `npm run desktop` and `npm run desktop build` for every consumer (frontend seed `frontend-805d`). v6.0.18's published tarball still carries the unconditional call, so a clean `npm install` of the previously-published `6.0.18` reinstalls the broken build even where a local `node_modules` was hand-patched — this release exists to ship the fix to the registry (frontend seed `frontend-1be5`).
+
+### Bug Fixes
+
+* **Guard the obsolete `createLazyProductionDeps` call (`lib/electronBuilder.js:66` `prepareLastRebuildObject`).** Build `lastRebuild` (`frameworkInfo`/`platform`/`arch`) without `productionDeps`, then set `productionDeps` only when the legacy helper is still present (`typeof this.packageDependencies.createLazyProductionDeps === 'function'`). app-builder-lib < 26 keeps its precomputed-array behaviour; 26.x skips the dead field it no longer reads. Eliminates the `createLazyProductionDeps is not a function` crash on electron-builder 26 (commit `9d88179`).
+
+### Also in this release
+
+* **`chore(deps)`: bump all outdated npm packages to latest, incl. `app-builder-lib`/`electron-builder` → `^26.9.0`** (`06e3392`) — the bump that surfaced the `createLazyProductionDeps` removal the Bug Fix above accommodates.
+* **`chore`: remove Codacy integration** (`7a01777`).
+* **`test(cli)`: `.bin`-symlink main-guard coverage + `prepublishOnly` smoke gate** (`4592716`).
+
+### Verification
+
+* **Pre-publish smoke gate.** `scripts/prepublishOnly` → `scripts/prepublish-smoke.js` runs the published CLI bin through a `node_modules/.bin`-style symlink and asserts it prints `v6.0.19` before `npm publish` proceeds; ran locally clean against this bump.
+* **Consumer-side defect reproduced and fixed.** The crash is the consumer report `frontend-805d` (`createLazyProductionDeps is not a function` under electron-builder `26.15.0`). The fix is exercised through frontend's real `node_modules/.bin/meteor-desktop` entry; the post-publish closing step is a clean `npm install` of `6.0.19` in `frontend` followed by `npm run desktop build` (Rule 48), replacing the ephemeral in-place patch.
+
 ## v6.0.18 <sup>30.05.2026</sup>
 
 Patch release fixing a regression introduced by v6.0.17's own CLI refactor: `npm run desktop` (and every other invocation through the `node_modules/.bin/meteor-desktop` symlink) silently did nothing — exit 0, no banner, no Electron. v6.0.17 guarded the top-level `program.parse` behind a main-check `import.meta.url === pathToFileURL(process.argv[1]).href` (the "test seam" refactor). Under ESM, when the entry is reached through a symlink, Node sets `import.meta.url` to the **resolved realpath** of the file but leaves `process.argv[1]` as the **symlink path** on the command line — so the two URLs never match, `isMain` is `false`, and the entire `addOptions`/`registerCommands`/`program.parse` block is skipped. Because npm always invokes bins via the `.bin` symlink, the CLI became a no-op for the primary consumer (`frontend`'s `npm run desktop`). v6.0.17's Rule 48 consumer exercise ran `lib/bin/cli.js` by its **realpath** (`isMain` true), never through the symlink, which is exactly why the mismatch shipped undetected.
