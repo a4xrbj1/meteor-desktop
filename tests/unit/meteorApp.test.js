@@ -345,6 +345,7 @@ describe('meteorApp', () => {
         const newInstance = function (tempDir) {
             return new MeteorApp({
                 env: {
+                    options: { skipMobileBuild: false },
                     paths: {
                         electronApp: {
                             meteorApp: tempDir,
