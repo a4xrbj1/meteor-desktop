@@ -1,4 +1,3 @@
-/* eslint-disable no-underscore-dangle, global-require */
 import * as chai from 'chai';
 import dirty from 'dirty-chai';
 import sinonChai from 'sinon-chai';
@@ -145,7 +144,7 @@ describe('App', () => {
     describe('#injectRspackClientScript', () => {
         it('should inject the Rspack client bundle into Cordova HTML when missing', () => {
             const app = new App();
-            const html = '<html><head><link href="/build-chunks/main.css" rel="stylesheet"></head><body><script src="/app.js"></script></body></html>';
+            const html = '<html><head><link href="/build-chunks/main.css" rel="stylesheet"></head><body><script src="/app.js"></script></body></html>'; // eslint-disable-line @stylistic/max-len
 
             const patchedHtml = app.injectRspackClientScript(html);
 
@@ -165,7 +164,7 @@ describe('App', () => {
 
         it('should leave HTML unchanged when the Rspack client bundle is already present', () => {
             const app = new App();
-            const html = '<html><head><link href="/build-chunks/main.css" rel="stylesheet"></head><body><script src="/app.js"></script><script src="/__rspack__/client-rspack.js"></script></body></html>';
+            const html = '<html><head><link href="/build-chunks/main.css" rel="stylesheet"></head><body><script src="/app.js"></script><script src="/__rspack__/client-rspack.js"></script></body></html>'; // eslint-disable-line @stylistic/max-len
 
             const patchedHtml = app.injectRspackClientScript(html);
 

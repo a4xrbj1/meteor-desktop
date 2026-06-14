@@ -7,6 +7,7 @@
 
 class IsDesktopInjector {
     constructor() {
+        /* eslint-disable prefer-regex-literals */
         this.startupDidCompleteRegEx = new RegExp('\\.isCordova\\)[\\S\\s]*?startupDidComplete\\(', 'gm');
 
         this.startupDidCompleteRegExReplace = new RegExp('(\\(\\w+\\.)(?:isCordova)(\\)[\\S\\s]*?startupDidComplete\\()', 'gm');
@@ -14,6 +15,7 @@ class IsDesktopInjector {
         this.startupDidCompleteProductionRegEx = new RegExp('\\.isCordova&&\\w*\\.startupDidComplete', 'gm');
 
         this.startupDidCompleteProductionRegExReplace = new RegExp('(\\w+\\.)(?:isCordova)(&&\\w*\\.startupDidComplete\\()', 'gm');
+        /* eslint-enable prefer-regex-literals */
     }
 
     /**

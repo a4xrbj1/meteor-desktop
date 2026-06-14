@@ -1,9 +1,9 @@
-/* eslint-disable no-console */
 /**
  * Historical name — this file defines WebAppLocalServer for Meteor's standard web HCP.
  * Based on: https://github.com/meteor/cordova-plugin-meteor-webapp/blob/master/www/webapp_local_server.js
  */
 
+// eslint-disable-next-line no-global-assign
 WebAppLocalServer = {
     onNewVersionReadyCallback: null,
     onErrorCallback: null,

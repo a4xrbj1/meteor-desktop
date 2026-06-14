@@ -2,9 +2,8 @@ import http from 'http';
 import connect from 'connect';
 import findPort from 'find-port';
 import enableDestroy from 'server-destroy';
-import url from 'url';
+import url, { fileURLToPath } from 'url';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import fs from 'fs-plus';
 import send from 'send';
 import mime from 'mime';
@@ -17,14 +16,14 @@ const oneYearInSeconds = 60 * 60 * 24 * 365;
 // https://github.com/electron/electron/blob/master/docs/api/structures/stream-protocol-response.md
 class StreamProtocolResponse {
     constructor() {
-        this._headers = {}; // eslint-disable-line
+        this._headers = {};
         this.statusCode = 200;
         this.data = null;
         this.headers = {};
     }
 
     setHeader(key, value) {
-        this._headers[key] = value; // eslint-disable-line
+        this._headers[key] = value;
     }
 
     setStream(stream) {
@@ -36,12 +35,12 @@ class StreamProtocolResponse {
     }
 
     finalize() {
-        this.headers = this._headers; // eslint-disable-line
+        this.headers = this._headers;
     }
 }
 
 function* iterate(array) {
-    for (const entry of array) { // eslint-disable-line
+    for (const entry of array) { // eslint-disable-line no-restricted-syntax
         yield entry;
     }
 }
@@ -211,11 +210,9 @@ export default class LocalServer {
          * @param {string} message - message
          */
         function respondWithCode(res, code, message) {
-            /* eslint-disable */
             res._headers = {};
             res._headerNames = {};
             res.statusCode = code;
-            /* eslint-enable */
             res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
             res.setHeader('Content-Length', Buffer.byteLength(message));
             res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -331,7 +328,6 @@ export default class LocalServer {
             const filePath = fs.existsSync(bundlePath) ? bundlePath : fallbackPath;
 
             if (!fs.existsSync(bundlePath)) {
-                // eslint-disable-next-line no-console
                 console.warn('[WwwHandler] desktop-hcp.js not in bundle:', bundlePath, '— fallback:', fallbackPath);
             }
 
@@ -583,7 +579,7 @@ export default class LocalServer {
         let port = null;
         try {
             port = parseInt(fs.readFileSync(this.portFilePath, this.port), 10);
-        } catch (e) {
+        } catch {
             // No harm in that.
         }
         if (port < this.portRange[0] && port > this.portRange[1]) {
@@ -599,7 +595,7 @@ export default class LocalServer {
     savePort() {
         try {
             fs.writeFileSync(this.portFilePath, this.port);
-        } catch (e) {
+        } catch {
             // No harm in that.
         }
     }

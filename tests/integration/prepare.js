@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 // CI cache version: 2
 
 import tempDir from 'temp-dir';

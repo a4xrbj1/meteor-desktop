@@ -46,7 +46,7 @@ const require = createRequire(import.meta.url);
 let originalFs = fs;
 try {
     originalFs = require('original-fs');
-} catch (e) {
+} catch {
     // Falls back to fs-plus outside Electron.
 }
 
@@ -118,7 +118,7 @@ export default class HCPClient {
         this.log.verbose('initializing autoupdate module');
         try {
             fs.accessSync(this.configFile, fs.F_OK);
-        } catch (e) {
+        } catch {
             this.saveConfig();
             this.log.info('created empty autoupdate.json');
         }
@@ -468,7 +468,7 @@ export default class HCPClient {
     readConfig() {
         try {
             this.config = JSON.parse(fs.readFileSync(this.configFile, 'UTF-8'));
-        } catch (e) {
+        } catch {
             this.log.error('could not read the config.json');
             this.resetConfig();
             this.resetConfig();

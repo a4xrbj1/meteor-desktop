@@ -1,6 +1,3 @@
-/* eslint-disable import-x/no-unresolved,no-console */
-/* eslint-disable global-require, import-x/no-dynamic-require */
-
 import { EventEmitter as Events } from 'events';
 import path from 'path';
 import { createRequire } from 'module';
@@ -25,12 +22,12 @@ let electron = {
 };
 try {
     electron = require('electron');
-} catch (e) {
+} catch {
     // Allows unit tests to run outside Electron.
 }
 
 const {
-    app, BrowserWindow, dialog, net, protocol
+    app, BrowserWindow, dialog, net
 } = electron;
 const { join } = path;
 
@@ -101,9 +98,7 @@ export default class App {
         // for electron 16 or lower
         GlobalModule.globalPaths.push(absoluteNodeModulesPath);
         // for electron 17 or higher
-        // eslint-disable-next-line no-underscore-dangle
         const nodeModulePaths = GlobalModule._nodeModulePaths;
-        // eslint-disable-next-line no-underscore-dangle
         GlobalModule._nodeModulePaths = (from) => nodeModulePaths(from).concat([absoluteNodeModulesPath]);
 
         /**
@@ -243,7 +238,7 @@ export default class App {
             if (this.eventsBus) {
                 this.emit('unhandledException', error);
             }
-        } catch (e) {
+        } catch {
             // Well...
         }
     }
@@ -263,7 +258,7 @@ export default class App {
     uncaughtExceptionHandler() {
         try {
             this.window.close();
-        } catch (e) {
+        } catch {
             // Empty catch block... nasty...
         }
         setTimeout(() => {
@@ -402,7 +397,7 @@ export default class App {
                 if (result.moduleName) {
                     ({ moduleName } = result);
                 }
-            } catch (e) {
+            } catch {
                 this.l.warn(`could not load ${path.join(modulePath, 'module.json')}`);
             }
             this.l.debug(`loading module: ${dirName} => ${moduleName}`);
@@ -479,6 +474,7 @@ export default class App {
      *
      * @returns {String} Patched HTML.
      */
+    // eslint-disable-next-line class-methods-use-this
     injectRspackClientScript(html) {
         if (html.includes('/__rspack__/client-rspack.js')) {
             return html;
@@ -599,6 +595,7 @@ export default class App {
      * when meteor.asar does not exist (e.g. in dev mode before the first production build).
      * @returns {string}
      */
+    // eslint-disable-next-line class-methods-use-this
     resolveInitialBundlePath() {
         const asarPath = path.join(__dirname, '..', 'meteor.asar');
         return fs.existsSync(asarPath) ? asarPath : path.join(__dirname, '..', 'meteor');
@@ -655,6 +652,7 @@ export default class App {
 
         windowSettings.webPreferences.nodeIntegration = false; // node integration must be off
         windowSettings.webPreferences.preload = join(__dirname, 'preload.js');
+        // eslint-disable-next-line @stylistic/max-len
         windowSettings.webPreferences.enableRemoteModule = false; // disabled: deprecated since Electron 14, removed in Electron 28+; enabled renderer access to main-process Node.js APIs (XSS-to-RCE risk)
 
         this.currentPort = port;
@@ -719,8 +717,6 @@ export default class App {
             this.l.debug('received did-stop-loading');
             this.handleAppStartup(false);
         });
-
-        const urlStripLength = 'meteor://desktop'.length;
 
         // A5: Dev/prod parity canary — track which patch types have been warned this session.
         this.a5WarnedPatches = new Set();
@@ -897,7 +893,8 @@ wrapConsoleMethod('log');
                                             if (js === jsBeforeLiveReloadPatch) {
                                                 warnOnce(
                                                     'rspack-live-reload-patch-miss',
-                                                    `rspack live-reload patches matched nothing (${urlPath}) — check upstream rspack-dev-server client source for changed call patterns`
+                                                    `rspack live-reload patches matched nothing (${urlPath})`
+                                                    + ' — check upstream rspack-dev-server client source for changed call patterns'
                                                 );
                                             }
                                         }
@@ -1061,14 +1058,12 @@ wrapConsoleMethod('log');
                 this.window.show();
                 this.window.focus();
             }
+        } else if (this.meteorAppVersionChange) {
+            this.l.verbose('new version ready after initial load, performing HCP reset');
+            this.meteorAppVersionChange = false;
+            this.updateToNewVersion();
         } else {
-            if (this.meteorAppVersionChange) {
-                this.l.verbose('new version ready after initial load, performing HCP reset');
-                this.meteorAppVersionChange = false;
-                this.updateToNewVersion();
-            } else {
-                this.l.debug('window already loaded');
-            }
+            this.l.debug('window already loaded');
         }
         this.emit('loadingFinished');
     }

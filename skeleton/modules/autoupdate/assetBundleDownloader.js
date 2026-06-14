@@ -1,7 +1,7 @@
 import fs from 'fs';
 import url from 'url';
 import { createRequire } from 'module';
-import queue from 'queue';
+import Queue from 'queue';
 import IsDesktopInjector from './isDesktopInjector.js';
 
 const require = createRequire(import.meta.url);
@@ -9,7 +9,7 @@ const require = createRequire(import.meta.url);
 let originalFs = fs;
 try {
     originalFs = require('original-fs');
-} catch (e) {
+} catch {
     // Falls back to fs outside Electron.
 }
 
@@ -42,7 +42,7 @@ export default class AssetBundleDownloader {
         this.onFailure = null;
         this.cancelInvoked = false;
 
-        this.queue = new queue();
+        this.queue = new Queue();
     }
 
     /**

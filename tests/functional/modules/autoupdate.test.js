@@ -1,4 +1,3 @@
-/* eslint-disable no-console, global-require */
 // These test were ported and adapted from here
 // https://github.com/meteor/cordova-plugin-meteor-webapp/blob/master/tests/www/tests.js
 
@@ -65,7 +64,7 @@ function exists(checkPath) {
     try {
         fs.accessSync(checkPath);
         return true;
-    } catch (e) {
+    } catch {
         return false;
     }
 }
@@ -769,7 +768,6 @@ describe('autoupdate', () => {
         });
     });
 
-
     // Commented out as the cordova compatibility check is disabled in this autoupdate integration.
     // That is of course because we have Electron, not Cordova integration.
     /*
@@ -992,5 +990,4 @@ describe('autoupdate', () => {
             }).catch(done);
         });
     });
-
 });

@@ -19,7 +19,7 @@ function exists(checkPath) {
     try {
         fs.accessSync(checkPath);
         return true;
-    } catch (e) {
+    } catch {
         return false;
     }
 }

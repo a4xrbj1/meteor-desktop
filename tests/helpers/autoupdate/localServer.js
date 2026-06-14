@@ -82,17 +82,20 @@ export function setUpLocalServer(mainPath, parentPath) {
  * @returns {Promise<Response>}
  */
 export async function fetchFromLocalServer(url, retries = 3) {
-    for (let attempt = 0; attempt <= retries; attempt++) {
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
         try {
+            // eslint-disable-next-line no-await-in-loop
             return await fetch(`http://127.0.0.1:${localServerPort}${url}`);
         } catch (e) {
             if (attempt < retries) {
-                await new Promise(resolve => setTimeout(resolve, 100));
+                // eslint-disable-next-line no-await-in-loop
+                await new Promise((resolve) => { setTimeout(resolve, 100); });
             } else {
                 throw e;
             }
         }
     }
+    throw new Error('fetchFromLocalServer: exhausted retries');
 }
 
 /**
@@ -167,11 +170,11 @@ export async function expectAssetToBeServed(filename) {
 
 /**
  * Checks is a certain asset wit hspecified content is currently served from the local server.
- * @param path
+ * @param assetPath
  * @param expectedContents
  */
-export async function expectAssetServedToContain(path, expectedContents) {
-    const response = await fetchFromLocalServer(`/${path}`);
+export async function expectAssetServedToContain(assetPath, expectedContents) {
+    const response = await fetchFromLocalServer(`/${assetPath}`);
     expect(response.status).to.equal(200);
     const body = await response.text();
     expect(body).to.contain(expectedContents);

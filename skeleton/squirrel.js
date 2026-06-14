@@ -1,4 +1,3 @@
-/* eslint-disable import-x/no-dynamic-require */
 import path from 'path';
 import { spawnSync } from 'child_process';
 import { createRequire } from 'module';
@@ -9,7 +8,7 @@ const require = createRequire(import.meta.url);
 let electron = { app: {}, autoUpdater: {} };
 try {
     electron = require('electron');
-} catch (e) {
+} catch {
     // Allows unit tests to run outside Electron.
 }
 const { app, autoUpdater } = electron;
@@ -68,9 +67,9 @@ export default class Squirrel {
     static loadCustomHooks(desktopPath) {
         let hooks;
         try {
-            const HooksClass = require(path.join(desktopPath, 'squirrelEvents.js')).default; // eslint-disable-line global-require
+            const HooksClass = require(path.join(desktopPath, 'squirrelEvents.js')).default;
             hooks = new HooksClass(this);
-        } catch (e) {
+        } catch {
             hooks = {};
         }
         return hooks;

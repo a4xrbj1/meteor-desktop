@@ -91,7 +91,7 @@ export default function AssetManifest(logger, manifestSource) {
 
         if (this.entries.length === 0) {
             error(
-                `asset manifest has no 'client' entries after filtering — `
+                'asset manifest has no \'client\' entries after filtering — '
                 + `'where' values found: [${allWhereValues.join(', ')}]`
             );
         }

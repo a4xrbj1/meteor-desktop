@@ -18,7 +18,7 @@ const createFallbackLogger = function createFallbackLogger() {
 let winston;
 try {
     winston = require('winston');
-} catch (e) {
+} catch {
     const registry = {};
     winston = {
         transports: {

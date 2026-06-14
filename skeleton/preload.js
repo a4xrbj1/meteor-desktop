@@ -1,4 +1,3 @@
-/* eslint-disable global-require */
 import { createRequire } from 'module';
 // This was inspiried by
 // https://github.com/electron-webapps/meteor-electron/blob/master/app/preload.js
@@ -16,7 +15,7 @@ let electron = {
 };
 try {
     electron = require('electron');
-} catch (e) {
+} catch {
     // Allows unit tests to run outside Electron.
 }
 

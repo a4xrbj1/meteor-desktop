@@ -1,4 +1,3 @@
-/* eslint-disable import-x/extensions */
 import * as chai from 'chai';
 
 const { describe, it, afterEach } = global;

@@ -12,7 +12,7 @@ const require = createRequire(import.meta.url);
 let originalFs = fs;
 try {
     originalFs = require('original-fs');
-} catch (e) {
+} catch {
     // Falls back to fs-plus outside Electron.
 }
 
@@ -257,7 +257,7 @@ class AssetBundleManager {
                     );
                     this.log.info(`got version: ${assetBundle.getVersion()} in ${file}`);
                     this.downloadedAssetBundlesByVersion[assetBundle.getVersion()] = assetBundle;
-                } catch (e) {
+                } catch {
                     this.log.info(`broken version in directory: ${directory}`);
                 }
             }
@@ -328,7 +328,7 @@ class AssetBundleManager {
                 if (cachedAsset !== null && fs.accessSync(cachedAsset.getFile())) {
                     return cachedAsset;
                 }
-            } catch (e) {
+            } catch {
                 return null;
             }
         }
@@ -351,10 +351,10 @@ class AssetBundleManager {
 
             try {
                 fs.lstatSync(containingDirectory);
-            } catch (e) {
+            } catch {
                 try {
                     fs.mkdirSync(containingDirectory, { recursive: true });
-                } catch (mkdirError) {
+                } catch {
                     this.didFail(`could not create containing directory: ${containingDirectory}`);
                     return;
                 }
@@ -438,7 +438,7 @@ class AssetBundleManager {
                     // deleting the archive. `del` also could not delete asar archive. Rimraf is ok
                     // because it accepts custom fs object.
                     originalFs.rmSync(this.partialDownloadDirectory, { recursive: true, force: true });
-                } catch (e) {
+                } catch {
                     this.log.error('could not delete partial download directory.');
                     return;
                 }
@@ -448,7 +448,7 @@ class AssetBundleManager {
 
             try {
                 originalFs.renameSync(this.downloadDirectory, this.partialDownloadDirectory);
-            } catch (e) {
+            } catch {
                 this.log.error('could not rename existing download directory');
                 return;
             }
@@ -460,7 +460,7 @@ class AssetBundleManager {
                     undefined,
                     this.initialAssetBundle
                 );
-            } catch (e) {
+            } catch {
                 this.log.warn('could not load partially downloaded asset bundle.');
             }
         }

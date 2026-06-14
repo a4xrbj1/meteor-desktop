@@ -302,7 +302,7 @@ export default class AssetBundle {
         try {
             const matches = content.match(this.matcher);
             return JSON.parse(decodeURIComponent(matches[1]));
-        } catch (e) {
+        } catch {
             this.log.error('could not find runtime config in index file');
             return null;
         }

@@ -33,7 +33,7 @@ export default class DesktopPathResolver {
     static readJsonFile(jsonFilePath) {
         try {
             return JSON.parse(fs.readFileSync(jsonFilePath, 'UTF-8'));
-        } catch (e) {
+        } catch {
             return {};
         }
     }
@@ -51,14 +51,14 @@ export default class DesktopPathResolver {
         let content;
         try {
             content = fs.readFileSync(manifestPath, 'UTF-8');
-        } catch (e) {
+        } catch {
             return undefined;
         }
 
         let parsed = {};
         try {
             parsed = JSON.parse(content);
-        } catch (e) {
+        } catch {
             // fall through
         }
 
@@ -68,7 +68,6 @@ export default class DesktopPathResolver {
 
         // Meteor 3.x omits version; derive stable version from manifest content hash.
         const derivedHash = crypto.createHash('sha256').update(content).digest('hex').substring(0, 40);
-        // eslint-disable-next-line no-console
         console.warn(
             `[DesktopPathResolver] no version in manifest at ${manifestPath}`
             + ` — using derived hash version: ${derivedHash}`
@@ -139,7 +138,7 @@ export default class DesktopPathResolver {
         files.forEach((filePath) => {
             try {
                 parts.push(fs.readFileSync(filePath, 'UTF-8'));
-            } catch (e) {
+            } catch {
                 // Skip unreadable files so dev/test environments without desktop.asar still get
                 // a stable signature from the bootstrap files that do exist.
             }

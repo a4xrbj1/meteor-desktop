@@ -1,10 +1,14 @@
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
-let electron = { ipcMain: { on: Function.prototype, once: Function.prototype, removeListener: Function.prototype, removeAllListeners: Function.prototype } };
+let electron = {
+    ipcMain: {
+        on: Function.prototype, once: Function.prototype, removeListener: Function.prototype, removeAllListeners: Function.prototype
+    }
+};
 try {
     electron = require('electron');
-} catch (e) {
+} catch {
     // Allows unit tests to run outside Electron.
 }
 

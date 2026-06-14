@@ -1,4 +1,3 @@
-/* eslint-disable global-require, import-x/extensions */
 import * as chai from 'chai';
 import dirty from 'dirty-chai';
 import sinonChai from 'sinon-chai';
@@ -6,7 +5,6 @@ import sinon from 'sinon';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { createRequire } from 'module';
 import { pathToFileURL } from 'url';
 
 // need for running test
@@ -19,7 +17,6 @@ const {
     describe, it, before, after, afterEach
 } = global;
 const { expect } = chai;
-const require = createRequire(import.meta.url);
 
 const METEOR_APP_CONTEXT = { env: { paths: { meteorApp: { release: 'release.file' } } } };
 const METEOR_RELEASES = [
@@ -505,7 +502,7 @@ describe('meteorApp', () => {
 
             fs.writeFileSync(
                 indexHtmlPath,
-                '<html><head></head><body><script>window.inline = true;</script><script src="https://cdn.example.com/runtime.js"></script><script src="/packages/session.js?hash=1"></script><script src="/app.js?hash=2"></script></body></html>'
+                '<html><head></head><body><script>window.inline = true;</script><script src="https://cdn.example.com/runtime.js"></script><script src="/packages/session.js?hash=1"></script><script src="/app.js?hash=2"></script></body></html>' // eslint-disable-line @stylistic/max-len
             );
 
             try {
@@ -536,7 +533,7 @@ describe('meteorApp', () => {
 
             fs.writeFileSync(
                 indexHtmlPath,
-                '<html><head></head><body><script>window.inline = true;</script><script src="https://cdn.example.com/runtime.js"></script><script src="/app.js?hash=stale"></script></body></html>'
+                '<html><head></head><body><script>window.inline = true;</script><script src="https://cdn.example.com/runtime.js"></script><script src="/app.js?hash=stale"></script></body></html>' // eslint-disable-line @stylistic/max-len
             );
 
             try {
@@ -573,7 +570,7 @@ describe('meteorApp', () => {
 
             fs.writeFileSync(
                 indexHtmlPath,
-                '<html><head></head><body><script>window.inline = true;</script><script src="https://cdn.example.com/runtime.js"></script></body></html>'
+                '<html><head></head><body><script>window.inline = true;</script><script src="https://cdn.example.com/runtime.js"></script></body></html>' // eslint-disable-line @stylistic/max-len
             );
 
             try {
@@ -705,7 +702,7 @@ describe('meteorApp', () => {
                 },
                 utils: {
                     exists: (filePath) => fs.existsSync(filePath),
-                    rmWithRetries: async function () {
+                    async rmWithRetries() {
                         fs.rmSync(meteorAppDir, { recursive: true, force: true });
                     }
                 },
