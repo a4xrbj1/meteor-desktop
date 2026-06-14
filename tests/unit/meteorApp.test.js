@@ -342,10 +342,10 @@ describe('meteorApp', () => {
             return tempDir;
         };
 
-        const newInstance = function (tempDir) {
+        const newInstance = function (tempDir, optionOverrides) {
             return new MeteorApp({
                 env: {
-                    options: { skipMobileBuild: false },
+                    options: { skipMobileBuild: false, ...optionOverrides },
                     paths: {
                         electronApp: {
                             meteorApp: tempDir,
@@ -412,6 +412,23 @@ describe('meteorApp', () => {
             try {
                 expect(() => newInstance(tempDir).validateHashCoherence())
                     .to.throw(/style-less desktop build/);
+            } finally {
+                fs.rmSync(tempDir, { recursive: true, force: true });
+            }
+        });
+
+        it('keeps unresolvable stylesheet links in dev mode (skipMobileBuild) instead of throwing', () => {
+            const tempDir = writeFixture({
+                'index.html': '<html><head><link href="/build-chunks-local/main.css" '
+                    + 'rel="stylesheet"></head><body></body></html>',
+                'program.json': JSON.stringify({ manifest: [] })
+            });
+
+            try {
+                expect(() => newInstance(tempDir, { skipMobileBuild: true }).validateHashCoherence())
+                    .to.not.throw();
+                const html = fs.readFileSync(path.join(tempDir, 'index.html'), 'UTF-8');
+                expect(html).to.include('href="/build-chunks-local/main.css"');
             } finally {
                 fs.rmSync(tempDir, { recursive: true, force: true });
             }
