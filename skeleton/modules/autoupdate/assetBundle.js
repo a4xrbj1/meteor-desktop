@@ -13,17 +13,19 @@ import AssetManifest from './assetManifest.js';
  * @property {number} size
  * @property {bool}   cacheable
  * @property {string} hash
+ * @property {string} sri
  * @property {string} sourceMapFilePath
  * @property {string} sourceMapUrlPath
  * @property {AssetBundle} bundle
  * @constructor
  */
-function Asset(filePath, urlPath, fileType, cacheable, hash, sourceMapUrlPath, size, bundle) {
+function Asset(filePath, urlPath, fileType, cacheable, hash, sri, sourceMapUrlPath, size, bundle) {
     this.filePath = filePath;
     this.urlPath = urlPath;
     this.fileType = fileType;
     this.cacheable = cacheable;
     this.hash = hash;
+    this.sri = sri;
     this.entrySize = size;
     this.sourceMapUrlPath = sourceMapUrlPath;
     this.bundle = bundle;
@@ -84,6 +86,7 @@ export default class AssetBundle {
                     entry.fileType,
                     entry.cacheable,
                     entry.hash,
+                    entry.sri,
                     entry.sourceMapUrlPath,
                     entry.size,
                     this
@@ -101,6 +104,7 @@ export default class AssetBundle {
                         true,
                         null,
                         null,
+                        null,
                         entry.size,
                         this
                     ));
@@ -108,7 +112,7 @@ export default class AssetBundle {
             }
         });
 
-        const indexFile = new Asset('index.html', '/', 'html', false, null, null, null, this);
+        const indexFile = new Asset('index.html', '/', 'html', false, null, null, null, null, this);
         this.addAsset(indexFile);
         this.indexFile = indexFile;
     }

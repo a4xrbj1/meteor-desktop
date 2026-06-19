@@ -10,6 +10,7 @@ import crypto from 'crypto';
  * @param {number} manifestEntry.size
  * @param {bool}   manifestEntry.cacheable
  * @param {string} manifestEntry.hash
+ * @param {string} manifestEntry.sri
  * @param {string} manifestEntry.sourceMap
  * @param {string} manifestEntry.sourceMapUrl
  *
@@ -19,6 +20,7 @@ import crypto from 'crypto';
  * @property {number} size
  * @property {bool}   cacheable
  * @property {string} hash
+ * @property {string} sri
  * @property {string} sourceMapFilePath
  * @property {string} sourceMapUrlPath
  * @constructor
@@ -31,6 +33,9 @@ function ManifestEntry(manifestEntry) {
         size: manifestEntry.size,
         cacheable: manifestEntry.cacheable,
         hash: manifestEntry.hash || null,
+        // sri = base64(sha512(content)) — the only manifest field that is a
+        // verifiable digest of the served bytes (the legacy `hash` is not).
+        sri: manifestEntry.sri || null,
         sourceMapFilePath: manifestEntry.sourceMap || null,
         sourceMapUrlPath: manifestEntry.sourceMapUrl || null
     });

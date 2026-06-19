@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import fs from 'fs';
 import url from 'url';
 import { createRequire } from 'module';
@@ -221,6 +222,23 @@ export default class AssetBundleDownloader {
             throw new Error(
                 `non-success status code ${response.status} for asset: ${asset.filePath}`
             );
+        }
+
+        // Strong integrity: verify the downloaded bytes against the manifest's
+        // sha512 subresource-integrity digest (sri = base64(sha512(content))).
+        // Meteor 3.x emits sri for cacheable client assets; the legacy `hash`
+        // field is NOT a content digest of the served bytes (verified against
+        // production), so only sri can be checked here. This catches a corrupt
+        // or wrong asset even when the server sends no ETag (seed
+        // meteor-desktop-1820). Runs on the raw body, before isDesktop injection.
+        if (asset.sri) {
+            const actualSri = crypto.createHash('sha512').update(body).digest('base64');
+            if (actualSri !== asset.sri) {
+                throw new Error(
+                    `sri mismatch for asset: ${asset.filePath} - expected sha512: `
+                    + `${asset.sri} != ${actualSri}`
+                );
+            }
         }
 
         // If we have a hash for the asset, and the ETag header also specifies

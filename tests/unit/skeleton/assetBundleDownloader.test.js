@@ -1,5 +1,6 @@
 import * as chai from 'chai';
 import dirty from 'dirty-chai';
+import crypto from 'crypto';
 import { createRequire } from 'module';
 
 chai.use(dirty);
@@ -88,5 +89,36 @@ describe('AssetBundleDownloader#verifyRuntimeConfig', () => {
     it('still accepts autoupdateVersionCordova (Cordova shape)', () => {
         const runtimeConfig = baseRuntimeConfig({ autoupdateVersionCordova: EXPECTED });
         expect(() => makeDownloader().verifyRuntimeConfig(runtimeConfig)).to.not.throw();
+    });
+});
+
+describe('AssetBundleDownloader#verifyResponse (sri integrity)', () => {
+    before(() => {
+        AssetBundleDownloader = require('../../../skeleton/modules/autoupdate/assetBundleDownloader.js').default;
+    });
+
+    const body = Buffer.from('console.log("hot code push");');
+    const sri = crypto.createHash('sha512').update(body).digest('base64');
+    // No ETag, so the legacy hash-vs-ETag branch is skipped; we exercise sri only.
+    const response = { status: 200, headers: { get: () => null } };
+
+    // seed meteor-desktop-1820: verify the downloaded bytes against the
+    // manifest's sha512 sri digest.
+    it('accepts a body whose sha512 matches the manifest sri', () => {
+        expect(() => makeDownloader()
+            .verifyResponse(response, { filePath: 'a.js', hash: null, sri }, body)).to.not.throw();
+    });
+
+    // Inversion (Rule 41): a tampered body must be rejected.
+    it('rejects a body whose sha512 does not match the manifest sri', () => {
+        expect(() => makeDownloader()
+            .verifyResponse(response, { filePath: 'a.js', hash: null, sri }, Buffer.from('tampered')))
+            .to.throw(/sri mismatch/);
+    });
+
+    // Legacy manifests (and index.html / source maps) carry no sri — skip, don't throw.
+    it('skips sri verification when the asset has no sri', () => {
+        expect(() => makeDownloader()
+            .verifyResponse(response, { filePath: 'a.js', hash: null, sri: null }, body)).to.not.throw();
     });
 });
