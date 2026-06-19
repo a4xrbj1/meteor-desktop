@@ -280,15 +280,23 @@ export default class AssetBundleDownloader {
      */
     verifyRuntimeConfig(runtimeConfig) {
         const expectedVersion = this.assetBundle.getVersion();
-        // autoupdateVersionCordova is absent in Meteor 3.x web.browser runtime config;
-        // fall back to autoupdateVersion (the web.browser equivalent).
+        // Meteor 3.x web.browser leaves the legacy top-level autoupdateVersion(Cordova)
+        // fields null even though the never-null per-arch version is published under
+        // autoupdate.versions['web.browser'].version (== the manifest version we
+        // fetched). Fall back to it so the integrity check has a real version to
+        // compare against (seed meteor-desktop-e490 G2).
+        const perArchVersion = runtimeConfig.autoupdate
+            && runtimeConfig.autoupdate.versions
+            && runtimeConfig.autoupdate.versions['web.browser']
+            && runtimeConfig.autoupdate.versions['web.browser'].version;
         const actualVersion = runtimeConfig.autoupdateVersionCordova
-            || runtimeConfig.autoupdateVersion;
+            || runtimeConfig.autoupdateVersion
+            || perArchVersion;
 
         if (!actualVersion) {
             throw new Error(
-                'runtime config missing both autoupdateVersionCordova and autoupdateVersion'
-                + ' — cannot verify downloaded bundle version'
+                'runtime config missing autoupdateVersionCordova, autoupdateVersion and '
+                + 'autoupdate.versions[web.browser].version — cannot verify downloaded bundle version'
             );
         }
 

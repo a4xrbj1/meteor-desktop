@@ -50,3 +50,69 @@ Desktop.on('autoupdate', 'onNewVersionReady', (event, args) => {
 
 // Set the reference, so that the desktop side will be able to communicate with us asap.
 Desktop.send('dummyModule', 'setRendererReference');
+
+// ---------------------------------------------------------------------------
+// Web HCP bridge bootstrap (seed meteor-desktop-e490).
+//
+// In a Meteor 3.x web.browser desktop build there is no cordova-plugin-meteor-
+// webapp consumer, so nothing drives this WebAppLocalServer bridge:
+//   - the stock autoupdate client reloads in place (Reload._reload) instead of
+//     calling checkForUpdates(), so the desktop side never DOWNLOADS a bundle;
+//   - nothing registers onNewVersionReady, so a staged bundle is never APPLIED.
+// (Meteor.isDesktop and startupDidComplete are already handled by the build's
+// isDesktopInjector, so the startup-timer revert is not a concern here.)
+//
+// This bootstrap supplies only those two missing hooks. It is DOWNLOAD-only +
+// APPLY-via-the-existing-gate: the swap rides Meteor's standard Reload pipeline
+// (the app's Reload._onMigrate handler defers it on desktop and applies it at a
+// safe route), so we never add a second reload gate or bypass holy-ops gating.
+(() => {
+    // How often to re-ask the desktop side for a newer bundle once running.
+    const CHECK_INTERVAL_MS = 10 * 60 * 1000;
+
+    const getReload = () => (window.Package
+        && window.Package.reload
+        && window.Package.reload.Reload) || null;
+
+    const requestCheck = () => {
+        try {
+            WebAppLocalServer.checkForUpdates();
+        } catch (e) {
+            console.warn('[meteor-desktop] HCP checkForUpdates failed', e);
+        }
+    };
+
+    const start = () => {
+        // Register an error sink so the bridge's 'error' handler (which calls
+        // WebAppLocalServer.onErrorCallback) never invokes a null callback when
+        // a check fails (e.g. the HCP server is unreachable).
+        WebAppLocalServer.onError((cause) => {
+            console.warn('[meteor-desktop] HCP error:', cause);
+        });
+
+        // APPLY hook: when the desktop side has a verified, staged bundle, route
+        // it through Meteor's standard Reload pipeline rather than forcing a raw
+        // reload — so the app's existing onMigrate gate decides WHEN to swap.
+        WebAppLocalServer.onNewVersionReady(() => {
+            const Reload = getReload();
+            if (Reload && typeof Reload._reload === 'function') {
+                Reload._reload();
+            }
+        });
+
+        // DOWNLOAD trigger: check now and on a periodic poll. The desktop side
+        // no-ops when the served manifest version equals the current bundle.
+        requestCheck();
+        setInterval(requestCheck, CHECK_INTERVAL_MS);
+    };
+
+    // desktop-hcp.js is injected BEFORE meteor.js, so defer until Meteor is up.
+    const whenReady = () => {
+        if (typeof Meteor !== 'undefined' && typeof Meteor.startup === 'function') {
+            Meteor.startup(start);
+            return;
+        }
+        setTimeout(whenReady, 50);
+    };
+    whenReady();
+})();

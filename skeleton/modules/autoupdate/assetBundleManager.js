@@ -175,6 +175,13 @@ class AssetBundleManager {
                 }
 
                 this.downloadAssetBundle(assetBundle, baseUrl);
+            })
+            // The fetch chain had no rejection handler: a network error (server
+            // unreachable / offline) surfaced as an UnhandledPromiseRejection.
+            // Now that the web-HCP bootstrap polls checkForUpdates() routinely
+            // (seed meteor-desktop-e490), route those failures through didFail.
+            .catch((e) => {
+                this.didFail(`error querying asset manifest at ${manifestUrl}: ${e.message}`);
             });
     }
 
