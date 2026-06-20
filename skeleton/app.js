@@ -996,6 +996,50 @@ wrapConsoleMethod('log');
                                 headers: localHeaders
                             });
                         }
+                    } else {
+                        // PRODUCTION: an HCP-DOWNLOADED bundle is the server's plain web build —
+                        // it ships WITHOUT DDP_DEFAULT_CONNECTION_URL (the Meteor server injects
+                        // that per request; the static bundle only carries ROOT_URL) and without
+                        // the desktop-hcp loader. In the meteor:// renderer a missing
+                        // DDP_DEFAULT_CONNECTION_URL makes Meteor's default DDP connection resolve
+                        // to meteor://desktop → SockJS throws "scheme must be http/https" → the
+                        // uncaught error aborts module loading (meteorInstall never finishes) →
+                        // white screen → the splash never clears → the HCP startup timer reverts
+                        // in a loop (the stuck-splash brick). The embedded bundle is immune only
+                        // because the build bakes both in. Re-add them here so every served bundle
+                        // boots; both injections are no-ops when already present, so the embedded
+                        // bundle is untouched. seed meteor-desktop-hcp-brick.
+                        const prodCt = (localResp.headers.get('content-type') || '').toLowerCase();
+                        if (prodCt.includes('text/html')) {
+                            let html = await localResp.text();
+                            // Set DDP_DEFAULT_CONNECTION_URL = ROOT_URL when the bundle omits it,
+                            // AFTER __meteor_runtime_config__ is assigned and BEFORE any package
+                            // script (ddp-client) reads it.
+                            const ddpFix = '<script>(function(){try{'
+                                + 'var c=__meteor_runtime_config__;'
+                                + 'if(c&&typeof c==="object"&&!c.DDP_DEFAULT_CONNECTION_URL&&c.ROOT_URL){'
+                                + 'c.DDP_DEFAULT_CONNECTION_URL=c.ROOT_URL;}'
+                                + '}catch(e){}})();</script>';
+                            html = html.replace(
+                                /(<script[^>]*>__meteor_runtime_config__\s*=[^<]*<\/script>)/,
+                                `$1${ddpFix}`
+                            );
+                            // Inject the desktop-hcp.js loader (defines WebAppLocalServer + fires
+                            // startupDidComplete on Meteor.startup) before the first Meteor script.
+                            if (!html.includes('/cordova.js') && !html.includes('/desktop-hcp.js')) {
+                                html = html.replace(
+                                    /<script\b(?=[^>]*\bsrc=)[^>]*>/i,
+                                    '<script src="/cordova.js"></script>\n$&'
+                                );
+                            }
+                            const prodHeaders = new Headers(localResp.headers);
+                            prodHeaders.delete('content-length');
+                            return new Response(html, {
+                                status: localResp.status,
+                                statusText: localResp.statusText,
+                                headers: prodHeaders
+                            });
+                        }
                     }
                     return localResp;
                 }

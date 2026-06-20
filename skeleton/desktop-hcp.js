@@ -83,6 +83,28 @@ Desktop.send('dummyModule', 'setRendererReference');
     };
 
     const start = () => {
+        // CONFIRM STARTUP (seed meteor-desktop-hcp-brick). We are inside
+        // Meteor.startup, so this bundle's JS executed successfully → this version
+        // booted OK. Signal that to the desktop shell so it cancels the startup-
+        // timer revert (autoupdate.js startStartupTimer/revertToLastKnownGoodVersion)
+        // and records the version as last-known-good.
+        //
+        // This MUST be fired here for web HCP: the stock cordova-plugin-meteor-webapp
+        // call that normally fires startupDidComplete exists ONLY in meteor-desktop's
+        // own embedded build (where the isDesktopInjector rewrites its isCordova gate
+        // to isDesktop) — it is ABSENT from the plain web.browser bundle the server
+        // serves over HCP. Without this, a downloaded version never signals completion
+        // and the shell loops reset → 5-min timeout → revert forever (the stuck-splash
+        // brick). A genuinely broken bundle never reaches Meteor.startup, so the
+        // bad-version revert safety is preserved. On the embedded build the injected
+        // cordova call also fires it; startupDidComplete is idempotent so the double
+        // fire is harmless.
+        try {
+            WebAppLocalServer.startupDidComplete();
+        } catch (e) {
+            console.warn('[meteor-desktop] startupDidComplete signal failed', e);
+        }
+
         // Register an error sink so the bridge's 'error' handler (which calls
         // WebAppLocalServer.onErrorCallback) never invokes a null callback when
         // a check fails (e.g. the HCP server is unreachable).
