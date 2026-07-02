@@ -1,3 +1,9 @@
+## v6.0.23 <sup>02.07.2026</sup>
+
+### Changes
+
+* **Recommended Electron bumped `40.8.3` → `42.5.2` (`lib/defaultDependencies.js`).** Electron 40 reached EOL 2026-06-30 (no further Chromium security patches). This is the version `getDependency` recommends (mismatch warning) and auto-installs into a consumer app that has no `electron` devDependency; consumers pinning their own version are unaffected beyond the warning now aligning with 42.x. Note Electron 42 removed the npm `postinstall` binary download — the binary now downloads on first `require('electron')`/run (`install.js` still exists for explicit fetching). Consumer exercise (Rule 48): frontend `npm run desktop` dev launch + prod `npm run desktop build` on electron 42.5.2 as part of the frontend electron-42 upgrade (seed `frontend-5da0`).
+
 ## v6.0.22 <sup>20.06.2026</sup>
 
 **Fix the e490 web-HCP stuck-splash brick — a downloaded server bundle never boots Meteor in the `meteor://` renderer (seed `meteor-desktop-hcp-brick`).** v6.0.20's Stage 1 (e490) made the desktop DOWNLOAD + APPLY a web-HCP bundle, but the *applied* bundle could not boot: an HCP update reset to it, the renderer white-screened, the splash never cleared, and the 5-minute startup timer reverted in a loop (revert → re-apply → timeout) — the app sat on the tiny update splash forever. Diagnosed live with the renderer debugger (CDP) on a real bricked install, not from logs alone.
