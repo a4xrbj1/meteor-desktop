@@ -326,6 +326,60 @@ describe('meteorApp', () => {
                 fs.rmSync(tempDir, { recursive: true, force: true });
             }
         });
+
+        // Incident 2026-07-10 (yourdna.family frontend): under @meteorjs/rspack v2 the Meteor
+        // bundle (app/app.js) links the client-rspack graph via module.link AND runs it, so the
+        // extra <script src="/__rspack__/client-rspack.js"> injectEsm used to always add made the
+        // renderer evaluate the whole client bundle twice (duplicate DDP logins, Login remount).
+        // These two tests pin the conditional: skip the tag when the Meteor bundle links the graph,
+        // keep injecting it when it does not (older thin-shim pipelines).
+        it('skips the redundant client-rspack.js <script> when the Meteor bundle links the graph', async () => {
+            const linkedFixture = {
+                'dynamic/foo.js': 'var global = this;',
+                'index.html': '<html><head></head><body><script src="/app.js"></script></body></html>',
+                'app/app.js': "meteorInstall({});\nmodule.link('./client-rspack.js');\n",
+                '_build/main-prod/client-rspack.js': '// rspack client bundle\n',
+                'program.json': JSON.stringify({
+                    manifest: [{
+                        path: 'app/app.js', url: '/app.js', type: 'js', where: 'client', cacheable: true
+                    }]
+                })
+            };
+            const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-rspack-linked-'));
+            writeFixture(tempDir, linkedFixture);
+            try {
+                await newInstance(tempDir).injectEsm();
+                const html = fs.readFileSync(path.join(tempDir, 'index.html'), 'UTF-8');
+                expect(html, 'redundant rspack <script> must be skipped').to.not.include('/__rspack__/client-rspack.js');
+                expect(html, 'the Meteor bundle tag must remain').to.include('<script src="/app.js">');
+            } finally {
+                fs.rmSync(tempDir, { recursive: true, force: true });
+            }
+        });
+
+        it('injects the client-rspack.js <script> when the Meteor bundle does not link the graph', async () => {
+            const shimFixture = {
+                'dynamic/foo.js': 'var global = this;',
+                'index.html': '<html><head></head><body><script src="/app.js"></script></body></html>',
+                'app/app.js': 'var thinShim = 1;\n',
+                '_build/main-prod/client-rspack.js': '// rspack client bundle\n',
+                'program.json': JSON.stringify({
+                    manifest: [{
+                        path: 'app/app.js', url: '/app.js', type: 'js', where: 'client', cacheable: true
+                    }]
+                })
+            };
+            const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-desktop-rspack-shim-'));
+            writeFixture(tempDir, shimFixture);
+            try {
+                await newInstance(tempDir).injectEsm();
+                const html = fs.readFileSync(path.join(tempDir, 'index.html'), 'UTF-8');
+                expect(html, 'rspack <script> must be injected when the graph is not already linked')
+                    .to.include('<script src="/__rspack__/client-rspack.js"></script>');
+            } finally {
+                fs.rmSync(tempDir, { recursive: true, force: true });
+            }
+        });
     });
 
     describe('#validateHashCoherence stylesheet links', () => {
