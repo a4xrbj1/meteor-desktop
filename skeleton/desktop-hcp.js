@@ -28,7 +28,18 @@ WebAppLocalServer = {
 };
 
 Desktop.on('autoupdate', 'error', (event, args) => {
-    WebAppLocalServer.onErrorCallback(args);
+    // Guard the callback like the onVersionsCleanedUp / onNewVersionReady handlers below do. This
+    // bridge is live from module-load, but onErrorCallback is only registered later, inside
+    // Meteor.startup(start) (onError, further down). An 'autoupdate' 'error' emitted in that window —
+    // e.g. an early checkForUpdates / verifyRuntimeConfig failure before startup, made more likely
+    // when startup is delayed under load — otherwise calls null(args) and throws
+    // "WebAppLocalServer.onErrorCallback is not a function" (e2e-2589 / meteor-desktop-a5e5). Surface
+    // the cause via console.warn when the sink is not yet registered, so the error is never dropped.
+    if (WebAppLocalServer.onErrorCallback) {
+        WebAppLocalServer.onErrorCallback(args);
+    } else {
+        console.warn('[meteor-desktop] autoupdate error before error sink registered:', args);
+    }
 });
 
 Desktop.on('autoupdate', 'warn', (event, args) => {
