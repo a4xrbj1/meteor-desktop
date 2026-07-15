@@ -1,3 +1,12 @@
+## Unreleased
+
+**Raise the Node floor `>=22.22.0` → `>=24.15.0` to match the Node bundled by MeteorJS 3.5.** meteor-desktop runs inside the Meteor toolchain (`meteor build` / `npm run desktop`), so the runtime it actually executes under is Meteor's bundled Node — 24.15.0 for Meteor 3.5. `engines` is a floor, not a cap: no dependency in the tree carries an upper-bound `engines.node`, so this does not forbid newer lines (24.x, 26.x). CI updated for parity: `test.yml` `22.22.0` → `24.15.0`, `publish.yml` `22` → `24`.
+
+### Changes
+
+* **`package.json` `engines.node` `>=22.22.0` → `>=24.15.0`.** Documents the real runtime (Meteor 3.5 bundled Node); still a floor, so consumers on any Node ≥ 24.15.0 are unaffected.
+* **CI Node pins bumped to 24.15.0** (`.github/workflows/test.yml`, `publish.yml`) so the suite no longer runs below the declared floor.
+
 ## v6.0.24 <sup>10.07.2026</sup>
 
 **Stop the desktop renderer from evaluating the client bundle TWICE — the root of the "login screen re-appears after the security token is pasted" incident (2026-07-10, frontend).** Under `@meteorjs/rspack` v2 the Meteor bundle (`app/app.js`) bundles the compiled client graph as a module **and** executes it via `module.link('./client-rspack.js')` — web production ships `/app.js` alone and runs the whole app. But meteor-desktop's `injectEsm` (PATCH 2b) *also* injected a standalone `<script src="/__rspack__/client-rspack.js">` into `index.html`, so the renderer evaluated the **entire** client bundle a second time. Observed on prod 5.1.9 via DataDog: every client marker in duplicate pairs, two `[remoteAuth] calling login on test2`, two `test2_login_arrived` — and, user-visibly, the Login Svelte component remounting and resetting to the first (email) step the instant a passwordless token completed. (The double execution is itself proof that `/app.js` runs the graph independently — otherwise there would be nothing to duplicate — so dropping the second tag is safe.)
