@@ -1,6 +1,12 @@
-## Unreleased
+## v6.0.25 <sup>15.07.2026</sup>
+
+**Null-guard the `autoupdate` `'error'` bridge callback in `skeleton/desktop-hcp.js` — fixes the intermittent `"WebAppLocalServer.onErrorCallback is not a function"` TypeError (e2e-2589 / seed `meteor-desktop-a5e5`).** The `Desktop.on('autoupdate', 'error', …)` bridge handler called `WebAppLocalServer.onErrorCallback(args)` unconditionally, unlike its two sibling handlers (`onVersionsCleanedUp`, `onNewVersionReady`) which null-guard their callbacks. `onErrorCallback` is only registered inside `start()`, run in `Meteor.startup(start)` — so an autoupdate `'error'` emitted in the window between module-load (bridge live) and `Meteor.startup` (sink registered) called `null(args)` and threw. Prod-latent (needs an early `checkForUpdates` / `verifyRuntimeConfig` failure before startup); reliably reproduced in the YDF e2e harness, where the ROOT_URL-mismatch `verifyRuntimeConfig` failure fires early and full-suite load delays `Meteor.startup`, widening the window.
 
 **Raise the Node floor `>=22.22.0` → `>=24.15.0` to match the Node bundled by MeteorJS 3.5.** meteor-desktop runs inside the Meteor toolchain (`meteor build` / `npm run desktop`), so the runtime it actually executes under is Meteor's bundled Node — 24.15.0 for Meteor 3.5. `engines` is a floor, not a cap: no dependency in the tree carries an upper-bound `engines.node`, so this does not forbid newer lines (24.x, 26.x). CI updated for parity: `test.yml` `22.22.0` → `24.15.0`, `publish.yml` `22` → `24`.
+
+### Bug Fixes
+
+* **`skeleton/desktop-hcp.js` — guard the `'error'` bridge callback and `console.warn` the cause when the sink is not yet registered.** The error is still surfaced (never dropped) but no longer crashes when it arrives before `Meteor.startup`, matching the sibling-handler pattern. Unit test in `tests/unit/skeleton/desktopHcpBootstrap.test.js` reproduces the exact race (`Meteor.startup` captured but not run) and asserts no throw + the warn; without the guard its `.to.not.throw()` assertion fails (inversion, Rule 41). `desktopHcpBootstrap`: 6 passing; eslint clean.
 
 ### Changes
 
