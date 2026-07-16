@@ -23,6 +23,7 @@
     "test-integration": "cross-env mocha -t 10000 \"tests/+(integration)/**/*.test.js\"",
     "test-watch": "cross-env mocha -r ./tests/helpers/clear.js \"tests/+(unit|functional)/**/*.test.js\" --watch",
     "lint": "eslint lib scaffold skeleton tests",
+    "checkjs": "node_modules/.bin/tsc -p jsconfig.json --noEmit",
     "prepare-integration-tests": "node tests/integration/prepare.js",
     "coverage-html": "nyc report --reporter=lcov",
     "prepublishOnly": "node scripts/prepublish-smoke.js",
@@ -39,6 +40,8 @@
   "devDependencies": {
     "@babel/register": "7.29.7",
     "@types/fs-extra": "11.0.4",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^24.13.3",
     "babel-plugin-istanbul": "^8.0.0",
     "chai": "^6.2.2",
     "chai-as-promised": "^8.0.2",

@@ -14,6 +14,8 @@ version
 port.cfg
 
 .reify-cache
+# tsc --incremental output (the PostToolUse checkjs hook writes this on every edit)
+*.tsbuildinfo
 tests/.__tmp/autoupdate/Downloading
 tests/.__tmp/autoupdate/autoupdate.json
 tests/.__tmp/meteorProject
