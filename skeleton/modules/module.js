@@ -1,6 +1,7 @@
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
+/** @type {any} */
 let electron = {
     ipcMain: {
         on: Function.prototype, once: Function.prototype, removeListener: Function.prototype, removeAllListeners: Function.prototype
@@ -75,7 +76,7 @@ export default class Module {
                     if (id === fetchId) {
                         clearTimeout(this.fetchTimeoutTimers[fetchId]);
                         delete this.fetchTimeoutTimers[fetchId];
-                        resolve(...responseArgs);
+                        resolve(responseArgs[0]);
                     }
                 },
                 true);

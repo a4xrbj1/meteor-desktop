@@ -33,7 +33,7 @@ describe('meteorManager', () => {
         }
         readFileSyncStub = sinon.stub(fs, 'readFileSync');
         readFileSyncStub
-            .withArgs(sinon.match(METEOR_APP_CONTEXT.env.paths.meteorApp.packages, 'UTF-8'))
+            .withArgs(sinon.match(METEOR_APP_CONTEXT.env.paths.meteorApp.packages, 'utf-8'))
             .returns([
                 '# Comment in file',
                 'meteor-base@1.1.0',
@@ -42,7 +42,7 @@ describe('meteorManager', () => {
                 'omega:meteor-desktop-localstorage@=0.0.11'
             ].join('\n'));
         readFileSyncStub
-            .withArgs(sinon.match(METEOR_APP_CONTEXT.env.paths.meteorApp.versions, 'UTF-8'))
+            .withArgs(sinon.match(METEOR_APP_CONTEXT.env.paths.meteorApp.versions, 'utf-8'))
             .returns([
                 'meteor-base@1.1.0',
                 'mongo@1.1.18',

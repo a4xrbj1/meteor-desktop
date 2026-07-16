@@ -53,7 +53,7 @@ describe('desktop', () => {
             MeteorDesktop.desktop.getSettings();
             expect(logStub.stubs.error).to.have.been.calledOnce();
             logStub.restore();
-            process.exit.restore();
+            /** @type {any} */ (process.exit).restore();
         });
     });
 

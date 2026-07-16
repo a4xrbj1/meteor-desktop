@@ -53,6 +53,7 @@ function getLocalServer(bundlePath, settings) {
             fakeLogger,
             bundlePath
         );
+        // @ts-expect-error init(assetBundle, desktopPath, restart) — restart arg omitted (seed meteor-desktop-c1f9)
         localServerInstance.init(assetBundle, paths.fixtures.desktop);
     });
 }

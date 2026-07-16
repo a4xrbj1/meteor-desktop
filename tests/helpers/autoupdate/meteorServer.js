@@ -59,7 +59,7 @@ export default class MeteorServer {
      *
      * @param {string} serverPath       - Path for the resources to serve.
      * @param {string} parentServerPath - Path for the parent resources.
-     * @param {bool}   restart          - Are we restarting the server?
+     * @param {boolean}   restart          - Are we restarting the server?
      */
     init(serverPath, parentServerPath, restart) {
         const self = this;
@@ -68,7 +68,8 @@ export default class MeteorServer {
 
         if (restart) {
             if (this.httpServerInstance) {
-                this.httpServerInstance.destroy();
+                // .destroy is added at runtime by the server-destroy package (enableDestroy)
+                /** @type {any} */ (this.httpServerInstance).destroy();
             }
         }
         function saveRequests(req, res, next) {
@@ -143,6 +144,7 @@ export default class MeteorServer {
             {});
 
         if (parentServerPath) {
+            // @ts-expect-error MeteorServer ctor never assigns this.log — latent drift (seed meteor-desktop-c1f9)
             this.log.info('use ', parentServerPath);
 
             // Server files from the parent directory as the main bundle has only changed files.
@@ -167,7 +169,7 @@ export default class MeteorServer {
 
     /**
      * Tries to start the http server.
-     * @param {bool} restart - Is this restart.
+     * @param {boolean} restart - Is this restart.
      */
     startHttpServer(restart) {
         try {
@@ -198,6 +200,7 @@ export default class MeteorServer {
 export function serveVersion(version) {
     if (!meteorServer) {
         return new Promise((resolve, reject) => {
+            // @ts-expect-error MeteorServer ctor takes 0 args; logger silently ignored (seed meteor-desktop-c1f9)
             meteorServer = new MeteorServer({
                 info() {
                 },
@@ -216,6 +219,7 @@ export function serveVersion(version) {
             }
 
             meteorServer.setCallbacks(onStartupFailed, onServerReady, onServerRestarted);
+            // @ts-expect-error init(serverPath, parentServerPath, restart) — trailing args omitted (seed meteor-desktop-c1f9)
             meteorServer.init(path.join(paths.fixtures.downloadableVersions, version));
         });
     }

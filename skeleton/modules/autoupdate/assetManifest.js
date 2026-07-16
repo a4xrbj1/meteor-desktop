@@ -8,7 +8,7 @@ import crypto from 'crypto';
  * @param {string} manifestEntry.url
  * @param {string} manifestEntry.type
  * @param {number} manifestEntry.size
- * @param {bool}   manifestEntry.cacheable
+ * @param {boolean}   manifestEntry.cacheable
  * @param {string} manifestEntry.hash
  * @param {string} manifestEntry.sri
  * @param {string} manifestEntry.sourceMap
@@ -18,7 +18,7 @@ import crypto from 'crypto';
  * @property {string} urlPath
  * @property {string} fileType
  * @property {number} size
- * @property {bool}   cacheable
+ * @property {boolean}   cacheable
  * @property {string} hash
  * @property {string} sri
  * @property {string} sourceMapFilePath

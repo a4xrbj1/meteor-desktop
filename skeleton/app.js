@@ -10,6 +10,7 @@ import Squirrel from './squirrel.js';
 
 const require = createRequire(import.meta.url);
 
+/** @type {any} */
 let electron = {
     app: {},
     BrowserWindow: class BrowserWindow { },
@@ -93,7 +94,7 @@ export default class App {
             nodeModulesPath.splice(1, 0, '..');
         }
 
-        const GlobalModule = require('module');
+        const GlobalModule = /** @type {any} */ (require('module')); // globalPaths/_nodeModulePaths are Node internals absent from @types/node
         const absoluteNodeModulesPath = path.resolve(join(...nodeModulesPath));
         // for electron 16 or lower
         GlobalModule.globalPaths.push(absoluteNodeModulesPath);
@@ -110,8 +111,9 @@ export default class App {
         }
 
         // This is needed for OSX - check Electron docs for more info.
-        if ('builderOptions' in this.settings && this.settings.builderOptions.appId) {
-            app.setAppUserModelId(this.settings.builderOptions.appId);
+        if ('builderOptions' in this.settings
+            && /** @type {any} */ (this.settings.builderOptions).appId) {
+            app.setAppUserModelId(/** @type {any} */ (this.settings.builderOptions).appId);
         }
 
         // System events emitter.
@@ -205,7 +207,7 @@ export default class App {
     loadSettings() {
         try {
             this.settings = JSON.parse(
-                fs.readFileSync(join(this.desktopPath, 'settings.json')), 'UTF-8'
+                fs.readFileSync(join(this.desktopPath, 'settings.json'), 'utf-8')
             );
         } catch (e) {
             this.l.error(e);
@@ -363,7 +365,7 @@ export default class App {
         let settings = {};
         let moduleName = null;
         const moduleJson = JSON.parse(
-            fs.readFileSync(path.join(modulePath, 'module.json'), 'UTF-8')
+            fs.readFileSync(path.join(modulePath, 'module.json'), 'utf-8')
         );
         if ('settings' in moduleJson) {
             ({ settings } = moduleJson);
@@ -456,7 +458,7 @@ export default class App {
     /**
      * Util function for emitting events on the event bus.
      * @param {string} event - event name
-     * @param {[*]}    args  - event's arguments
+     * @param {...*}    args  - event's arguments
      */
     emit(event, ...args) {
         try {
@@ -511,7 +513,7 @@ export default class App {
      * Util function for emitting events synchronously and waiting asynchronously for
      * handlers to finish.
      * @param {string} event - event name
-     * @param {[*]}    args  - event's arguments
+     * @param {...*}    args  - event's arguments
      */
     emitAsync(event, ...args) {
         const promises = [];
@@ -603,7 +605,7 @@ export default class App {
 
     /**
      * Returns prepared autoupdate module settings.
-     * @returns {{dataPath: *, bundleStorePath: *, initialBundlePath,
+     * @returns {{dataPath: *, bundleStorePath: *, customHCPUrl: *, initialBundlePath: *,
       * webAppStartupTimeout: number}}
      */
     prepareAutoupdateSettings() {

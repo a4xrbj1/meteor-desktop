@@ -108,6 +108,7 @@ export default class LocalServer {
         this.parentServerPath = '';
         this.portRange = [57200, 57400];
         this.portSearchStep = 20;
+        this.port = null;
 
         this.assetBundle = null;
 
@@ -474,7 +475,8 @@ export default class LocalServer {
         };
 
         if (restart && this.httpServerInstance) {
-            this.httpServerInstance.destroy(() => start());
+            // .destroy is added at runtime by the server-destroy package (enableDestroy)
+            /** @type {any} */ (this.httpServerInstance).destroy(() => start());
         } else {
             start();
         }

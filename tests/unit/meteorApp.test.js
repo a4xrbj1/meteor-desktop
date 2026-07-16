@@ -38,7 +38,7 @@ const meteorAppLibDir = path.dirname(meteorAppModulePath);
 const loadMeteorAppTestExports = async function () {
     const sourcePath = path.join(meteorAppLibDir, 'meteorApp.js');
     const tempModulePath = path.join(meteorAppLibDir, '__meteorApp.test.mjs');
-    const originalSource = fs.readFileSync(sourcePath, 'UTF-8');
+    const originalSource = fs.readFileSync(sourcePath, 'utf-8');
     const testableSource = `${originalSource}
 
 export {
@@ -48,7 +48,7 @@ export {
 };
 `;
 
-    fs.writeFileSync(tempModulePath, testableSource, 'UTF-8');
+    fs.writeFileSync(tempModulePath, testableSource, 'utf-8');
 
     try {
         return await import(`${pathToFileURL(tempModulePath).href}?ts=${Date.now()}`);
@@ -135,8 +135,8 @@ describe('meteorApp', () => {
 
             instance.injectEsm();
 
-            expect(fs.readFileSync(dynamicFilePath, 'UTF-8')).to.not.include('import.meta');
-            expect(fs.readFileSync(dynamicFilePath, 'UTF-8')).to.include('({url: location.href}).url');
+            expect(fs.readFileSync(dynamicFilePath, 'utf-8')).to.not.include('import.meta');
+            expect(fs.readFileSync(dynamicFilePath, 'utf-8')).to.include('({url: location.href}).url');
         });
     });
 
@@ -200,7 +200,7 @@ describe('meteorApp', () => {
                 expect(fs.existsSync(path.join(tempDir, 'build-chunks-local-desktop/main.css')))
                     .to.equal(false);
                 const appCopy = fs.readFileSync(
-                    path.join(tempDir, 'app/build-chunks-local-desktop/main.css'), 'UTF-8'
+                    path.join(tempDir, 'app/build-chunks-local-desktop/main.css'), 'utf-8'
                 );
                 expect(appCopy).to.equal('.real-css { color: red; }');
             } finally {
@@ -214,7 +214,7 @@ describe('meteorApp', () => {
             try {
                 await newInstance(tempDir).injectEsm();
                 const pj = JSON.parse(
-                    fs.readFileSync(path.join(tempDir, 'program.json'), 'UTF-8')
+                    fs.readFileSync(path.join(tempDir, 'program.json'), 'utf-8')
                 );
                 const entry = pj.manifest.find(
                     (e) => e.url === '/build-chunks-local-desktop/main.css'
@@ -287,7 +287,7 @@ describe('meteorApp', () => {
                 await newInstance(tempDir).injectEsm();
                 const written = path.join(tempDir, '__rspack__/dynamic-chunk.js');
                 expect(fs.existsSync(written), 'chunk must be written to localPath').to.equal(true);
-                expect(fs.readFileSync(written, 'UTF-8')).to.equal(body);
+                expect(fs.readFileSync(written, 'utf-8')).to.equal(body);
             } finally {
                 fetchStub.restore();
                 fs.rmSync(tempDir, { recursive: true, force: true });
@@ -349,7 +349,7 @@ describe('meteorApp', () => {
             writeFixture(tempDir, linkedFixture);
             try {
                 await newInstance(tempDir).injectEsm();
-                const html = fs.readFileSync(path.join(tempDir, 'index.html'), 'UTF-8');
+                const html = fs.readFileSync(path.join(tempDir, 'index.html'), 'utf-8');
                 expect(html, 'redundant rspack <script> must be skipped').to.not.include('/__rspack__/client-rspack.js');
                 expect(html, 'the Meteor bundle tag must remain').to.include('<script src="/app.js">');
             } finally {
@@ -373,7 +373,7 @@ describe('meteorApp', () => {
             writeFixture(tempDir, shimFixture);
             try {
                 await newInstance(tempDir).injectEsm();
-                const html = fs.readFileSync(path.join(tempDir, 'index.html'), 'UTF-8');
+                const html = fs.readFileSync(path.join(tempDir, 'index.html'), 'utf-8');
                 expect(html, 'rspack <script> must be injected when the graph is not already linked')
                     .to.include('<script src="/__rspack__/client-rspack.js"></script>');
             } finally {
@@ -425,7 +425,7 @@ describe('meteorApp', () => {
 
             try {
                 newInstance(tempDir).validateHashCoherence();
-                const html = fs.readFileSync(path.join(tempDir, 'index.html'), 'UTF-8');
+                const html = fs.readFileSync(path.join(tempDir, 'index.html'), 'utf-8');
                 expect(html).to.include('href="/build-chunks-local-desktop/main.50dab1a8aa8e6b42.css"');
                 expect(html).to.not.include('href="/build-chunks-local-desktop/main.css"');
             } finally {
@@ -444,7 +444,7 @@ describe('meteorApp', () => {
 
             try {
                 newInstance(tempDir).validateHashCoherence();
-                const html = fs.readFileSync(path.join(tempDir, 'index.html'), 'UTF-8');
+                const html = fs.readFileSync(path.join(tempDir, 'index.html'), 'utf-8');
                 expect(html).to.include('href="/build-chunks-local-desktop/main.50dab1a8aa8e6b42.css"');
                 expect(html).to.not.include('/build-chunks-local/main.css');
                 expect(html).to.not.include('href="/build-chunks-local-desktop/main.css"');
@@ -478,7 +478,7 @@ describe('meteorApp', () => {
             try {
                 expect(() => newInstance(tempDir, { skipMobileBuild: true }).validateHashCoherence())
                     .to.not.throw();
-                const html = fs.readFileSync(path.join(tempDir, 'index.html'), 'UTF-8');
+                const html = fs.readFileSync(path.join(tempDir, 'index.html'), 'utf-8');
                 expect(html).to.include('href="/build-chunks-local/main.css"');
             } finally {
                 fs.rmSync(tempDir, { recursive: true, force: true });
@@ -496,7 +496,7 @@ describe('meteorApp', () => {
 
             try {
                 newInstance(tempDir).validateHashCoherence();
-                const html = fs.readFileSync(path.join(tempDir, 'index.html'), 'UTF-8');
+                const html = fs.readFileSync(path.join(tempDir, 'index.html'), 'utf-8');
                 expect(html).to.include('<link rel="shortcut icon" type="image/png" href="/favicon-194x194.png">');
                 expect(html).to.include('href="/build-chunks-local-desktop/main.50dab1a8aa8e6b42.css"');
             } finally {
@@ -597,7 +597,7 @@ describe('meteorApp', () => {
                         { type: 'js', url: '/app.js?hash=new-app' }
                     ]
                 }, logger);
-                const reconciledHtml = fs.readFileSync(indexHtmlPath, 'UTF-8');
+                const reconciledHtml = fs.readFileSync(indexHtmlPath, 'utf-8');
 
                 expect(result).to.deep.equal({
                     changed: true,
@@ -771,7 +771,7 @@ describe('meteorApp', () => {
 
             await instance.copyBuild();
 
-            const copiedIndex = fs.readFileSync(meteorAppIndex, 'UTF-8');
+            const copiedIndex = fs.readFileSync(meteorAppIndex, 'utf-8');
             expect(copiedIndex).to.include('/packages/session.js?hash=new-session');
             expect(copiedIndex).to.include('/app.js?hash=new-app');
             expect(copiedIndex).to.not.include('stale-app');

@@ -37,7 +37,7 @@ describe('electronApp', () => {
             MeteorDesktop.electronApp.copyDesktopToDesktopTemp();
             MeteorDesktop.electronApp.packDesktopToAsar().then(() => {
                 expect(fs.existsSync(MeteorDesktop.env.paths.electronApp.desktopAsar)).to.be.true();
-                const files = asar.listPackage(MeteorDesktop.env.paths.electronApp.desktopAsar);
+                const files = asar.listPackage(MeteorDesktop.env.paths.electronApp.desktopAsar, { isPack: false });
                 const expected = ['desktop.js', 'settings.json', 'modules', 'assets'];
                 expect(files).to.include.members(
                     expected.map((expectedPath) => path.sep + expectedPath)
@@ -51,7 +51,7 @@ describe('electronApp', () => {
         it('should update fields according to settings.packageJsonFields', () => {
             MeteorDesktop.electronApp.updatePackageJsonFields();
             const packageJson = JSON.parse(
-                fs.readFileSync(MeteorDesktop.env.paths.electronApp.packageJson, 'UTF-8')
+                fs.readFileSync(MeteorDesktop.env.paths.electronApp.packageJson, 'utf-8')
             );
             expect(packageJson.description).to.be.equal('My Meteor App');
             expect(packageJson.private).to.be.true();
@@ -66,7 +66,7 @@ describe('electronApp', () => {
             MeteorDesktop.electronApp.packageJson = {};
             MeteorDesktop.electronApp.updateDependenciesList();
             const packageJson = JSON.parse(
-                fs.readFileSync(MeteorDesktop.env.paths.electronApp.packageJson, 'UTF-8')
+                fs.readFileSync(MeteorDesktop.env.paths.electronApp.packageJson, 'utf-8')
             );
             expect(packageJson.dependencies).to.have.a.property('some-package', '1.2.3');
             expect(packageJson.dependencies).to.have.a.property(

@@ -32,7 +32,7 @@ export default class DesktopPathResolver {
      */
     static readJsonFile(jsonFilePath) {
         try {
-            return JSON.parse(fs.readFileSync(jsonFilePath, 'UTF-8'));
+            return JSON.parse(fs.readFileSync(jsonFilePath, 'utf-8'));
         } catch {
             return {};
         }
@@ -50,7 +50,7 @@ export default class DesktopPathResolver {
 
         let content;
         try {
-            content = fs.readFileSync(manifestPath, 'UTF-8');
+            content = fs.readFileSync(manifestPath, 'utf-8');
         } catch {
             return undefined;
         }
@@ -137,7 +137,7 @@ export default class DesktopPathResolver {
 
         files.forEach((filePath) => {
             try {
-                parts.push(fs.readFileSync(filePath, 'UTF-8'));
+                parts.push(fs.readFileSync(filePath, 'utf-8'));
             } catch {
                 // Skip unreadable files so dev/test environments without desktop.asar still get
                 // a stable signature from the bootstrap files that do exist.

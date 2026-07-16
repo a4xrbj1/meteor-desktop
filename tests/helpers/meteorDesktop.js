@@ -22,7 +22,7 @@ export function StubLog(object, methods, stubProcessExit) {
     this.restore = () => {
         Object.keys(stubs).forEach((method) => stubs[method].restore());
         if (stubProcessExit) {
-            process.exit.restore();
+            /** @type {any} */ (process.exit).restore();
         }
     };
 
@@ -43,14 +43,14 @@ export function createTestInstance() {
         paths.testProjectInstallPath,
         paths.testProjectInstallPath,
         { ddpUrl: 'http://127.0.0.1:3788', output: paths.testProjectInstallPath },
-        {
+        /** @type {any} */ ({
             log: class {
                 constructor() {
                     this.info = sinon.stub();
                     this.error = (...args) => console.error(args);
                 }
             }
-        }
+        })
     );
 }
 
@@ -106,7 +106,7 @@ export function getModuleJson(module) {
     const moduleJsonPath = path.join(
         paths.testProjectInstallPath, '.desktop', 'modules', module, 'module.json'
     );
-    return JSON.parse(fs.readFileSync(moduleJsonPath, 'UTF-8'));
+    return JSON.parse(fs.readFileSync(moduleJsonPath, 'utf-8'));
 }
 
 export function saveModuleJson(module, moduleJson) {

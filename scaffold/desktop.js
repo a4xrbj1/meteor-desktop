@@ -9,13 +9,14 @@ import { app, dialog } from 'electron';
  */
 export default class Desktop {
     /**
-     * @param {Object} log         - Winston logger instance
-     * @param {Object} skeletonApp - reference to the skeleton app instance
-     * @param {Object} appSettings - settings.json contents
-     * @param {Object} eventsBus   - event emitter for listening or emitting events
-     *                               shared across skeleton app and every module/plugin
-     * @param {Object} modules     - references to all loaded modules
-     * @param {Object} Module      - reference to the Module class
+     * @param {Object} config             - constructor arguments (destructured)
+     * @param {Object} config.log         - Winston logger instance
+     * @param {Object} config.skeletonApp - reference to the skeleton app instance
+     * @param {Object} config.appSettings - settings.json contents
+     * @param {Object} config.eventsBus   - event emitter for listening or emitting events
+     *                                       shared across skeleton app and every module/plugin
+     * @param {Object} config.modules     - references to all loaded modules
+     * @param {Object} config.Module      - reference to the Module class
      * @constructor
      */
     constructor({
@@ -74,7 +75,7 @@ export default class Desktop {
 
     /**
      * JS's uncaught exception handler.
-     * @param {string} error - error message
+     * @param {Error} error - the uncaught exception
      */
     static uncaughtExceptionHandler(error) {
         // Consider sending a log somewhere, it is good be aware your users are having problems,

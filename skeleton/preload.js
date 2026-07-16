@@ -3,6 +3,7 @@ import { createRequire } from 'module';
 // https://github.com/electron-webapps/meteor-electron/blob/master/app/preload.js
 const require = createRequire(import.meta.url);
 
+/** @type {any} */
 let electron = {
     ipcRenderer: {
         on: Function.prototype,
@@ -76,6 +77,7 @@ const Desktop = new (class {
      * @returns {Promise}
      */
     fetchFile(absolutePath) {
+        // @ts-expect-error vestigial 2nd arg silently dropped — getFileUrl takes one param (seed meteor-desktop-ab39)
         return fetch(this.getFileUrl(absolutePath, false));
     }
 
@@ -86,6 +88,7 @@ const Desktop = new (class {
      * @returns {Promise}
      */
     fetchAsset(assetPath) {
+        // @ts-expect-error vestigial 2nd arg silently dropped — getAssetUrl takes one param (seed meteor-desktop-ab39)
         return fetch(this.getAssetUrl(assetPath, false));
     }
 
@@ -99,7 +102,7 @@ const Desktop = new (class {
      * @param {boolean}     response - whether we are listening for fetch response
      * @private
      */
-    addToListeners(module, event, callback, once, response = false) {
+    addToListeners(module, event, callback, once = false, response = false) {
         const self = this;
         const eventName = response ? this.getResponseEventName(module, event) : this.getEventName(module, event);
 
@@ -310,22 +313,25 @@ const Desktop = new (class {
     }
 
     asJSON() {
+        // `self` is `any` so the variadic (...args) forwarders spread into the fixed-arity
+        // methods without tripping TS2556; runtime behaviour is unchanged.
+        const self = /** @type {any} */ (this);
         return {
             electron: { webFrame: { getZoomFactor: () => 1 } },
-            fetch: (...args) => this.fetch(...args),
-            fetchAsset: (...args) => this.fetchAsset(...args),
-            fetchFile: (...args) => this.fetchFile(...args),
-            getAssetUrl: (...args) => this.getAssetUrl(...args),
-            getEventName: (...args) => this.getEventName(...args),
-            getFileUrl: (...args) => this.getFileUrl(...args),
-            on: (...args) => this.on(...args),
-            once: (...args) => this.once(...args),
-            removeAllListeners: (...args) => this.removeAllListeners(...args),
-            removeListener: (...args) => this.removeListener(...args),
-            respond: (...args) => this.respond(...args),
-            send: (...args) => this.send(...args),
-            sendGlobal: (...args) => this.sendGlobal(...args),
-            setDefaultFetchTimeout: (...args) => this.setDefaultFetchTimeout(...args)
+            fetch: (...args) => self.fetch(...args),
+            fetchAsset: (...args) => self.fetchAsset(...args),
+            fetchFile: (...args) => self.fetchFile(...args),
+            getAssetUrl: (...args) => self.getAssetUrl(...args),
+            getEventName: (...args) => self.getEventName(...args),
+            getFileUrl: (...args) => self.getFileUrl(...args),
+            on: (...args) => self.on(...args),
+            once: (...args) => self.once(...args),
+            removeAllListeners: (...args) => self.removeAllListeners(...args),
+            removeListener: (...args) => self.removeListener(...args),
+            respond: (...args) => self.respond(...args),
+            send: (...args) => self.send(...args),
+            sendGlobal: (...args) => self.sendGlobal(...args),
+            setDefaultFetchTimeout: (...args) => self.setDefaultFetchTimeout(...args)
         };
     }
 })();

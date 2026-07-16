@@ -32,7 +32,7 @@ describe('App', () => {
         mockery.registerMock('./desktopPathResolver', {});
         mockery.registerMock('fs-plus', fs);
         mockery.enable(mockerySettings);
-        process.env.METEOR_DESKTOP_UNIT_TEST = true;
+        process.env.METEOR_DESKTOP_UNIT_TEST = 'true';
         App = require('../../../skeleton/app.js');
         App = App.default;
         // We will get a transpiled version here with a babel function upfront.
@@ -45,7 +45,7 @@ describe('App', () => {
     });
 
     after(() => {
-        process.env.METEOR_DESKTOP_UNIT_TEST = false;
+        process.env.METEOR_DESKTOP_UNIT_TEST = 'false';
         mockery.deregisterMock('./desktopPathResolver');
         mockery.deregisterMock('fs-plus');
         mockery.deregisterMock('electron');

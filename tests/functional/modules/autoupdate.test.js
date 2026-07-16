@@ -83,7 +83,7 @@ function exists(checkPath) {
  *                                   when true, autoupdate does not fire the startup timer
  * @param {Object} [appSettings]   - object pass as appSettings to HCPClient
  *
- * @returns {HCPClient}
+ * @returns {Promise<HCPClient>}
  */
 async function setUpAutoupdate(printLogs = false, onNewVersionReady = Function.prototype,
     expectedVersion = 'version1', errorCallback = Function.prototype, printErrorLogs = false,

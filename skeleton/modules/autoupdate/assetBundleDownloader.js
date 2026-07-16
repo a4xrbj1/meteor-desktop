@@ -106,10 +106,10 @@ export default class AssetBundleDownloader {
                 // Unfortunately on every hot code push we need to ensure that we will not loose
                 // `Meteor.isDesktop`. Here we will inject it into the code that arrived from HCP.
                 if (asset.fileType === 'js') {
-                    const fileContentsString = fileContents.toString('UTF-8');
+                    const fileContentsString = fileContents.toString('utf-8');
                     const result = self.injector.processFileContents(fileContentsString);
                     if (result.injected || result.injectedStartupDidComplete) {
-                        fs.writeFileSync(asset.getFile(), result.fileContents, 'UTF-8');
+                        fs.writeFileSync(asset.getFile(), result.fileContents, 'utf-8');
                     } else {
                         fs.writeFileSync(asset.getFile(), fileContents);
                     }
@@ -203,7 +203,8 @@ export default class AssetBundleDownloader {
         // is not found, we add meteor_dont_serve_index=true to the URL unless we
         // are actually downloading the index page.
         if (asset.filePath !== 'index.html') {
-            builder.query = { meteor_dont_serve_index: 'true' };
+            // legacy url.parse/format API: .query accepts an object for url.format
+            builder.query = /** @type {any} */ ({ meteor_dont_serve_index: 'true' });
         }
 
         return url.format(builder);

@@ -22,6 +22,7 @@ describe('Module', () => {
 
     describe('#sendInternal', () => {
         it('should throw when no reference to renderer set yet', () => {
+            // @ts-expect-error test intentionally exercises the @private sendInternal
             expect(Module.sendInternal.bind(Module, 'test')).to.throw(
                 /No reference to renderer process/
             );
@@ -31,6 +32,7 @@ describe('Module', () => {
             const arg1 = { some: 'data' };
             const arg2 = 'test';
             Module.__setRendererForTest(rendererMock);
+            // @ts-expect-error test intentionally exercises the @private sendInternal
             Module.sendInternal('event', arg1, arg2);
             expect(rendererMock.send).to.be.calledWith('event', arg1, arg2);
             Module.__setRendererForTest(null);
@@ -38,6 +40,7 @@ describe('Module', () => {
         it('should not send ipc when renderer is destroyed', () => {
             const rendererMock = { send: sinon.stub(), isDestroyed: () => true };
             Module.__setRendererForTest(rendererMock);
+            // @ts-expect-error test intentionally exercises the @private sendInternal
             Module.sendInternal('event');
             expect(rendererMock.send).to.have.callCount(0);
             Module.__setRendererForTest(null);
@@ -46,12 +49,14 @@ describe('Module', () => {
     describe('#getEventName', () => {
         it('should return namespaced event name', () => {
             const module = new Module('test');
+            // @ts-expect-error test intentionally exercises the @private getEventName
             expect(module.getEventName('event')).to.equal('test__event');
         });
     });
     describe('#getResponseEventName', () => {
         it('should return namespaced response event name', () => {
             const module = new Module('test');
+            // @ts-expect-error test intentionally exercises the @private getResponseEventName
             expect(module.getResponseEventName('event')).to.equal('test__event___response');
         });
     });

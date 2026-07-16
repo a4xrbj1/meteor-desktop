@@ -11,7 +11,7 @@ import AssetManifest from './assetManifest.js';
  * @property {string} urlPath
  * @property {string} fileType
  * @property {number} size
- * @property {bool}   cacheable
+ * @property {boolean}   cacheable
  * @property {string} hash
  * @property {string} sri
  * @property {string} sourceMapFilePath
@@ -118,8 +118,8 @@ export default class AssetBundle {
     }
 
     /**
-     * Get index.html path.
-     * @returns {string}
+     * Get index.html asset.
+     * @returns {Asset}
      */
     getIndexFile() {
         return this.indexFile;
@@ -271,7 +271,7 @@ export default class AssetBundle {
         try {
             return new AssetManifest(
                 this.log,
-                fs.readFileSync(manifestPath, 'UTF-8')
+                fs.readFileSync(manifestPath, 'utf-8')
             );
         } catch (e) {
             const msg = `error loading asset manifest: ${e.message}`;
@@ -292,7 +292,7 @@ export default class AssetBundle {
     loadRuntimeConfig(index) {
         let content;
         try {
-            content = fs.readFileSync(index, 'UTF-8');
+            content = fs.readFileSync(index, 'utf-8');
         } catch (e) {
             this.log.error(`error loading index file: ${e.message}`);
             return null;

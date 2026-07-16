@@ -35,4 +35,5 @@ type AssetBundle = any;     // skeleton/modules/autoupdate/assetBundle.js defaul
 type AssetManifest = any;   // typedef local to skeleton/modules/autoupdate/assetManifest.js
 type SquirrelEvents = any;  // skeleton/squirrel.js JSDoc ref — defined nowhere
 type Platform = any;        // electron-builder Platform, JSDoc-only ref (lib/electronBuilder.js)
+type Arch = any;            // electron-builder Arch, JSDoc-only ref (lib/electronBuilder.js)
 type desktopSettings = any; // typedef in lib/desktop.js, referenced from lib/electronApp.js

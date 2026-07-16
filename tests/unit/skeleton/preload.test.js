@@ -166,7 +166,7 @@ describe('Desktop', () => {
             test.clear();
         });
         it('should call callback (with preserved this) once on events received', () => {
-            let ipcCallback;
+            /** @type {any} */ let ipcCallback;
             // We will create an ipc mock, to get the listener passed to it.
             // We need that listener to fire it to emulate an ipc event arrival.
             const ipcMock = {
@@ -228,7 +228,7 @@ describe('Desktop', () => {
             test.clear();
         });
         it('should call callback (with preserved this) on event received', () => {
-            let ipcCallback;
+            /** @type {any} */ let ipcCallback;
             // We will create an ipc mock, to get the listener passed to it.
             // We need that listener to fire it to emulate an ipc event arrival.
             const ipcMock = {

@@ -467,7 +467,7 @@ export default class HCPClient {
      */
     readConfig() {
         try {
-            this.config = JSON.parse(fs.readFileSync(this.configFile, 'UTF-8'));
+            this.config = JSON.parse(fs.readFileSync(this.configFile, 'utf-8'));
         } catch {
             this.log.error('could not read the config.json');
             this.resetConfig();

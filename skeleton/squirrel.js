@@ -5,6 +5,7 @@ import fs from 'fs-plus';
 import os from 'os';
 
 const require = createRequire(import.meta.url);
+/** @type {any} */
 let electron = { app: {}, autoUpdater: {} };
 try {
     electron = require('electron');

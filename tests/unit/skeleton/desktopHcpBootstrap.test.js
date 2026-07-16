@@ -24,7 +24,7 @@ const hcpSource = fs.readFileSync(
 // G1 bootstrap wiring (seed meteor-desktop-e490) rather than a reimplementation.
 const loadInSandbox = (overrides = {}) => {
     const reload = { _reload: sinon.spy() };
-    const sandbox = {
+    const sandbox = /** @type {any} */ ({
         Desktop: { send: sinon.spy(), on: sinon.spy() },
         Meteor: { startup: (cb) => cb() },
         window: { Package: { reload: { Reload: reload } } },
@@ -32,7 +32,7 @@ const loadInSandbox = (overrides = {}) => {
         setTimeout: sinon.spy(),
         setInterval: sinon.spy(),
         ...overrides
-    };
+    });
     sandbox.globalThis = sandbox;
     vm.runInNewContext(hcpSource, sandbox);
     return { sandbox, reload };
