@@ -11,6 +11,8 @@ jobs:
     permissions:
       contents: write
       packages: write
+      # OIDC identity token for npm Trusted Publishing (replaces NPM_TOKEN).
+      id-token: write
     env:
       # Opt into Node.js 24 for action runtime ahead of GitHub's
       # 2026-06-02 forced default switch. Resolves the deprecation
@@ -27,14 +29,21 @@ jobs:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
+      # Trusted Publishing (OIDC) requires npm >= 11.5.1; the npm bundled
+      # with the Node 24 runner may lag that, so pin it up explicitly.
+      - name: Ensure npm supports Trusted Publishing
+        run: npm install -g npm@latest
+
       - name: Install dependencies
         run: npm ci
 
-      # Publish to the global npm registry
+      # Publish to the global npm registry via OIDC Trusted Publishing.
+      # No NPM_TOKEN: npm exchanges the workflow's id-token for a short-lived
+      # publish credential, so long as a Trusted Publisher for this repo +
+      # workflow (publish.yml) is configured on npmjs.org. Provenance is
+      # attested automatically under OIDC.
       - name: Publish to npm
         run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       # Publish to GitHub Packages
       - name: Setup Node.js for GitHub Packages
