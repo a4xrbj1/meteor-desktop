@@ -14,17 +14,17 @@ jobs:
       # OIDC identity token for npm Trusted Publishing (replaces NPM_TOKEN).
       id-token: write
     env:
-      # Opt into Node.js 24 for action runtime ahead of GitHub's
-      # 2026-06-02 forced default switch. Resolves the deprecation
-      # warning for actions/checkout@v4, actions/setup-node@v4 and
-      # softprops/action-gh-release@v2, which otherwise run on the
-      # deprecated Node 20 (slated for removal 2026-09-16).
+      # checkout@v5 and setup-node@v5 already declare the Node 24 action
+      # runtime. softprops/action-gh-release@v2 still declares Node 20 (no
+      # node24 release yet), so keep forcing JS actions onto Node 24 ahead
+      # of GitHub's node20 runtime removal (~2026-09-16). Drop this once the
+      # release action ships a node24 major.
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
@@ -47,7 +47,7 @@ jobs:
 
       # Publish to GitHub Packages
       - name: Setup Node.js for GitHub Packages
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '24'
           registry-url: 'https://npm.pkg.github.com'
