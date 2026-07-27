@@ -16,7 +16,7 @@ try {
     // Falls back to fs-plus outside Electron.
 }
 
-const { rimrafWithRetries } = utils;
+const { rimrafWithRetries, modernUserAgent } = utils;
 
 class AssetBundleManager {
     /**
@@ -85,7 +85,9 @@ class AssetBundleManager {
 
         this.log.info(`trying to query ${manifestUrl}`);
 
-        this.httpClient(manifestUrl, { headers: { Connection: 'close' } })
+        this.httpClient(manifestUrl, {
+            headers: { Connection: 'close', 'User-Agent': modernUserAgent }
+        })
             .then((response) => Promise.all([response, response.text()]))
             .then(([response, body]) => {
                 if (response.status !== 200) {

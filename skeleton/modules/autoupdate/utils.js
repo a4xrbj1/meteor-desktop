@@ -30,6 +30,21 @@ function rimrafWithRetries(path, optionsOrFs) {
     });
 }
 
+/**
+ * Meteor picks the client arch from the request's User-Agent (`modern-browsers`), and HCP
+ * always fetches its manifest from the modern `/__browser/` endpoint. So the asset requests
+ * have to look modern too: with no User-Agent the server answers with `web.browser.legacy`
+ * bytes, whose sha512 can never match the modern manifest's sri, and the whole bundle is
+ * rejected at verifyResponse (seed frontend-7c13, measured on staging: 546244 legacy bytes
+ * vs the manifest's 471826). `process.versions.chrome` is always set in the Electron main
+ * process; the fallback only applies outside Electron (tests, tooling).
+ *
+ * @type {string}
+ */
+const modernUserAgent = `Mozilla/5.0 (${process.platform}) AppleWebKit/537.36 (KHTML, like Gecko) `
+    + `Chrome/${process.versions.chrome || '120.0.0.0'} meteor-desktop-hcp Safari/537.36`;
+
 export default {
-    rimrafWithRetries
+    rimrafWithRetries,
+    modernUserAgent
 };

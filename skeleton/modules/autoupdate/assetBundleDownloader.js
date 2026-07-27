@@ -4,6 +4,9 @@ import url from 'url';
 import { createRequire } from 'module';
 import Queue from 'queue';
 import IsDesktopInjector from './isDesktopInjector.js';
+import utils from './utils.js';
+
+const { modernUserAgent } = utils;
 
 const require = createRequire(import.meta.url);
 
@@ -157,7 +160,9 @@ export default class AssetBundleDownloader {
                 self.assetsDownloading.push(asset);
                 const downloadUrl = self.downloadUrlForAsset(asset);
                 self.queue.push((callback) => {
-                    self.httpClient(downloadUrl, { headers: { Connection: 'close' } })
+                    self.httpClient(downloadUrl, {
+                        headers: { Connection: 'close', 'User-Agent': modernUserAgent }
+                    })
                         .then((response) => Promise.all([response, response.arrayBuffer()]))
                         .then(([response, arrayBuffer]) => {
                             onResponse(asset, response, Buffer.from(arrayBuffer));
