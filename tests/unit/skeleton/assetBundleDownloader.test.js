@@ -122,3 +122,31 @@ describe('AssetBundleDownloader#verifyResponse (sri integrity)', () => {
             .verifyResponse(response, { filePath: 'a.js', hash: null, sri: null }, body)).to.not.throw();
     });
 });
+
+describe('AssetBundleDownloader request headers', () => {
+    before(() => {
+        AssetBundleDownloader = require('../../../skeleton/modules/autoupdate/assetBundleDownloader.js').default;
+    });
+
+    // seed frontend-7c13: Meteor picks the client arch from the User-Agent, and the manifest
+    // is always fetched from the modern /__browser/ endpoint. A request without a modern UA
+    // gets web.browser.legacy bytes, which can never match the modern manifest's sri.
+    it('sends a modern Chrome User-Agent with every asset request', async () => {
+        const downloader = makeDownloader();
+        downloader.missingAssets = [{ filePath: 'packages/modules.js', urlPath: '/packages/modules.js' }];
+        const requests = [];
+        downloader.httpClient = (requestUrl, options) => {
+            requests.push(options);
+            return Promise.reject(new Error('stop after capturing the request'));
+        };
+
+        downloader.resume();
+        await new Promise((resolve) => {
+            setTimeout(resolve, 10);
+        });
+
+        expect(requests).to.have.lengthOf(1);
+        expect(requests[0].headers['User-Agent']).to.match(/ Chrome\/\d[\d.]* /);
+        expect(requests[0].headers.Connection).to.equal('close');
+    });
+});
