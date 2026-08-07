@@ -80,6 +80,12 @@ export default class HCPClient {
         // We will need a reference to the BrowserWindow object once it will be available.
         this.eventsBus.on('windowCreated', (window) => {
             this.window = window;
+            // Drop the reference when the window goes away, mirroring skeleton/app.js. Without
+            // this, a startup-timer expiry that lands after the window was destroyed calls
+            // reload() on a dead BrowserWindow and throws "Object has been destroyed".
+            window.on('closed', () => {
+                this.window = null;
+            });
             // Start the startup timer.
             this.startStartupTimer();
         });
@@ -368,8 +374,9 @@ export default class HCPClient {
             this.pendingAssetBundle = this.assetBundleManager.initialAssetBundle;
         }
 
-        // Only reload if we have a pending asset bundle to reload.
-        if (this.pendingAssetBundle) {
+        // Only reload if we have a pending asset bundle to reload AND a window to reload it in -
+        // the timer can expire during teardown, when both the emit and the reload are pointless.
+        if (this.pendingAssetBundle && this.window) {
             this.eventsBus.emit('revertVersionReady');
             this.log.warn(`will try to revert to ${this.pendingAssetBundle.getVersion()}`);
             this.window.reload();
