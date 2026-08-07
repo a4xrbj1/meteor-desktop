@@ -1081,6 +1081,17 @@ wrapConsoleMethod('log');
     }
 
     handleAppStartup(startupDidCompleteEvent) {
+        // Both producers of this call are asynchronous and can be dispatched AFTER the window's
+        // own 'closed' handler nulled this.window (see onServerReady): the startupDidComplete IPC
+        // (registered in the constructor) and webContents 'did-stop-loading'. Electron gives no
+        // guarantee that a queued IPC is dropped between window destruction and process exit, so a
+        // renderer that reports startup completion while the app is quitting used to crash the main
+        // process here on this.window.show(). Nothing below is meaningful without a window, and
+        // updateToNewVersion() would restart the local HTTP server while the app is shutting down.
+        if (!this.window) {
+            this.l.warn('handleAppStartup fired after window teardown - ignoring');
+            return;
+        }
         if (this.settings.showWindowOnStartupDidComplete) {
             if (!startupDidCompleteEvent) {
                 return;
