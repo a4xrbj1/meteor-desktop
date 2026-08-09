@@ -8,6 +8,8 @@ WebAppLocalServer = {
     onNewVersionReadyCallback: null,
     onErrorCallback: null,
     onVersionsCleanedUpCallback: null,
+    onDownloadStartedCallback: null,
+    onDownloadProgressCallback: null,
 
     startupDidComplete(callback) {
         this.onVersionsCleanedUpCallback = callback;
@@ -20,6 +22,17 @@ WebAppLocalServer = {
 
     onNewVersionReady(callback) {
         this.onNewVersionReadyCallback = callback;
+    },
+
+    // Download lifecycle. Before these existed the only signal was onNewVersionReady, which
+    // fires when the bundle has ALREADY landed — so a Meteor app could not distinguish "no
+    // update" from "downloading over a slow link", and had nothing to show or block on.
+    onDownloadStarted(callback) {
+        this.onDownloadStartedCallback = callback;
+    },
+
+    onDownloadProgress(callback) {
+        this.onDownloadProgressCallback = callback;
     },
 
     onError(callback) {
@@ -49,6 +62,18 @@ Desktop.on('autoupdate', 'warn', (event, args) => {
 Desktop.on('autoupdate', 'onVersionsCleanedUp', () => {
     if (WebAppLocalServer.onVersionsCleanedUpCallback) {
         WebAppLocalServer.onVersionsCleanedUpCallback();
+    }
+});
+
+Desktop.on('autoupdate', 'onDownloadStarted', (event, bytesTotal) => {
+    if (WebAppLocalServer.onDownloadStartedCallback) {
+        WebAppLocalServer.onDownloadStartedCallback(bytesTotal);
+    }
+});
+
+Desktop.on('autoupdate', 'onDownloadProgress', (event, bytesTransferred, bytesTotal) => {
+    if (WebAppLocalServer.onDownloadProgressCallback) {
+        WebAppLocalServer.onDownloadProgressCallback(bytesTransferred, bytesTotal);
     }
 });
 

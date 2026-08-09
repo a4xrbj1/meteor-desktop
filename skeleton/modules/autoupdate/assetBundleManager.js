@@ -412,8 +412,19 @@ class AssetBundleManager {
                     this.didFail(e);
                 }
             },
-            (cause) => this.didFail(cause)
+            (cause) => this.didFail(cause),
+            (bytesTransferred, bytesTotal) => {
+                if (this.callback !== null && this.callback.onDownloadProgress) {
+                    this.callback.onDownloadProgress(bytesTransferred, bytesTotal);
+                }
+            }
         );
+        // Announced only once a real download is committed to: everything above this point can
+        // still short-circuit (all assets cached at :392, or the bundle rejected at :120), and a
+        // consumer that blocked the UI on a download that never starts would hang the app.
+        if (this.callback !== null && this.callback.onDownloadStarted) {
+            this.callback.onDownloadStarted(assetBundleDownloader.bytesTotal);
+        }
         assetBundleDownloader.resume();
     }
 

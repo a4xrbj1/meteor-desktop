@@ -44,6 +44,13 @@ export default class AssetBundleDownloader {
         this.assetsDownloading = [];
         this.onFinished = null;
         this.onFailure = null;
+        this.onProgress = null;
+        // Byte totals for download progress. The total is summed HERE, at construction, because
+        // `missingAssets` is spliced as each asset lands — by the time the download finishes the
+        // array is empty and the total is unrecoverable. Manifest entries carry `size`
+        // (assetManifest.js), so this is real byte progress, not a file count.
+        this.bytesTotal = missingAssets.reduce((sum, asset) => sum + (asset.size || 0), 0);
+        this.bytesTransferred = 0;
         this.cancelInvoked = false;
 
         this.queue = new Queue();
@@ -59,12 +66,16 @@ export default class AssetBundleDownloader {
     /**
      * Stores callbacks.
      *
-     * @param {function} onFinished - Callback for success.
-     * @param {function} onFailure  - Callback for failure.
+     * @param {function} onFinished  - Callback for success.
+     * @param {function} onFailure   - Callback for failure.
+     * @param {function} [onProgress] - Optional (bytesTransferred, bytesTotal) progress callback,
+     *                                  fired once per verified+written asset. Optional so existing
+     *                                  callers keep working unchanged.
      */
-    setCallbacks(onFinished, onFailure) {
+    setCallbacks(onFinished, onFailure, onProgress) {
         this.onFinished = onFinished;
         this.onFailure = onFailure;
+        this.onProgress = onProgress || null;
     }
 
     /**
@@ -142,6 +153,14 @@ export default class AssetBundleDownloader {
             self.log.verbose(`saving ${asset.urlPath}`);
 
             self.missingAssets.splice(self.missingAssets.indexOf(asset), 1);
+
+            // Emitted here rather than on response arrival: at this point the asset has been
+            // verified and written, so the bytes are genuinely on disk. Reporting on arrival
+            // would let progress run ahead of a download that then fails verification.
+            self.bytesTransferred += (asset.size || 0);
+            if (self.onProgress) {
+                self.onProgress(self.bytesTransferred, self.bytesTotal);
+            }
 
             if (self.missingAssets.length === 0) {
                 self.log.verbose(

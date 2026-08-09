@@ -492,6 +492,33 @@ export default class HCPClient {
     }
 
     /**
+     * Download-started callback fired by assetBundleManager, once a bundle download is actually
+     * committed to (not merely considered).
+     *
+     * Until this existed the only renderer-facing HCP signal was onNewVersionReady, which fires
+     * when the whole bundle has already landed — so a Meteor app could not tell "no update" from
+     * "downloading 40MB over a slow link", and had nothing to show the user or block on.
+     *
+     * @param {number} bytesTotal - Total bytes to download, summed from the manifest entries.
+     */
+    onDownloadStarted(bytesTotal) {
+        this.log.verbose(`started downloading asset bundle (${bytesTotal} bytes)`);
+        this.eventsBus.emit('downloadStarted', bytesTotal);
+        this.module.send('onDownloadStarted', bytesTotal);
+    }
+
+    /**
+     * Progress callback fired by assetBundleManager, once per verified and written asset.
+     *
+     * @param {number} bytesTransferred - Bytes written so far.
+     * @param {number} bytesTotal       - Total bytes to download.
+     */
+    onDownloadProgress(bytesTransferred, bytesTotal) {
+        this.eventsBus.emit('downloadProgress', bytesTransferred, bytesTotal);
+        this.module.send('onDownloadProgress', bytesTransferred, bytesTotal);
+    }
+
+    /**
      * Fires error callback from the Meteor app side.
      *
      * @param {string} cause - error message
