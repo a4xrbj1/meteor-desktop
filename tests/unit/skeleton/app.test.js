@@ -232,4 +232,67 @@ describe('App', () => {
             expect(autoupdateSettings.webAppStartupTimeout).to.equal(45000);
         });
     });
+
+    describe('#handleAppStartup', () => {
+        /**
+         * Builds a bare App with just the fields handleAppStartup touches.
+         *
+         * @param {Object|null} window - The BrowserWindow stand-in, or null for a torn-down window.
+         *
+         * @returns {Object} The app instance.
+         */
+        const buildApp = (window) => {
+            const app = new App();
+            app.settings = {};
+            app.l = {
+                info: sinon.stub(), debug: sinon.stub(), warn: sinon.stub(), verbose: sinon.stub()
+            };
+            app.startup = false;
+            app.windowAlreadyLoaded = false;
+            app.meteorAppVersionChange = false;
+            app.window = window;
+            app.emit = sinon.stub();
+            app.updateToNewVersion = sinon.stub();
+            return app;
+        };
+
+        // ESC-0005 regression. A win32 5.2.2 user's startup watchdog gave up and called
+        // app.exit(0); 1.18s later the renderer finally reached Meteor.startup and its
+        // startupDidComplete IPC landed in a main process whose window was already destroyed and
+        // whose `closed` handler had nulled this.window. handleAppStartup then dereferenced it:
+        // "TypeError: Cannot read properties of null (reading 'show')", crashing the main process.
+        // Inversion check: delete the `if (!this.window)` guard in skeleton/app.js and this test
+        // fails with exactly that TypeError. If it still passes, the guard is not covered.
+        it('should not throw when the window was torn down before a late startupDidComplete', () => {
+            const app = buildApp(null);
+            expect(() => app.handleAppStartup(true)).to.not.throw();
+            expect(app.l.warn).to.have.been.calledOnce();
+            // Nothing downstream may run either: updateToNewVersion would restart the local HTTP
+            // server while the app is quitting.
+            expect(app.emit).to.have.not.been.called();
+            expect(app.updateToNewVersion).to.have.not.been.called();
+        });
+
+        it('should not throw on a late did-stop-loading either', () => {
+            // The other producer of this call (webContents did-stop-loading) reaches the same
+            // dereference, so the guard has to cover both entry points, not just the IPC.
+            const app = buildApp(null);
+            expect(() => app.handleAppStartup(false)).to.not.throw();
+        });
+
+        // The guard's counterpart: it must not over-block. Without this, deleting the whole body
+        // of handleAppStartup would still pass the tests above.
+        it('should still show the window on a normal startup', () => {
+            const show = sinon.stub();
+            const focus = sinon.stub();
+            const app = buildApp({ show, focus });
+
+            app.handleAppStartup(true);
+
+            expect(show).to.have.been.calledOnce();
+            expect(focus).to.have.been.calledOnce();
+            expect(app.windowAlreadyLoaded).to.be.true();
+            expect(app.emit).to.have.been.calledWith('loadingFinished');
+        });
+    });
 });
