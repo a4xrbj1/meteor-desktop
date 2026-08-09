@@ -47,9 +47,16 @@ export default class AssetBundleDownloader {
         this.onProgress = null;
         // Byte totals for download progress. The total is summed HERE, at construction, because
         // `missingAssets` is spliced as each asset lands — by the time the download finishes the
-        // array is empty and the total is unrecoverable. Manifest entries carry `size`
-        // (assetManifest.js), so this is real byte progress, not a file count.
-        this.bytesTotal = missingAssets.reduce((sum, asset) => sum + (asset.size || 0), 0);
+        // array is empty and the total is unrecoverable.
+        //
+        // The field is `entrySize`, NOT `size`. assetManifest.js parses the manifest entry's
+        // `size`, but assetBundle.js's Asset constructor stores it as `this.entrySize`
+        // (assetBundle.js:29), and `missingAssets` holds Asset objects, not manifest entries.
+        // Reading `asset.size` yields undefined for every asset, so both the total and every
+        // increment silently become 0 — a download that reports 0 of 0 bytes forever. The
+        // size-verification check further down this same file (`asset.entrySize !== body.length`)
+        // already had it right.
+        this.bytesTotal = missingAssets.reduce((sum, asset) => sum + (asset.entrySize || 0), 0);
         this.bytesTransferred = 0;
         this.cancelInvoked = false;
 
@@ -157,7 +164,7 @@ export default class AssetBundleDownloader {
             // Emitted here rather than on response arrival: at this point the asset has been
             // verified and written, so the bytes are genuinely on disk. Reporting on arrival
             // would let progress run ahead of a download that then fails verification.
-            self.bytesTransferred += (asset.size || 0);
+            self.bytesTransferred += (asset.entrySize || 0);
             if (self.onProgress) {
                 self.onProgress(self.bytesTransferred, self.bytesTotal);
             }

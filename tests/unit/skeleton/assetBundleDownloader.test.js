@@ -123,6 +123,51 @@ describe('AssetBundleDownloader#verifyResponse (sri integrity)', () => {
     });
 });
 
+describe('AssetBundleDownloader byte progress', () => {
+    before(() => {
+        AssetBundleDownloader = require('../../../skeleton/modules/autoupdate/assetBundleDownloader.js').default;
+    });
+
+    // Builds a downloader over a given missingAssets array. The total is summed in the
+    // CONSTRUCTOR (missingAssets is spliced as assets land), so constructing is the whole test.
+    const withAssets = (missingAssets) => new AssetBundleDownloader(
+        fakeLogger,
+        { rootUrlString: 'https://app.example.com/', appId: 'pzkp2619zyzxgsarhim' },
+        { directoryUri: '/tmp/bundle', getVersion: () => EXPECTED },
+        'https://app.example.com/',
+        missingAssets
+    );
+
+    // REGRESSION, seed frontend-dac7. The 6.0.28 progress feature summed `asset.size`, but
+    // missingAssets holds Asset objects (assetBundle.js:22) whose size lives on `entrySize` —
+    // `size` is the name on the raw MANIFEST entry, one hop earlier, in assetManifest.js. Every
+    // asset therefore contributed `undefined || 0` and the shell reported "0 of 0 bytes" for the
+    // entire download. Observed end-to-end: a real HCP download drove appUpdateTotal 0 and
+    // appUpdateTransferred 0 from start to finish. Inversion: change `entrySize` back to `size`
+    // in assetBundleDownloader.js and this expectation drops to 0.
+    it('sums bytesTotal from the Asset field that actually carries the size', () => {
+        const downloader = withAssets([
+            { filePath: 'a.js', entrySize: 1000 },
+            { filePath: 'b.js', entrySize: 2000 }
+        ]);
+        expect(downloader.bytesTotal).to.equal(3000);
+        expect(downloader.bytesTransferred).to.equal(0);
+    });
+
+    // Pins the field name from the other side: an object shaped like a raw manifest entry must
+    // NOT contribute, because that is not what missingAssets contains. Without this, someone
+    // "simplifying" back to `asset.size` could make the test above pass by changing its fixture.
+    it('ignores a raw manifest-entry shape, which is not what missingAssets holds', () => {
+        expect(withAssets([{ filePath: 'a.js', size: 1000 }]).bytesTotal).to.equal(0);
+    });
+
+    // Index.html and source maps have no size in some manifests; they must not poison the sum.
+    it('tolerates assets with no size rather than producing NaN', () => {
+        const downloader = withAssets([{ filePath: 'index.html' }, { filePath: 'a.js', entrySize: 500 }]);
+        expect(downloader.bytesTotal).to.equal(500);
+    });
+});
+
 describe('AssetBundleDownloader request headers', () => {
     before(() => {
         AssetBundleDownloader = require('../../../skeleton/modules/autoupdate/assetBundleDownloader.js').default;
