@@ -195,3 +195,42 @@ describe('AssetBundleDownloader request headers', () => {
         expect(requests[0].headers.Connection).to.equal('close');
     });
 });
+
+describe('AssetBundleDownloader download concurrency', () => {
+    before(() => {
+        AssetBundleDownloader = require('../../../skeleton/modules/autoupdate/assetBundleDownloader.js').default;
+    });
+
+    // seed meteor-desktop-3669. `new Queue()` defaults to concurrency Infinity, so resume() fired
+    // EVERY missing asset at once — 285 simultaneous requests for the yourdna.family bundle. Measured
+    // against production 2026-08-18: sequential, 20-way and 80-way were 100% 200, while the third
+    // consecutive 151-way burst returned 48x 503. One shed asset calls didFail, which cancels the
+    // whole download, and the app then silently stays on its baked bundle.
+    //
+    // The stub returns a promise that NEVER settles, deliberately: a rejection would reach didFail
+    // and end the queue, so the cap could never be observed. Holding every slot open is what makes
+    // the ceiling measurable. The cap is reached synchronously inside resume(), so the wait below is
+    // only there to let any deferred start land — nothing about the assertion is timing-dependent.
+    // Inversion: restore `new Queue()` and maxInFlight becomes 40.
+    it('never has more than the configured number of asset requests in flight', async () => {
+        const downloader = makeDownloader();
+        downloader.missingAssets = Array.from({ length: 40 }, (asset, index) => ({
+            filePath: `a${index}.js`, urlPath: `/a${index}.js`
+        }));
+        let inFlight = 0;
+        let maxInFlight = 0;
+        downloader.httpClient = () => {
+            inFlight += 1;
+            maxInFlight = Math.max(maxInFlight, inFlight);
+            return new Promise(() => {});
+        };
+
+        downloader.resume();
+        await new Promise((resolve) => {
+            setTimeout(resolve, 20);
+        });
+
+        expect(maxInFlight).to.equal(6);
+        expect(downloader.missingAssets).to.have.lengthOf(40);
+    });
+});

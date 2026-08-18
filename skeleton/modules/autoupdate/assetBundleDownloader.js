@@ -8,6 +8,21 @@ import utils from './utils.js';
 
 const { modernUserAgent } = utils;
 
+// Cap on assets fetched in parallel. `new Queue()` defaults to `concurrency: Infinity`
+// (queue/index.js:18), so EVERY missing asset was requested at once: one HCP download of the
+// yourdna.family bundle is a 285-request simultaneous burst at the Meteor server. Measured against
+// production 2026-08-18, replaying this downloader's exact request shape — 5x sequential, 20 and 80
+// concurrent were 100% 200, and the third consecutive 151-way burst returned 103x 200 and 48x 503.
+// One shed asset fails the WHOLE bundle (verifyResponse -> didFail), and the app then stays on its
+// baked bundle, because the reload is gated on `onNewVersionReady`, which a failed download never
+// fires — so the user silently never receives the update. Seed meteor-desktop-3669. The staging half
+// of the same bug was frontend-a312, seen there as a 429 and fixed only on the server side, which is
+// why it resurfaced on production as a 503.
+//
+// 6 is deliberately far below the measured breaking point rather than just under it: the probe had
+// the server to itself, real clients share it with live users and with each other.
+const DOWNLOAD_CONCURRENCY = 6;
+
 const require = createRequire(import.meta.url);
 
 let originalFs = fs;
@@ -60,7 +75,7 @@ export default class AssetBundleDownloader {
         this.bytesTransferred = 0;
         this.cancelInvoked = false;
 
-        this.queue = new Queue();
+        this.queue = new Queue({ concurrency: DOWNLOAD_CONCURRENCY });
     }
 
     /**
