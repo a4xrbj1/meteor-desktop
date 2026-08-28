@@ -5,11 +5,10 @@ import sinon from 'sinon';
 import fs from 'fs';
 import path from 'path';
 import shell from 'shelljs';
-import mockery from 'mockery';
 
 import * as meteorDesktop from '../helpers/meteorDesktop.js';
+import moduleMock from '../helpers/moduleMock.js';
 import paths from '../helpers/paths.js';
-import mockerySettings from '../helpers/mockerySettings.js';
 
 chai.use(sinonChai);
 chai.use(dirty);
@@ -26,13 +25,13 @@ describe('desktop', () => {
     let MeteorDesktop;
 
     before(() => {
-        mockery.registerMock('electron', Electron);
-        mockery.enable(mockerySettings);
+        moduleMock.registerMock('electron', Electron);
+        moduleMock.enable();
     });
 
     after(() => {
-        mockery.deregisterMock('electron');
-        mockery.disable();
+        moduleMock.deregisterMock('electron');
+        moduleMock.disable();
     });
 
     beforeEach(() => {

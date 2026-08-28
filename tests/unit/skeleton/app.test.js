@@ -2,10 +2,9 @@ import * as chai from 'chai';
 import dirty from 'dirty-chai';
 import sinonChai from 'sinon-chai';
 import sinon from 'sinon';
-import mockery from 'mockery';
 import { createRequire } from 'module';
 
-import mockerySettings from '../../helpers/mockerySettings.js';
+import moduleMock from '../../helpers/moduleMock.js';
 
 chai.use(sinonChai);
 chai.use(dirty);
@@ -26,10 +25,10 @@ const fs = {};
 
 describe('App', () => {
     before(() => {
-        mockery.registerMock('electron', Electron);
-        mockery.registerMock('./desktopPathResolver', {});
-        mockery.registerMock('fs-plus', fs);
-        mockery.enable(mockerySettings);
+        moduleMock.registerMock('electron', Electron);
+        moduleMock.registerMock('./desktopPathResolver', {});
+        moduleMock.registerMock('fs-plus', fs);
+        moduleMock.enable();
         process.env.METEOR_DESKTOP_UNIT_TEST = 'true';
         App = require('../../../skeleton/app.js');
         App = App.default;
@@ -44,10 +43,10 @@ describe('App', () => {
 
     after(() => {
         process.env.METEOR_DESKTOP_UNIT_TEST = 'false';
-        mockery.deregisterMock('./desktopPathResolver');
-        mockery.deregisterMock('fs-plus');
-        mockery.deregisterMock('electron');
-        mockery.disable();
+        moduleMock.deregisterMock('./desktopPathResolver');
+        moduleMock.deregisterMock('fs-plus');
+        moduleMock.deregisterMock('electron');
+        moduleMock.disable();
     });
 
     describe('#emitAsync', () => {

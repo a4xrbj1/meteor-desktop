@@ -32,10 +32,9 @@ import sinonChai from 'sinon-chai';
 import path from 'path';
 import shell from 'shelljs';
 import fs from 'fs';
-import mockery from 'mockery';
 import { createRequire } from 'module';
 
-import mockerySettings from '../../helpers/mockerySettings.js';
+import moduleMock from '../../helpers/moduleMock.js';
 import paths from '../../helpers/paths.js';
 import { serveVersion } from '../../helpers/autoupdate/meteorServer.js';
 import {
@@ -262,14 +261,14 @@ describe('autoupdate', () => {
     before(() => {
         shell.rm('-rf', paths.autoUpdateVersionsPath);
         shell.mkdir('-p', paths.autoUpdateVersionsPath);
-        mockery.registerMock('original-fs', fs);
-        mockery.enable(mockerySettings);
+        moduleMock.registerMock('original-fs', fs);
+        moduleMock.enable();
         HCPClient = require('../../../skeleton/modules/autoupdate').default;
     });
 
     after(() => {
-        mockery.deregisterMock('original-fs');
-        mockery.disable();
+        moduleMock.deregisterMock('original-fs');
+        moduleMock.disable();
     });
 
     describe('when updating from the bundled app version to a downloaded version', () => {
@@ -920,8 +919,8 @@ describe('autoupdate', () => {
             cleanup();
             await shutdownLocalServer();
             await shutdownMeteorServer();
-            mockery.disable();
-            mockery.deregisterAll();
+            moduleMock.disable();
+            moduleMock.deregisterAll();
         });
         it('should fallback to last known good version', async () => {
             await (() => new Promise((resolve) => {

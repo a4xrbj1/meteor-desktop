@@ -2,10 +2,9 @@ import * as chai from 'chai';
 import dirty from 'dirty-chai';
 import sinonChai from 'sinon-chai';
 import sinon from 'sinon';
-import mockery from 'mockery';
 import { createRequire } from 'module';
 
-import mockerySettings from '../../helpers/mockerySettings.js';
+import moduleMock from '../../helpers/moduleMock.js';
 
 chai.use(sinonChai);
 chai.use(dirty);
@@ -23,15 +22,15 @@ let Desktop;
 
 describe('Desktop', () => {
     before(() => {
-        mockery.registerMock('electron', Electron);
-        mockery.enable(mockerySettings);
+        moduleMock.registerMock('electron', Electron);
+        moduleMock.enable();
         desktopModule = require('../../../skeleton/preload.js');
         Desktop = desktopModule.Desktop;
     });
 
     after(() => {
-        mockery.deregisterMock('electron');
-        mockery.disable();
+        moduleMock.deregisterMock('electron');
+        moduleMock.disable();
     });
 
     function testSend(event, module) {
