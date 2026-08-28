@@ -48,6 +48,7 @@ function ManifestEntry(manifestEntry) {
  * @param {string} manifestSource - Manifest source.
  *
  * @property {string} version
+ * @property {string|null} minDesktopVersion
  *
  * @constructor
  */
@@ -66,6 +67,8 @@ export default function AssetManifest(logger, manifestSource) {
          * @type object
          * @property {string} format
          * @property {string|null} version
+         * @property {string=} minDesktopVersion
+         * @property {Object=} PUBLIC_SETTINGS
          * @property {Array} manifest
          */
         json = JSON.parse(manifestSource);
@@ -84,6 +87,19 @@ export default function AssetManifest(logger, manifestSource) {
         } else {
             this.version = json.version;
         }
+
+        // Minimum NATIVE (Electron shell) app version this JS bundle requires — the native-vs-JS
+        // update split of seed meteor-desktop-0a0e. Optional and absent by default: a bundle that
+        // does not declare one is accepted by every native, so no existing app changes behaviour.
+        // Two accepted locations, in precedence order:
+        //   1. top level, for a server that grows an explicit field;
+        //   2. PUBLIC_SETTINGS, i.e. `Meteor.settings.public.minDesktopVersion` — the only one a
+        //      consuming app can publish TODAY with no server-code change (verified against the
+        //      live production `/__browser/manifest.json`, which carries PUBLIC_SETTINGS and has
+        //      no cordovaCompatibilityVersions).
+        this.minDesktopVersion = json.minDesktopVersion
+            || (json.PUBLIC_SETTINGS && json.PUBLIC_SETTINGS.minDesktopVersion)
+            || null;
 
         if (!Array.isArray(json.manifest)) {
             error(`asset manifest 'manifest' field is not an array (got: ${typeof json.manifest})`);
@@ -110,4 +126,5 @@ export default function AssetManifest(logger, manifestSource) {
 /**
  * @typedef {Object} AssetManifest
  * @property {string} version
+ * @property {string|null} minDesktopVersion
  */

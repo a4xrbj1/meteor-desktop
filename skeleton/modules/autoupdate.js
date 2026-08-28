@@ -38,9 +38,11 @@ import url from 'url';
 
 import AssetBundle from './autoupdate/assetBundle.js';
 import AssetBundleManager from './autoupdate/assetBundleManager.js';
+import utils from './autoupdate/utils.js';
 import DesktopPathResolver from '../desktopPathResolver.js';
 
 const { join } = path;
+const { compareCoreVersions } = utils;
 const require = createRequire(import.meta.url);
 
 let originalFs = fs;
@@ -71,6 +73,7 @@ export default class HCPClient {
 
         this.startupTimer = null;
         this.window = null;
+        this.warnedAboutMissingNativeVersion = false;
 
         this.eventsBus = eventsBus;
 
@@ -571,6 +574,82 @@ export default class HCPClient {
     }
 
     /**
+     * Tells the app that a JS bundle was refused because the installed native shell is too old,
+     * so the only way forward is a full signed-binary (electron-updater) update.
+     *
+     * NOTE FOR CONSUMERS: nothing in meteor-desktop acts on this. The app has to subscribe and
+     * drive its own native updater — until it does, the gate's whole effect is that HCP stops for
+     * that bundle. It is re-emitted on every check (the renderer polls every 10 minutes), exactly
+     * like the existing blacklist notification, so debounce it before showing UI.
+     *
+     * @param {String} version  - Version of the refused bundle.
+     * @param {String} required - Minimum native version the bundle declared.
+     * @param {String} installed - Native version actually installed.
+     *
+     * @private
+     */
+    notifyNativeUpdateRequired(version, required, installed) {
+        const payload = { version, required, installed };
+        this.eventsBus.emit('nativeUpdateRequired', payload);
+        this.module.send('onNativeUpdateRequired', payload);
+    }
+
+    /**
+     * Native-vs-JS compatibility gate (seed meteor-desktop-0a0e).
+     *
+     * Native and JS update on independent channels — native only through electron-updater
+     * (desktopHCP was removed in v6.0.0), JS bundles over the air through HCP — so a bundle built
+     * against desktop APIs a user's installed shell does not have can otherwise be served to it.
+     *
+     * The comparison is ORDERED (`installed >= required`), not an equality test, and that is
+     * deliberate. It makes the safe direction safe: an OLD bundle on a NEW native is accepted,
+     * which is what happens to a pending bundle right after a native update, and it also means
+     * forgetting to publish a bump degrades to "gate too permissive" rather than "HCP dead for the
+     * whole fleet". Seed 0a0e's literal wording was an EQUALITY test on the build-time
+     * `compatibilityVersion` md5; that value is unordered, so it cannot tell those two directions
+     * apart. See CHANGELOG for the deviation.
+     *
+     * Fail-open on absence: a bundle that declares nothing, or a native with no version in its
+     * settings, is accepted.
+     *
+     * @param {AssetManifest} manifest - Manifest of the offered bundle.
+     *
+     * @returns {Boolean} - True when the installed native can run this bundle.
+     * @private
+     */
+    isNativeCompatibleWithManifest(manifest) {
+        const required = manifest.minDesktopVersion;
+        if (!required) {
+            return true;
+        }
+
+        const installed = this.appSettings && this.appSettings.version;
+        if (!installed) {
+            // Once, not on every poll: the renderer re-checks every 10 minutes, and a build with no
+            // version paired with a floor-declaring server would otherwise warn forever.
+            if (!this.warnedAboutMissingNativeVersion) {
+                this.warnedAboutMissingNativeVersion = true;
+                this.log.warn(
+                    `bundle ${manifest.version} requires native version ${required} but this build `
+                    + 'has no version in its desktop settings — accepting it'
+                );
+            }
+            return true;
+        }
+
+        if (compareCoreVersions(installed, required) >= 0) {
+            return true;
+        }
+
+        this.log.warn(
+            `skipping bundle ${manifest.version}: it requires native version ${required}, `
+            + `installed is ${installed} — a native update is needed`
+        );
+        this.notifyNativeUpdateRequired(manifest.version, required, installed);
+        return false;
+    }
+
+    /**
      * Method that decides whether we are interested in the new bundle that we were notified about.
      * Called by assetBundleManager.
      * @param {AssetManifest} manifest - manifest of the new bundle
@@ -579,6 +658,13 @@ export default class HCPClient {
      */
     shouldDownloadBundleForManifest(manifest) {
         const { version } = manifest;
+
+        // Compat first, ahead of the current/pending/blacklist skips: those answer "do we already
+        // have it", this answers "may we run it at all", and the app is entitled to hear that a
+        // native update is due even for a version it happens to be holding.
+        if (!this.isNativeCompatibleWithManifest(manifest)) {
+            return false;
+        }
 
         // No need to redownload the current version.
         if (this.currentAssetBundle.getVersion() === version) {

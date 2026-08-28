@@ -10,6 +10,7 @@ WebAppLocalServer = {
     onVersionsCleanedUpCallback: null,
     onDownloadStartedCallback: null,
     onDownloadProgressCallback: null,
+    onNativeUpdateRequiredCallback: null,
 
     startupDidComplete(callback) {
         this.onVersionsCleanedUpCallback = callback;
@@ -33,6 +34,15 @@ WebAppLocalServer = {
 
     onDownloadProgress(callback) {
         this.onDownloadProgressCallback = callback;
+    },
+
+    // Native-vs-JS update split (seed meteor-desktop-0a0e). Fires when the desktop side refused a
+    // JS bundle because the installed native shell is older than the minimum the bundle declares,
+    // with { version, required, installed }. Nothing in meteor-desktop acts on it — subscribe and
+    // drive your own electron-updater check. Re-emitted on every 10-minute poll while the mismatch
+    // stands, so debounce before showing UI.
+    onNativeUpdateRequired(callback) {
+        this.onNativeUpdateRequiredCallback = callback;
     },
 
     onError(callback) {
@@ -74,6 +84,14 @@ Desktop.on('autoupdate', 'onDownloadStarted', (event, bytesTotal) => {
 Desktop.on('autoupdate', 'onDownloadProgress', (event, bytesTransferred, bytesTotal) => {
     if (WebAppLocalServer.onDownloadProgressCallback) {
         WebAppLocalServer.onDownloadProgressCallback(bytesTransferred, bytesTotal);
+    }
+});
+
+Desktop.on('autoupdate', 'onNativeUpdateRequired', (event, args) => {
+    if (WebAppLocalServer.onNativeUpdateRequiredCallback) {
+        WebAppLocalServer.onNativeUpdateRequiredCallback(args);
+    } else {
+        console.warn('[meteor-desktop] HCP bundle needs a newer native shell:', args);
     }
 });
 

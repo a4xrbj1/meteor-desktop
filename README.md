@@ -388,6 +388,54 @@ You can also analyze `autoupdate.log` if you are experiencing any issues.
 
 > **Note:** `.desktop` hot code push (desktopHCP) was removed in v6.0.0 because it is incompatible with rspack-based Meteor 3.x projects. Meteor's standard web.browser HCP continues to work. If you need desktopHCP, fork [v5.1.7](https://github.com/a4xrbj1/meteor-desktop/tree/v5.1.7).
 
+### Requiring a minimum native version for a JS bundle
+
+Since desktopHCP was removed, the native shell and the JS bundle update on **independent channels**:
+the shell only through a full signed-binary `electron-updater` release, the JS bundle over the air
+through HCP. So a bundle built against a desktop module the user's installed shell does not have can
+otherwise be served to it.
+
+A bundle can declare the oldest native it is willing to run on. Publish it from your Meteor server
+in `Meteor.settings.public`:
+
+```json
+{ "public": { "minDesktopVersion": "5.4.0" } }
+```
+
+That value reaches the desktop side in the manifest's `PUBLIC_SETTINGS`, so **no server-code change
+is needed**. A top-level `minDesktopVersion` in `program.json` is also honoured, and takes
+precedence, for servers that grow an explicit field.
+
+It is compared against `version` in your built `.desktop/settings.json` — the app's own semver.
+The check is `installed >= required` on the numeric `major.minor.patch` core, so:
+
+| | |
+|---|---|
+| Bundle declares nothing | accepted — this is the default, and no existing app changes behaviour |
+| Installed native is newer than required | accepted (an older bundle on a newer shell is safe) |
+| Installed native is older than required | **refused**, and `onNativeUpdateRequired` fires |
+| A prerelease, e.g. `5.4.0-beta.1` | equal to `5.4.0`; the suffix is ignored |
+
+**Nothing in meteor-desktop acts on the refusal.** Subscribe and drive your own native update:
+
+```js
+WebAppLocalServer.onNativeUpdateRequired(({ version, required, installed }) => {
+    // e.g. ask the main process to run its electron-updater check
+});
+```
+
+Until you do, the only effect of a refusal is that HCP stops for that bundle. The refused version is
+**not** blacklisted, so it is accepted as soon as the native catches up — but the event re-fires on
+every update check (the bundled renderer bootstrap polls every 10 minutes), so debounce it before
+showing anything to the user.
+
+> **Ship the gate before you publish a floor.** The check lives in the shell, so it only exists in
+> apps built with a `meteor-desktop` that has it. An already-installed older shell has no gate and
+> will happily download and run a floor-declaring bundle — which is the population a floor is meant
+> to protect. Release the gate-carrying native first, then start publishing floors. The gate also
+> only refuses a *download*: a bundle that a pre-gate shell already fetched stays in `versions/` and
+> is still loaded at the next launch. It is a forward guard, not an eviction.
+
 ---
 
 ## `Meteor.isDesktop`
