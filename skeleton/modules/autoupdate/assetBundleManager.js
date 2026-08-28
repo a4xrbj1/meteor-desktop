@@ -523,12 +523,25 @@ class AssetBundleManager {
 
             if (cachedAsset !== null) {
                 try {
-                    if (~cachedAsset.getFile().indexOf('desktop.asar')) {
-                        originalFs.createReadStream(cachedAsset.getFile())
-                            .pipe(originalFs.createWriteStream(asset.getFile()));
-                    } else {
-                        fs.copyFileSync(cachedAsset.getFile(), asset.getFile());
-                    }
+                    // A `desktop.asar` special case used to sit here, copying through an unawaited
+                    // createReadStream().pipe(). It was residue of desktopHCP, removed in v6.0.0
+                    // (commit 1bc104c) — only that feature ever put a desktop.asar into an HCP
+                    // bundle. What makes it unreachable now is structural rather than historical:
+                    // `cachedAssetForUrlPath` is an exact key lookup into `ownAssetsByURLPath` by
+                    // the REQUESTED asset's urlPath, so a cached desktop.asar can only be returned
+                    // for a request whose own urlPath is a desktop.asar path — and requested
+                    // urlPaths come only from the server's `__browser/manifest.json` or from a
+                    // program.json this module wrote from that body, neither of which Meteor ever
+                    // fills with an asar. A stale pre-6.0.0 `versions/` directory is therefore dead
+                    // weight on disk, never a lookup hit.
+                    //
+                    // It was also the one copy here that could not fail safely: stream errors are
+                    // emitted a tick after this catch has returned, so they escaped both this try
+                    // and the abort added for seed meteor-desktop-0cd8, and the pipe was not
+                    // awaited even on success — the download could finish and promote the bundle
+                    // while the copy was still in flight (seed meteor-desktop-1886). copyFileSync
+                    // fails CLOSED instead: it throws synchronously, which aborts the download.
+                    fs.copyFileSync(cachedAsset.getFile(), asset.getFile());
                 } catch (e) {
                     this.didFail(e.message);
                     return false;
