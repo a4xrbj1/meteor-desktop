@@ -151,7 +151,7 @@ describe('AssetBundleManager', () => {
         return { manager, downloadBundle, events };
     };
 
-    const waitFor = (predicate, timeout = 4000) => new Promise((resolve, reject) => {
+    const waitFor = (predicate, timeout = 10000) => new Promise((resolve, reject) => {
         const started = Date.now();
         const tick = () => {
             if (predicate()) {
@@ -264,15 +264,17 @@ describe('AssetBundleManager', () => {
             expect(events.filter(([name]) => name === 'error')).to.have.lengthOf(1);
         });
 
-        // The watchdog must not kill a download that is making progress. 30 assets at 80ms with the
-        // downloader's concurrency of 6 is five waves, ~400ms — deliberately LONGER than the 300ms
-        // window, so only the re-arm on each completed asset can carry it through, while each
-        // individual wave has 220ms of slack so a loaded machine does not false-fire the test.
-        // Inversion: delete armStallTimer() from the progress callback and this fails with a
-        // stall error partway through the fourth wave.
+        // The watchdog must not kill a download that is making progress. 60 assets at 60ms with the
+        // downloader's concurrency of 6 is ten waves, ~600ms — deliberately LONGER than the 400ms
+        // window, so only the re-arm on each completed asset can carry it through. What the window
+        // has to survive is a WAVE, not the total, and a wave is nominally 60ms: 340ms of slack,
+        // about six times over. The earlier 30-at-80ms/300ms version left only 220ms and was seen
+        // to false-fire while a consumer build was saturating the machine (the suite took 1m
+        // instead of 24s on that run). Inversion: delete armStallTimer() from the progress callback
+        // and this fails with a stall error partway through.
         it('does not fire while assets keep completing', async () => {
-            await startServer(80);
-            const { manager, downloadBundle, events } = build({ hcpStallTimeout: 300 }, 30);
+            await startServer(60);
+            const { manager, downloadBundle, events } = build({ hcpStallTimeout: 400 }, 60);
 
             manager.downloadAssetBundle(downloadBundle, baseUrl);
 
