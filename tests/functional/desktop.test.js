@@ -62,7 +62,10 @@ describe('desktop', () => {
             const logStub = new StubLog(MeteorDesktop.desktop, ['info']);
             MeteorDesktop.env.paths.desktop.root = paths.fixtures.desktop;
             const version = await MeteorDesktop.desktop.getHashVersion();
-            expect(version).to.be.equal('6cc4370c9597b72cf1656880c93392866f6aa71c');
+            // Golden value over the CONTENTS of every file in tests/fixtures/.desktop, so any edit
+            // there - even one comment character - fails this. Regenerate, never loosen. One line:
+            // node -e "import('./lib/utils.js').then(async u=>console.log((await u.readFilesAndComputeHash('tests/fixtures/.desktop')).hash))"
+            expect(version).to.be.equal('923665332aa76e05ce74a33fac58ff22ef742f2d');
             logStub.restore();
         });
     });
