@@ -501,6 +501,52 @@ describe('AssetBundleManager', () => {
             expect(errors.some((cause) => cause.includes('ENOENT'))).to.be.false();
         });
     });
+    describe('an unpreparable asset aborts the download (seed meteor-desktop-0cd8)', () => {
+        // The failure had to be reached the way production would reach it, not simulated: a real
+        // file sitting where a parent directory needs to be makes lstatSync throw ENOTDIR and then
+        // mkdirSync -r throw ENOTDIR too, which is the exact pair of throws the guard catches.
+        it('does not finish a bundle whose asset directory cannot be created', async () => {
+            await startServer(0);
+            const initialBundle = new AssetBundle(
+                fakeLogger, writeBundleDir(path.join(root, 'initial'), 'initialversion', 1)
+            );
+            const manager = new AssetBundleManager(
+                fakeLogger, { appId: 'appid', rootUrlString: baseUrl }, initialBundle, versionsDir, {}
+            );
+            const wanted = entry({ path: 'app/blocked/deep.js', url: '/app/blocked/deep.js' });
+            const downloadDir = writeBundleWithEntries(
+                path.join(versionsDir, 'Downloading'), 'newversion', [wanted]
+            );
+            // `app` is a FILE, so the containing directory app/blocked can never be created.
+            fs.rmSync(path.join(downloadDir, 'app'), { recursive: true, force: true });
+            fs.writeFileSync(path.join(downloadDir, 'app'), 'not a directory');
+            const manifest = new AssetManifest(
+                fakeLogger,
+                JSON.stringify({ format: 'web-program-pre1', version: 'newversion', manifest: [wanted] })
+            );
+            const downloadBundle = new AssetBundle(fakeLogger, downloadDir, manifest, initialBundle);
+            const events = [];
+            manager.setCallback({
+                onError: (cause) => events.push(['error', String(cause)]),
+                onDownloadStarted: () => events.push(['started']),
+                onDownloadProgress: () => events.push(['progress']),
+                onFinishedDownloadingAssetBundle: () => events.push(['finished'])
+            });
+
+            manager.downloadAssetBundle(downloadBundle, baseUrl);
+
+            await waitFor(() => events.some(([name]) => name === 'error'));
+            expect(events.find(([name]) => name === 'error')[1])
+                .to.contain('could not create containing directory');
+            // Give any download that WOULD have been started time to finish and report.
+            await new Promise((resolve) => { setTimeout(resolve, 400); });
+            // Inversion: change the `every` back to `forEach` and 'finished' arrives after the
+            // error — the bundle completes, gets moved into versions/, and is short one asset.
+            expect(events.some(([name]) => name === 'finished')).to.be.false();
+            expect(events.some(([name]) => name === 'started')).to.be.false();
+        });
+    });
+
     describe('overlapping downloads (seed meteor-desktop-912a)', () => {
         let servedVersion;
         let manifestStatus;

@@ -497,7 +497,13 @@ class AssetBundleManager {
     downloadAssetBundle(assetBundle, baseUrl) {
         const missingAssets = [];
 
-        assetBundle.getOwnAssets().forEach((asset) => {
+        // `every` rather than `forEach`, so a failure ABORTS THE DOWNLOAD instead of just the
+        // iteration (seed meteor-desktop-0cd8). Both failures below used to `didFail` and carry on:
+        // the asset was then neither copied nor pushed onto missingAssets, so nothing downloaded it
+        // either, the remaining assets finished normally, and the bundle was moved into `versions/`
+        // and served MISSING that asset. It also emitted an error followed by onNewVersionReady for
+        // the same check, which is the "exactly one outcome" contract Stage 4 established.
+        const allAssetsPrepared = assetBundle.getOwnAssets().every((asset) => {
             // Create containing directories for the asset if necessary
             const containingDirectory = path.dirname(asset.getFile());
 
@@ -508,7 +514,7 @@ class AssetBundleManager {
                     fs.mkdirSync(containingDirectory, { recursive: true });
                 } catch {
                     this.didFail(`could not create containing directory: ${containingDirectory}`);
-                    return;
+                    return false;
                 }
             }
 
@@ -525,11 +531,18 @@ class AssetBundleManager {
                     }
                 } catch (e) {
                     this.didFail(e.message);
+                    return false;
                 }
             } else {
                 missingAssets.push(asset);
             }
+            return true;
         });
+
+        // didFail has already reported the cause; going on would ship a bundle short of an asset.
+        if (!allAssetsPrepared) {
+            return;
+        }
 
         // If all assets were cached, there is no need to start a download.
         if (missingAssets.length === 0) {
@@ -554,7 +567,9 @@ class AssetBundleManager {
         // recognised a download of the same version already running nor cancelled one of a
         // different version — both then wrote into the same `Downloading` directory and
         // `moveExistingDownloadDirectoryIfNeeded` renamed it out from under whichever was still
-        // running. Cleared again in `didFail` and `didFinishDownloadingAssetBundle`.
+        // running. Released by `releaseDownloader` at the three points where this download's own
+        // run ends — NOT by `didFail`, which is reached by callers that have no download of their
+        // own and would otherwise free another poll's slot.
         this.assetBundleDownloader = assetBundleDownloader;
         const stallTimeout = this.resolveTimeout('hcpStallTimeout', DEFAULT_HCP_STALL_TIMEOUT);
 
@@ -628,9 +643,11 @@ class AssetBundleManager {
                 }
             }
         );
-        // Announced only once a real download is committed to: everything above this point can
-        // still short-circuit (all assets cached at :392, or the bundle rejected at :120), and a
-        // consumer that blocked the UI on a download that never starts would hang the app.
+        // Announced only once a real download is committed to, and everything above this point can
+        // still short-circuit: an asset that could not be prepared, every asset already cached, or
+        // the bundle refused by `shouldDownloadBundleForManifest`. A consumer that blocked its UI on
+        // a download that never starts would hang the app. (Line numbers deliberately omitted — the
+        // previous version of this comment cited two that had already drifted.)
         if (this.callback !== null && this.callback.onDownloadStarted) {
             this.callback.onDownloadStarted(assetBundleDownloader.bytesTotal);
         }
