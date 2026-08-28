@@ -77,8 +77,7 @@ const Desktop = new (class {
      * @returns {Promise}
      */
     fetchFile(absolutePath) {
-        // @ts-expect-error vestigial 2nd arg silently dropped — getFileUrl takes one param (seed meteor-desktop-ab39)
-        return fetch(this.getFileUrl(absolutePath, false));
+        return fetch(this.getFileUrl(absolutePath));
     }
 
     /**
@@ -88,8 +87,7 @@ const Desktop = new (class {
      * @returns {Promise}
      */
     fetchAsset(assetPath) {
-        // @ts-expect-error vestigial 2nd arg silently dropped — getAssetUrl takes one param (seed meteor-desktop-ab39)
-        return fetch(this.getAssetUrl(assetPath, false));
+        return fetch(this.getAssetUrl(assetPath));
     }
 
     /**

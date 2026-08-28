@@ -131,8 +131,7 @@ class AssetBundleManager {
                 // There is no need to re-download the initial version.
                 if (this.initialAssetBundle.getVersion() === version) {
                     this.log.debug('No redownload of initial version.');
-                    // @ts-expect-error caller passes a vestigial isInitialAssetBundle arg the method no longer accepts (seed meteor-desktop-566b)
-                    this.didFinishDownloadingAssetBundle(this.initialAssetBundle, true);
+                    this.didFinishDownloadingAssetBundle(this.initialAssetBundle);
                     return;
                 }
 
