@@ -264,14 +264,15 @@ describe('AssetBundleManager', () => {
             expect(events.filter(([name]) => name === 'error')).to.have.lengthOf(1);
         });
 
-        // The watchdog must not kill a download that is making progress. 18 assets at 120ms with
-        // the downloader's concurrency of 6 is three waves, ~360ms — deliberately LONGER than the
-        // 250ms window, so only the re-arm on each completed asset can carry it through.
+        // The watchdog must not kill a download that is making progress. 30 assets at 80ms with the
+        // downloader's concurrency of 6 is five waves, ~400ms — deliberately LONGER than the 300ms
+        // window, so only the re-arm on each completed asset can carry it through, while each
+        // individual wave has 220ms of slack so a loaded machine does not false-fire the test.
         // Inversion: delete armStallTimer() from the progress callback and this fails with a
-        // stall error partway through the third wave.
+        // stall error partway through the fourth wave.
         it('does not fire while assets keep completing', async () => {
-            await startServer(120);
-            const { manager, downloadBundle, events } = build({ hcpStallTimeout: 250 }, 18);
+            await startServer(80);
+            const { manager, downloadBundle, events } = build({ hcpStallTimeout: 300 }, 30);
 
             manager.downloadAssetBundle(downloadBundle, baseUrl);
 
