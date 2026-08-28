@@ -46,13 +46,17 @@ function ManifestEntry(manifestEntry) {
  *
  * @param {Object} logger         - Logger instance.
  * @param {string} manifestSource - Manifest source.
+ * @param {String} [origin]       - Where the manifest came from: `served` (fetched from the Meteor
+ *                                  server) or `bundled` (read off disk). Governs only how loud the
+ *                                  missing-version fallback is; `served` is the default so a new
+ *                                  call site that forgets to say keeps the warning.
  *
  * @property {string} version
  * @property {string|null} minDesktopVersion
  *
  * @constructor
  */
-export default function AssetManifest(logger, manifestSource) {
+export default function AssetManifest(logger, manifestSource, origin = 'served') {
     const log = logger.getLoggerFor('AssetManifest');
     let json;
     let format;
@@ -78,11 +82,27 @@ export default function AssetManifest(logger, manifestSource) {
             error(`The asset manifest format is incompatible: ${format}`);
         }
         if (!('version' in json) || json.version === null) {
-            // Meteor 3.x omits the version field from program.json.
             // Derive a stable version from a SHA-256 hash of the manifest content.
+            //
+            // For a BUNDLED manifest this is the normal case, not a defect. Meteor's build never
+            // writes `version` into program.json on disk: `webapp` attaches lazy version getters to
+            // WebApp.clientPrograms[arch] and materialises them only when it serves
+            // /__<arch>/manifest.json (webapp_server.js, `newProgram.version = () => ...` and the
+            // staticFiles[manifestUrl] handler). So every embedded bundle lands here, and shouting
+            // about it on every startup is how seed meteor-desktop-e490 came to record a
+            // non-existent "rspack does not populate clientPrograms" root cause. Measured against
+            // production 2026-08-28: the SERVED manifest carries a real, changing
+            // WebAppHashing.calculateClientHash value, and only the on-disk artifact lacks one.
+            //
+            // For a SERVED manifest the field really should be there, so that stays a warning.
             const derivedVersion = crypto.createHash('sha256')
                 .update(manifestSource).digest('hex').substring(0, 40);
-            log.warn(`asset manifest has no version field — derived hash version: ${derivedVersion}`);
+            const message = `asset manifest has no version field — derived hash version: ${derivedVersion}`;
+            if (origin === 'bundled') {
+                log.debug(`${message} (normal for a bundled manifest — Meteor adds the version at serve time)`);
+            } else {
+                log.warn(message);
+            }
             this.version = derivedVersion;
         } else {
             this.version = json.version;

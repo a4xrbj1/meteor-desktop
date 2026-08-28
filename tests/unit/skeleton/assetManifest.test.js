@@ -19,6 +19,25 @@ const fakeLogger = {
     }
 };
 
+/**
+ * A logger whose sub-logger appends every warning to the supplied array.
+ *
+ * @param {Array<String>} warnings - Collector.
+ *
+ * @returns {Object} - Logger.
+ */
+const collectingLogger = (warnings) => ({
+    getLoggerFor() {
+        return {
+            debug: noop,
+            verbose: noop,
+            info: noop,
+            warn: (message) => warnings.push(message),
+            error: noop
+        };
+    }
+});
+
 // Shape taken from the live production /__browser/manifest.json (Meteor 3.5.1), trimmed to the
 // fields AssetManifest reads. Real shape, not an invented one: one client entry, format
 // web-program-pre1, a top-level version, and a PUBLIC_SETTINGS object.
@@ -36,6 +55,54 @@ const manifestJson = (extra) => JSON.stringify({
         sri: 'Zm9v'
     }],
     ...extra
+});
+
+describe('AssetManifest#version fallback origin', () => {
+    // A build artifact on disk NEVER has a version: webapp attaches lazy version getters to
+    // WebApp.clientPrograms[arch] and materialises them only when it serves
+    // /__<arch>/manifest.json. So a bundled manifest hitting the fallback is normal and must not
+    // warn — that warning fired on every startup and is how seed meteor-desktop-e490 came to
+    // record a root cause that does not exist. A SERVED manifest with no version is abnormal and
+    // still warns. Inversion: make both branches warn and the first test fails.
+    const versionlessManifest = JSON.stringify({
+        format: 'web-program-pre1',
+        manifest: [{
+            path: 'app/app.js', url: '/app/app.js', type: 'js', where: 'client', cacheable: true, size: 1
+        }]
+    });
+
+    before(() => {
+        AssetManifest = require('../../../skeleton/modules/autoupdate/assetManifest.js').default;
+    });
+
+    it('does not warn for a bundled manifest, and still derives a version', () => {
+        const warnings = [];
+        const manifest = new AssetManifest(collectingLogger(warnings), versionlessManifest, 'bundled');
+        expect(warnings).to.deep.equal([]);
+        expect(manifest.version).to.match(/^[0-9a-f]{40}$/);
+    });
+
+    it('warns for a served manifest with no version', () => {
+        const warnings = [];
+        const manifest = new AssetManifest(collectingLogger(warnings), versionlessManifest, 'served');
+        expect(warnings.join('\n')).to.include('has no version field');
+        expect(manifest.version).to.match(/^[0-9a-f]{40}$/);
+    });
+
+    // The default has to be the loud one, so a call site that forgets to declare its origin keeps
+    // the warning rather than silently losing it.
+    it('defaults to the served (warning) behaviour', () => {
+        const warnings = [];
+        const manifest = new AssetManifest(collectingLogger(warnings), versionlessManifest);
+        expect(manifest.version).to.match(/^[0-9a-f]{40}$/);
+        expect(warnings.join('\n')).to.include('has no version field');
+    });
+
+    it('derives the same version regardless of origin', () => {
+        const a = new AssetManifest(collectingLogger([]), versionlessManifest, 'bundled');
+        const b = new AssetManifest(collectingLogger([]), versionlessManifest, 'served');
+        expect(a.version).to.equal(b.version);
+    });
 });
 
 describe('AssetManifest#minDesktopVersion', () => {

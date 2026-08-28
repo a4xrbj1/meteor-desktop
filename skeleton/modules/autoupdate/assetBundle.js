@@ -271,7 +271,8 @@ export default class AssetBundle {
         try {
             return new AssetManifest(
                 this.log,
-                fs.readFileSync(manifestPath, 'utf-8')
+                fs.readFileSync(manifestPath, 'utf-8'),
+                'bundled'
             );
         } catch (e) {
             const msg = `error loading asset manifest: ${e.message}`;
