@@ -27,18 +27,6 @@ export default class DesktopPathResolver {
     }
 
     /**
-     * Reads a json file.
-     * @returns {Object}
-     */
-    static readJsonFile(jsonFilePath) {
-        try {
-            return JSON.parse(fs.readFileSync(jsonFilePath, 'utf-8'));
-        } catch {
-            return {};
-        }
-    }
-
-    /**
      * Reads a stable signature for the embedded bootstrap state.
      * It covers the files that decide startup semantics:
      * - meteor program.json

@@ -71,4 +71,23 @@ describe('cli binary entry (.bin symlink)', () => {
             fs.rmSync(halfAnApp, { recursive: true, force: true });
         }
     });
+
+    // This path used to exit 0 on purpose - "Do not fail, so that npm will not print his error
+    // stuff to console" - which made a refusal indistinguishable from a successful build for any
+    // script driving the CLI, the exact defect seed meteor-desktop-a8f8 closed elsewhere. The npm
+    // rationale is stale: on npm 12.0.2 a failing script prints two `npm notice` lines and no
+    // error block at all. `run` reaches the same guard, since it is `build(true)`. Inversion:
+    // restore `process.exit(0)` in electronApp.js and the status is 0 (verified, seed
+    // meteor-desktop-a86c).
+    it('exits non-zero when the .desktop dir is missing', () => {
+        const noDesktop = fs.mkdtempSync(path.join(os.tmpdir(), 'md-no-desktop-'));
+        fs.mkdirSync(path.join(noDesktop, '.meteor'));
+        try {
+            const r = runViaBinSymlink(['build'], noDesktop);
+            expect(r.status).to.equal(1);
+            expect(`${r.stdout}${r.stderr}`).to.contain('you do not have a .desktop dir');
+        } finally {
+            fs.rmSync(noDesktop, { recursive: true, force: true });
+        }
+    });
 });
