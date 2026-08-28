@@ -19,7 +19,6 @@ const { expect } = chai;
 const require = createRequire(import.meta.url);
 
 const Electron = { protocol: { registerStandardSchemes: Function.prototype } };
-const Winston = {};
 
 let App;
 
@@ -28,7 +27,6 @@ const fs = {};
 describe('App', () => {
     before(() => {
         mockery.registerMock('electron', Electron);
-        mockery.registerMock('winston', Winston);
         mockery.registerMock('./desktopPathResolver', {});
         mockery.registerMock('fs-plus', fs);
         mockery.enable(mockerySettings);
@@ -49,7 +47,6 @@ describe('App', () => {
         mockery.deregisterMock('./desktopPathResolver');
         mockery.deregisterMock('fs-plus');
         mockery.deregisterMock('electron');
-        mockery.deregisterMock('winston');
         mockery.disable();
     });
 

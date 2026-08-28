@@ -9,7 +9,7 @@ import { app, dialog } from 'electron';
  */
 export default class Desktop {
     /**
-     * @param {Object} log         - Winston logger instance
+     * @param {Object} log         - Logger instance
      * @param {Object} skeletonApp - reference to the skeleton app instance
      * @param {Object} appSettings - settings.json contents
      * @param {Object} eventsBus   - event emitter for listening or emitting events

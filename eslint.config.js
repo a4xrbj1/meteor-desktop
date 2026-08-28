@@ -50,7 +50,6 @@ export default [
         },
         settings: {
             'import-x/core-modules': [
-                'winston',
                 'original-fs',
                 'electron',
                 'electron-debug',

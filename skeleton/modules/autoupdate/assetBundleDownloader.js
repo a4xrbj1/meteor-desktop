@@ -36,7 +36,7 @@ export default class AssetBundleDownloader {
     /**
      * Assets downloader - responsible for downloading an asset version.
      *
-     * @param {object}      log           - Winston reference.
+     * @param {object}      log           - Logger instance from loggerManager.
      * @param {object}      configuration - Configuration object.
      * @param {AssetBundle} assetBundle   - Parent asset bundle.
      * @param {string}      baseUrl       - Url of the meteor server.

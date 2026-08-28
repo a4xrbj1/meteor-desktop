@@ -1,5 +1,35 @@
 ## Unreleased
 
+**Dropped `winston` from the skeleton — the logger is now ~200 lines with zero dependencies (seed `meteor-desktop-f570`).** `skeleton/loggerManager.js` was a thin wrapper over `winston@3.13.0` — **1.4 MB and 11 transitive dependencies installed into every consumer's `.meteor/desktop-build`** — to obtain one console sink, one 5 MB x 5 rotating file sink, and a name -> logger registry. Worse, the wrapper had been written against **winston 2** and never migrated, so it was paying that cost for behaviour it was not getting. Every claim below is measured against a real 4.1 MB production `run.log`, not inferred:
+
+| What the code asked for | What actually happened |
+|---|---|
+| `logger.filters.push(...)` to prefix every line with `[entityName]` | winston 3 removed `filters` outright. `grep -c '^\['` over the whole file returns **0** — the prefix never appeared, in any line, ever |
+| `json: false` and `colorize` on the File transport | winston 2 transport options; winston 3 takes a `format`. Output was JSON regardless |
+| `l.info('app data dir is:', userDataDir)` | The second argument was **dropped** — winston 3 needs `format.splat()`. Line 1 of run.log reads `{"level":"info","message":"app data dir is:"}` with the path gone. **5 call sites** logged this way |
+| `l.error(e)` on a caught Error | No stack recorded. The entire 4.1 MB file contains no `stack` key |
+
+Replaced rather than swapped for `electron-log`: the used surface is five level methods, one console sink, one size-rotated file and a registry. Trading one dependency for another buys nothing here.
+
+### Changes
+
+* **`skeleton/loggerManager.js` — rewritten, 318 lines, no imports beyond `fs`/`path`.** Exports the same `default class LoggerManager` with the same public surface — `getMainLogger()`, `configureLogger(name)`, `configureSubLogger(name, sub)`, and `logger.getLoggerFor(sub)` on each logger instance — so no caller changed. `RotatingFile` holds one descriptor open, writes with `fs.writeSync`, and rotates `run5 <- run4 <- ... <- run1 <- run.log` with the oldest unlinked — the same `MAX_FILE_SIZE = 5242880` / `MAX_ARCHIVES = 5` set winston's File transport produced.
+* **The record shape is `{ level, message, entity }`, in that order, with the message text unprefixed.** This is a hard constraint, not a preference: `frontend/.desktop/telemetry.js:42` strips HCP asset churn out of uploaded crash reports with `RUN_LOG_NOISE = /"message":"(saving \/|making bundle object|...)/`, which anchors on `"message":"` immediately followed by the text. "Fixing" the dead `[entity]` prefix by prefixing the *message* would have silently killed that filter and flooded every uploaded report with asset noise. The entity gets its own trailing field instead.
+* **The four silent losses above are fixed**: multiple arguments are joined, `Error` arguments keep their stack (newlines escaped by `JSON.stringify`, so a record is still exactly one physical line), and the entity is recorded in a field that actually reaches the file.
+* **`lib/skeletonDependencies.js` — `winston: '3.13.0'` removed.** Consumers' `desktop-build/package.json` no longer installs it.
+* **The silent `Function.prototype` fallback is gone.** The old `try { require('winston') } catch` replaced every level method with a no-op, so a failed require lost `run.log` for the whole session with no error — and it never defined `verbose`, which the skeleton calls **20 times**, so it would have thrown rather than no-opped. A write failure now reports once and backs off (`RETRY_AFTER_WRITES = 100`) instead of disabling the sink permanently.
+* **Half of `frontend-d466` goes with it.** That seed records a launch-time `MaxListenersExceededWarning: 11 listeners` attributed to winston's File transport accumulating one listener per module logger. The new sink is a single open descriptor written with `fs.writeSync` — no `EventEmitter`, no stream, no `.on(` anywhere in the file — so that warning has no producer left. Stated structurally, not as an observation: confirming it is part of the same Rule 48 launch below. The seed's other half (upstream `DEP0180 fs.Stats` from Electron's asar fs wrapper) is untouched.
+* **Orphans removed in the same sweep**: the dead `mockery.registerMock('winston', ...)` in `tests/unit/skeleton/app.test.js`, `'winston'` in `eslint.config.js`'s `import-x/core-modules`, and six now-false `@param {Object} log - Winston logger instance` JSDoc lines (two of them in `scaffold/`, i.e. shipped into every new consumer's `.desktop/`).
+
+### Verification (Rules 41/48/57)
+
+* **28 checks across three runs of the real module** — record shape and level routing (14), rotation and write-failure backoff (9), recovery from a real `EBADF` (5). Rotation asserts the archive set stays bounded at 5 + live and that the oldest is unlinked.
+* **No mocks.** Per this workspace's Anti-Mock Rule, the failure paths are provoked with real operating-system errors: a genuinely nonexistent directory for `ENOENT` on open, and `fs.closeSync` on the sink's own descriptor for `EBADF` on write, so the production `catch` branch runs for real. No `sinon`, no `mockery`, no `registerMock` anywhere in `tests/unit/skeleton/loggerManager.test.js`.
+* **Consumer coupling checked, not assumed.** `frontend/.desktop/desktop.js:31-35` sets `log.transports.console.level` / `log.transports.file.level` — that `log` is `electron-log` (imported at module scope, line 5), **not** this logger, so the winston-shaped `transports` API is not a consumer dependency. The only real coupling is `telemetry.js`'s `RUN_LOG_NOISE`, preserved above and re-verified by executing the regex against the new records.
+* `eslint` clean, `checkjs` clean.
+* **NOT verified here, and it is the release gate:** the Rule 48 consumer exercise. `frontend` installs the **published** package, so this change reaches nothing until it is on the registry — `npm run desktop` and `npm run desktop build` from `frontend/`, an Electron launch, and a confirmation that `run.log` still appears with the same lines plus the new `entity` field, all have to run against this version once installed.
+## v6.0.30 <sup>18.08.2026</sup>
+
 **Capped HCP asset-download concurrency at 6 (seed `meteor-desktop-3669`).** `assetBundleDownloader.js` built its work queue as `new Queue()`, and the `queue` package defaults to `concurrency: Infinity` (`queue/index.js:18`) — so `resume()` fired **every** missing asset at once. For the yourdna.family bundle that is a **285-request simultaneous burst** at the Meteor server on every hot code push. A single shed response reaches `didFail`, which cancels the whole download, and the app then silently stays on its baked bundle, because the reload is gated on `onNewVersionReady` and a failed download never fires it. Users stop receiving updates without any error they can see.
 
 ### Changes

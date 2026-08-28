@@ -39,7 +39,7 @@ export default class AssetBundle {
     /**
      * Represents assets bundle.
      *
-     * @param {object}         log               - Winston reference.
+     * @param {object}         log               - Logger instance from loggerManager.
      * @param {string}         directoryUri      - Where the bundle lies in the file system.
      * @param {AssetManifest=} manifest          - Bundle's manifest.
      * @param {AssetBundle=}   parentAssetBundle - Parent asset bundle.

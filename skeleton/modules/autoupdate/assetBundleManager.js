@@ -20,7 +20,7 @@ const { rimrafWithRetries, modernUserAgent } = utils;
 
 class AssetBundleManager {
     /**
-     * @param {object}      log                - Winston reference.
+     * @param {object}      log                - Logger instance from loggerManager.
      * @param {object}      configuration      - Configuration object.
      * @param {AssetBundle} initialAssetBundle - Parent asset bundle.
      * @param {string}      versionsDirectory  - Path to versions dir.
