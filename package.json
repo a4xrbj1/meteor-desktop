@@ -37,7 +37,6 @@
   "author": "Andreas West <a4xrbj1@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "@babel/register": "7.29.7",
     "@types/fs-extra": "11.0.4",
     "@types/mocha": "^10.0.10",
     "@types/node": "^24.13.3",
@@ -76,7 +75,6 @@
   "dependencies": {
     "@babel/core": "7.29.7",
     "@babel/preset-env": "7.29.7",
-    "@babel/runtime": "7.29.7",
     "@electron/asar": "^4.3.0",
     "commander": "^15.0.0",
     "cross-spawn": "7.0.6",
