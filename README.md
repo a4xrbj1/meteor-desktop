@@ -446,6 +446,7 @@ onUpdateCheckStarted(rootUrl)
    |-- onError(cause)                                    the check or the download failed
    |-- onUpdateNotAvailable(version)                     the server's version is one we already hold
    |-- onNativeUpdateRequired({version, required, installed})
+   |-- onDownloadAlreadyInProgress(version)              this version is already being downloaded
    `-- onDownloadStarted(bytesTotal)
           `-- onDownloadProgress(bytesTransferred, bytesTotal)   once per verified+written asset
                  `-- onNewVersionReady(version)
@@ -453,6 +454,10 @@ onUpdateCheckStarted(rootUrl)
 
 `onNewVersionReady` also arrives with no download events at all when the offered version needs no
 transfer — it is the shell's own initial bundle, or one already sitting in `versions/`.
+
+`onDownloadAlreadyInProgress` is routine rather than exceptional: the renderer polls every 10
+minutes and a large bundle on a slow link takes longer than that, so a poll frequently lands while
+the previous one's download is still running. The check returns without starting a second download.
 
 Register any of them the same way as `onNewVersionReady`:
 
@@ -469,7 +474,9 @@ Two watchdogs stop a check wedging silently, both configurable in `settings.json
 | `hcpStallTimeout` | `300000` | How long the bundle download may go **without a single asset completing** before it is cancelled and reported as an error. |
 
 `hcpStallTimeout` is an inactivity budget, not a total download time — it is re-armed by every
-completed asset, so a slow but progressing download is never killed. Neither timeout blacklists
+completed asset, so a slow but progressing download is never killed. It is also not reported when a
+download is cancelled deliberately, which happens when a later check finds the server has moved on
+to a different version. Neither timeout blacklists
 anything, so the next check (the bundled renderer bootstrap polls every 10 minutes) simply retries,
 reusing whatever was already fetched.
 

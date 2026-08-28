@@ -512,6 +512,23 @@ export default class HCPClient {
     }
 
     /**
+     * Fired by assetBundleManager when a check finds the server offering a version this app is
+     * already downloading, so the check returns without starting a second download.
+     *
+     * It exists so that branch still has an outcome: the renderer polls every 10 minutes and a
+     * bundle download on a slow link outlasts that interval, so this is a routine event, not an
+     * error — but a check that announced `onUpdateCheckStarted` and then said nothing at all is
+     * indistinguishable from a wedged one, which is the whole point of the Stage 4 contract.
+     *
+     * @param {String} version - Version whose download is already running.
+     */
+    onDownloadAlreadyInProgress(version) {
+        this.log.verbose(`already downloading version: ${version}`);
+        this.eventsBus.emit('downloadAlreadyInProgress', version);
+        this.module.send('onDownloadAlreadyInProgress', version);
+    }
+
+    /**
      * Progress callback fired by assetBundleManager, once per verified and written asset.
      *
      * @param {number} bytesTransferred - Bytes written so far.
@@ -540,8 +557,8 @@ export default class HCPClient {
      * Announces that an update check has begun (seed meteor-desktop-5aa1).
      *
      * Every check now ends in exactly one observable outcome — this, then one of `error`,
-     * `onUpdateNotAvailable`, `onNativeUpdateRequired`, or `onDownloadStarted` -> progress ->
-     * `onNewVersionReady`. Before it, the window between "the renderer asked" and "a download
+     * `onUpdateNotAvailable`, `onNativeUpdateRequired`, `onDownloadAlreadyInProgress`, or
+     * `onDownloadStarted` -> progress -> `onNewVersionReady`. Before it, the window between "the renderer asked" and "a download
      * started" emitted nothing at all, which is what let a wedged check look identical to a
      * healthy idle app.
      *

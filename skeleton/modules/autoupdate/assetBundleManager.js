@@ -20,6 +20,95 @@ const {
     rimrafWithRetries, modernUserAgent, DEFAULT_HCP_REQUEST_TIMEOUT, DEFAULT_HCP_STALL_TIMEOUT
 } = utils;
 
+/**
+ * True when the manifest's own subresource-integrity digest vouches for the cached bytes.
+ *
+ * `sri` (base64 sha512) is the one manifest field that is a digest of the served bytes — the
+ * legacy `hash` is not, which `AssetBundleDownloader.verifyResponse` says in as many words — and it
+ * is the field `verifyResponse` checked before those bytes were ever written to disk. So an sri
+ * present on both sides and equal is proof, without re-hashing anything. Re-hashing would in fact
+ * be wrong as well as slow: a `js` asset is rewritten on disk by the isDesktop injector after
+ * verification, so its file no longer matches any digest in any manifest.
+ *
+ * @param {Asset} asset       - Asset the new manifest asks for.
+ * @param {Asset} cachedAsset - Candidate already on disk.
+ *
+ * @returns {Boolean} - True when both carry the same sri.
+ */
+const sriVouchesForCachedAsset = function (asset, cachedAsset) {
+    return !!asset.sri && cachedAsset.sri === asset.sri;
+};
+
+/**
+ * True when the two manifests agree on a real `hash` for this asset.
+ *
+ * This is the identity the incremental download has always run on: `hash` is Meteor's per-asset
+ * version marker (the sha1 in the asset's url), so two manifests naming the same one mean the same
+ * asset version. What it deliberately excludes is `cachedAssetForUrlPath`'s other branch,
+ * `asset.cacheable && hash === null`, which matches on the url path ALONE and therefore asserts
+ * nothing whatsoever about the bytes — that is the route by which a stale directory can hand back
+ * a different build's asset under the path this manifest wants (seed meteor-desktop-932b).
+ *
+ * @param {Asset} asset       - Asset the new manifest asks for.
+ * @param {Asset} cachedAsset - Candidate already on disk.
+ *
+ * @returns {Boolean} - True when both name the same non-null hash.
+ */
+const hashIdentifiesCachedAsset = function (asset, cachedAsset) {
+    return asset.hash !== null && cachedAsset.hash === asset.hash;
+};
+
+/**
+ * Whether a cached asset's bytes may stand in for one this manifest asks for.
+ *
+ * A reused asset is copied straight into the new bundle directory, so it never passes through
+ * `verifyResponse` — whatever is on disk is what the app will run. That is why the match which
+ * found it is not by itself a licence to use it.
+ *
+ * The two cache sources do NOT get the same test, because the same comparison does not mean the
+ * same thing in both:
+ *
+ *  - A COMPLETE bundle in `versions/` carries its OWN version's manifest, so agreeing on `hash` is
+ *    a genuine claim by two independently written manifests about one asset version, and those
+ *    bytes already passed `verifyResponse` when that bundle was downloaded. Hash or sri will do.
+ *  - The PARTIAL download directory keeps the manifest of the PREVIOUS ATTEMPT.
+ *    `moveExistingDownloadDirectoryIfNeeded` renames the half-finished `Downloading` dir wholesale,
+ *    program.json and all, and it runs BEFORE the new manifest is written into the fresh directory.
+ *    Which manifest that leaves behind depends on why the attempt was abandoned, and the caller
+ *    cannot tell the two apart at this point:
+ *      * a RETRY of the same version leaves the identical manifest, so comparing hashes compares
+ *        that manifest with ITSELF and cannot fail, whatever bytes are lying in the directory;
+ *      * a SUPERSEDE leaves an older version's manifest, where a hash comparison would be genuine.
+ *    Since only the first is distinguishable by its consequences and it is the dangerous one, sri —
+ *    which `verifyResponse` actually checked against the bytes — is the only thing accepted here.
+ *    This is the arch-mismatch resurrection route seed frontend-7c13 fixed: legacy bytes filed under
+ *    a modern manifest, reused from cache with nothing in the path to catch them.
+ *
+ * `existsSync`, not `accessSync`: accessSync returns undefined on success and throws on a missing
+ * file, so the guard this replaces could never be true and the partial branch always fell through
+ * to null — every retry re-downloaded the whole bundle. The comment above it said existsSync.
+ *
+ * @param {Asset}   asset       - Asset the new manifest asks for.
+ * @param {Asset}   cachedAsset - Candidate already on disk.
+ * @param {Boolean} sriOnly     - True for the partial directory, where hashes are self-referential.
+ *
+ * @returns {Boolean} - True when the cached bytes may be reused.
+ */
+const canReuseCachedAsset = function (asset, cachedAsset, sriOnly) {
+    // When both manifests carry an sri it is decisive in BOTH directions. Agreeing proves the
+    // bytes. Disagreeing disproves them however well the hashes match — that combination is two
+    // manifests contradicting each other about one asset version, and the content digest is the
+    // one of the two that actually describes content.
+    if (asset.sri && cachedAsset.sri) {
+        return sriVouchesForCachedAsset(asset, cachedAsset)
+            && fs.existsSync(cachedAsset.getFile());
+    }
+    if (sriOnly) {
+        return false;
+    }
+    return hashIdentifiesCachedAsset(asset, cachedAsset) && fs.existsSync(cachedAsset.getFile());
+};
+
 class AssetBundleManager {
     /**
      * @param {object}      log                - Logger instance from loggerManager.
@@ -119,6 +208,13 @@ class AssetBundleManager {
                     && this.assetBundleDownloader.getAssetBundle().getVersion() === version
                 ) {
                     this.log.info(`already downloading asset bundle version: ${version}`);
+                    // Dead until seed meteor-desktop-912a assigned the field below. It returns
+                    // without downloading, so without an event of its own it would be the one path
+                    // that starts a check and yields no outcome — the exact silence Stage 4 (seed
+                    // meteor-desktop-5aa1) removed everywhere else.
+                    if (this.callback !== null && this.callback.onDownloadAlreadyInProgress) {
+                        this.callback.onDownloadAlreadyInProgress(version);
+                    }
                     return;
                 }
 
@@ -296,13 +392,43 @@ class AssetBundleManager {
     }
 
     /**
+     * Releases the in-flight slot, but only if it still holds the download that is reporting.
+     *
+     * `didFail` and `didFinishDownloadingAssetBundle` used to clear the slot unconditionally, and
+     * both are reached by callers that have no download of their own: the manifest fetch's own
+     * `.catch`, the "no redownload of initial version" short-circuit, the already-downloaded-bundle
+     * short-circuit. So a poll whose manifest fetch merely failed would release a DIFFERENT poll's
+     * running download, putting the two guards in `checkForUpdates` straight back to sleep — the
+     * next check for the same version would start a second download, and one for another version
+     * would rename `Downloading` out from under the first. That is the very race assigning the
+     * field was meant to close, so the slot is now released only by its own owner.
+     *
+     * The fix is the RELOCATION — clearing moved out of `didFail` and into the three points where a
+     * download's own run actually ends. The identity test on top of it is belt and braces: all
+     * three call sites are owner-invoked today, and a superseded downloader cannot reach any of
+     * them (the cancel in `checkForUpdates` nulls the slot before the replacement claims it, and a
+     * cancelled download's late responses and stall timer both return early on `cancelInvoked`).
+     * So the non-matching branch has no reachable caller and no test covers it; it is here so that
+     * a method named "release this downloader" is true in isolation rather than only by virtue of
+     * invariants living in two other functions.
+     *
+     * @param {AssetBundleDownloader} downloader - Downloader whose run has ended.
+     *
+     * @private
+     */
+    releaseDownloader(downloader) {
+        if (this.assetBundleDownloader === downloader) {
+            this.assetBundleDownloader = null;
+        }
+    }
+
+    /**
      * Failure handler.
      *
      * @param {string} cause - Error message.
      * @private
      */
     didFail(cause) {
-        this.assetBundleDownloader = null;
         this.log.debug(`fail: ${cause}`);
 
         if (this.callback !== null) {
@@ -317,8 +443,6 @@ class AssetBundleManager {
      * @private
      */
     didFinishDownloadingAssetBundle(assetBundle) {
-        this.assetBundleDownloader = null;
-
         if (this.callback !== null) {
             this.callback.onFinishedDownloadingAssetBundle(assetBundle);
         }
@@ -340,26 +464,24 @@ class AssetBundleManager {
             []
         );
 
-        let cachedAsset;
+        let cachedAsset = null;
         const assetFound = bundles.some((assetBundle) => {
-            cachedAsset = assetBundle.cachedAssetForUrlPath(asset.urlPath, asset.hash);
-            return cachedAsset;
+            const candidate = assetBundle.cachedAssetForUrlPath(asset.urlPath, asset.hash);
+            if (candidate !== null && canReuseCachedAsset(asset, candidate, false)) {
+                cachedAsset = candidate;
+                return true;
+            }
+            return false;
         });
         if (assetFound) {
             return cachedAsset;
         }
 
         if (this.partiallyDownloadedAssetBundle !== null) {
-            cachedAsset = this.partiallyDownloadedAssetBundle
+            const candidate = this.partiallyDownloadedAssetBundle
                 .cachedAssetForUrlPath(asset.urlPath, asset.hash);
-
-            // Make sure the asset has been downloaded.
-            try {
-                if (cachedAsset !== null && fs.accessSync(cachedAsset.getFile())) {
-                    return cachedAsset;
-                }
-            } catch {
-                return null;
+            if (candidate !== null && canReuseCachedAsset(asset, candidate, true)) {
+                return candidate;
             }
         }
         return null;
@@ -426,6 +548,14 @@ class AssetBundleManager {
         // Stable handle for the watchdog: the success callback below nulls the `let`, and the timer
         // still has to be able to cancel the downloader it was armed for.
         const downloader = assetBundleDownloader;
+
+        // Seed meteor-desktop-912a. This assignment is what makes `checkForUpdates`'s two guards
+        // real: without it the field stayed null forever, so a poll landing mid-download neither
+        // recognised a download of the same version already running nor cancelled one of a
+        // different version — both then wrote into the same `Downloading` directory and
+        // `moveExistingDownloadDirectoryIfNeeded` renamed it out from under whichever was still
+        // running. Cleared again in `didFail` and `didFinishDownloadingAssetBundle`.
+        this.assetBundleDownloader = assetBundleDownloader;
         const stallTimeout = this.resolveTimeout('hcpStallTimeout', DEFAULT_HCP_STALL_TIMEOUT);
 
         // Download stall watchdog (seed meteor-desktop-5aa1). Re-armed on every completed asset, so
@@ -434,13 +564,13 @@ class AssetBundleManager {
         // fetch leaves the queue undrained forever: onFinished never fires, no further event is
         // emitted, and the renderer sits on a dead progress bar until the user restarts.
         //
-        // The handle is a CLOSURE variable, not a field on the manager, because there can be more
-        // than one download in flight: `this.assetBundleDownloader` is never assigned (seed
-        // meteor-desktop-912a), so `checkForUpdates`'s "already downloading" guard is dead and a
-        // poll landing mid-download starts a second one. A single manager-wide slot would let each
-        // download disarm the other's watchdog — and any unrelated `didFail`, such as a concurrent
-        // poll's manifest fetch failing, would disarm it too. Then the very wedge this exists to
-        // catch would go uncaught, exactly when the link is slow enough for polls to overlap.
+        // The handle stays a CLOSURE variable rather than a field on the manager even now that
+        // `this.assetBundleDownloader` is assigned (seed meteor-desktop-912a). The two are not the
+        // same mechanism and neither replaces the other: the field answers "is a download in
+        // flight", and is deliberately cleared by any `didFail` — including a concurrent poll's
+        // manifest fetch failing, which has nothing to do with this download. A watchdog parked
+        // there would be disarmed by that unrelated failure, leaving the wedge it exists to catch
+        // uncaught. One timer per download, owned by the download, is the invariant.
         /** @type {NodeJS.Timeout|null} */
         let stallTimer = null;
         const clearStallTimer = () => {
@@ -453,12 +583,20 @@ class AssetBundleManager {
             clearStallTimer();
             stallTimer = setTimeout(() => {
                 stallTimer = null;
+                // Superseded, not stalled: `checkForUpdates` cancels this download when the server
+                // moves to a different version, and the cancel cannot clear a timer it cannot see.
+                // Reporting a failure here would hand the renderer a "stalled" error for a download
+                // deliberately abandoned minutes earlier, for a version it is no longer waiting on.
+                if (downloader.cancelInvoked) {
+                    return;
+                }
                 // cancel() ends the queue but cannot abort requests already in flight. What stops
                 // a late one from reaching onFinished after we have failed — and the renderer
                 // hearing "download stalled" and then "new version ready" for the same download —
                 // is the cancelInvoked guard at the top of the downloader's onResponse. One
                 // mechanism, at the source, rather than a second one here.
                 downloader.cancel();
+                this.releaseDownloader(downloader);
                 this.didFail(
                     `download of version ${assetBundle.getVersion()} stalled: `
                     + `no asset completed in ${stallTimeout}ms`
@@ -469,6 +607,7 @@ class AssetBundleManager {
         assetBundleDownloader.setCallbacks(
             () => {
                 clearStallTimer();
+                this.releaseDownloader(downloader);
                 assetBundleDownloader = null;
                 try {
                     this.moveDownloadedAssetBundleIntoPlace(assetBundle);
@@ -479,6 +618,7 @@ class AssetBundleManager {
             },
             (cause) => {
                 clearStallTimer();
+                this.releaseDownloader(downloader);
                 this.didFail(cause);
             },
             (bytesTransferred, bytesTotal) => {

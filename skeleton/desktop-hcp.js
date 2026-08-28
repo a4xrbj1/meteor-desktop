@@ -13,6 +13,7 @@ WebAppLocalServer = {
     onNativeUpdateRequiredCallback: null,
     onUpdateCheckStartedCallback: null,
     onUpdateNotAvailableCallback: null,
+    onDownloadAlreadyInProgressCallback: null,
 
     startupDidComplete(callback) {
         this.onVersionsCleanedUpCallback = callback;
@@ -40,7 +41,8 @@ WebAppLocalServer = {
 
     // Check lifecycle (seed meteor-desktop-5aa1). Every check now ends in exactly one observable
     // outcome: onUpdateCheckStarted, then one of onError / onUpdateNotAvailable /
-    // onNativeUpdateRequired / onDownloadStarted -> onDownloadProgress -> onNewVersionReady. The
+    // onNativeUpdateRequired / onDownloadAlreadyInProgress / onDownloadStarted ->
+    // onDownloadProgress -> onNewVersionReady. The
     // window between "asked" and "downloading" used to emit nothing, so a wedged check looked
     // exactly like a healthy idle app.
     onUpdateCheckStarted(callback) {
@@ -49,6 +51,14 @@ WebAppLocalServer = {
 
     onUpdateNotAvailable(callback) {
         this.onUpdateNotAvailableCallback = callback;
+    },
+
+    // Fires when a poll lands while a download of that same version is already running (seed
+    // meteor-desktop-912a). Routine on a slow link, where a bundle download outlasts the 10-minute
+    // poll interval — not an error, and not a second download. Present so the branch has an
+    // outcome at all; a check that starts and then says nothing is what a wedge looks like.
+    onDownloadAlreadyInProgress(callback) {
+        this.onDownloadAlreadyInProgressCallback = callback;
     },
 
     // Native-vs-JS update split (seed meteor-desktop-0a0e). Fires when the desktop side refused a
@@ -119,6 +129,12 @@ Desktop.on('autoupdate', 'onNativeUpdateRequired', (event, args) => {
         WebAppLocalServer.onNativeUpdateRequiredCallback(args);
     } else {
         console.warn('[meteor-desktop] HCP bundle needs a newer native shell:', args);
+    }
+});
+
+Desktop.on('autoupdate', 'onDownloadAlreadyInProgress', (event, version) => {
+    if (WebAppLocalServer.onDownloadAlreadyInProgressCallback) {
+        WebAppLocalServer.onDownloadAlreadyInProgressCallback(version);
     }
 });
 
