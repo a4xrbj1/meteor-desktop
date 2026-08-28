@@ -11,25 +11,24 @@ import Module from 'module';
  * identical is the point — it intercepts exactly what mockery intercepted, no more and no less, so
  * no test changes meaning.
  *
- * What that covers, precisely. A `Module._load` hook sees CJS `require()` and nothing else, so of
- * the four specifiers this suite registers only these three are actually intercepted — each one a
- * lazy `createRequire()` call, including calls made long after the module finished loading:
- *   - `electron`     — `skeleton/preload.js:18` and `:356`, the latter inside a `process.once('loaded')`
- *                      callback; `skeleton/app.js:25`
+ * What that covers, precisely. A `Module._load` hook sees CJS `require()` and nothing else, so
+ * every specifier this suite registers is reached through a `createRequire()` call, some at module
+ * top level during load, some long after loading finished:
+ *   - `electron`     — `skeleton/app.js:25`, at top level during load, which is why `app.test.js`
+ *                      must `enable()` before it requires the module; and `skeleton/preload.js:18`
+ *                      plus `:356`, the latter inside a `process.once('loaded')` callback
  *   - `original-fs`  — `skeleton/modules/autoupdate.js:48`
  *
- * The fourth, plus `fs-plus`, are reached by the skeleton through ESM `import` (`skeleton/app.js:4`
- * `import fs from 'fs-plus'`, `:7` `import DesktopPathResolver from './desktopPathResolver.js'`).
- * Those resolve through the ESM loader, which no `Module._load` hook can observe — so
- * `app.test.js`'s `registerMock('fs-plus', …)` and `registerMock('./desktopPathResolver', …)` are
- * INERT. They were equally inert under mockery, which used the same hook; this is pre-existing dead
- * scaffolding preserved as-is, not something this helper broke. Verified by loading a probe module
- * that imports both specifiers while a mock for each was registered: the CJS `require()` returned
- * the mock, both ESM bindings returned the real module.
+ * A specifier the skeleton reaches through ESM `import` cannot be mocked here at all: it resolves
+ * through the ESM loader, which no `Module._load` hook can observe. `app.test.js` used to register
+ * `fs-plus` and `./desktopPathResolver` (`skeleton/app.js:4` and `:7`, both ESM imports); both were
+ * inert under mockery for the same reason and have since been deleted (seed meteor-desktop-7683).
+ * Verified by loading a probe module that imports both specifiers while a mock for each was
+ * registered: the CJS `require()` returned the mock, both ESM bindings returned the real module.
  *
- * `proxyquire` (already a devDependency) is not a substitute: its stubs apply only for the
- * duration of the load call and only to a module's direct dependencies, so it cannot cover those
- * lazy post-load `require()` calls.
+ * `proxyquire` is not a substitute either — its stubs apply only for the duration of the load call
+ * and only to a module's direct dependencies, so it cannot cover those lazy post-load `require()`
+ * calls. It was removed as an unused devDependency in the same seed.
  *
  * mockery's `warnOnReplace` / `warnOnUnregistered` options are not reimplemented because the suite
  * set both to `false`, making the warning branches dead. `useCleanCache` was never enabled either,

@@ -21,13 +21,9 @@ const Electron = { protocol: { registerStandardSchemes: Function.prototype } };
 
 let App;
 
-const fs = {};
-
 describe('App', () => {
     before(() => {
         moduleMock.registerMock('electron', Electron);
-        moduleMock.registerMock('./desktopPathResolver', {});
-        moduleMock.registerMock('fs-plus', fs);
         moduleMock.enable();
         process.env.METEOR_DESKTOP_UNIT_TEST = 'true';
         App = require('../../../skeleton/app.js');
@@ -43,8 +39,6 @@ describe('App', () => {
 
     after(() => {
         process.env.METEOR_DESKTOP_UNIT_TEST = 'false';
-        moduleMock.deregisterMock('./desktopPathResolver');
-        moduleMock.deregisterMock('fs-plus');
         moduleMock.deregisterMock('electron');
         moduleMock.disable();
     });
