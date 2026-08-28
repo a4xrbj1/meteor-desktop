@@ -282,6 +282,7 @@ export default class HCPClient {
             return;
         }
 
+        this.notifyUpdateCheckStarted(rootUrl);
         this.assetBundleManager.checkForUpdates(url.resolve(rootUrl, '/'));
     }
 
@@ -536,6 +537,36 @@ export default class HCPClient {
     }
 
     /**
+     * Announces that an update check has begun (seed meteor-desktop-5aa1).
+     *
+     * Every check now ends in exactly one observable outcome — this, then one of `error`,
+     * `onUpdateNotAvailable`, `onNativeUpdateRequired`, or `onDownloadStarted` -> progress ->
+     * `onNewVersionReady`. Before it, the window between "the renderer asked" and "a download
+     * started" emitted nothing at all, which is what let a wedged check look identical to a
+     * healthy idle app.
+     *
+     * @param {String} rootUrl - Server the manifest is being fetched from.
+     *
+     * @private
+     */
+    notifyUpdateCheckStarted(rootUrl) {
+        this.eventsBus.emit('updateCheckStarted', rootUrl);
+        this.module.send('onUpdateCheckStarted', rootUrl);
+    }
+
+    /**
+     * Announces that the server's version is one we already hold, so there is nothing to do.
+     *
+     * @param {String} version - Version the server offered.
+     *
+     * @private
+     */
+    notifyUpdateNotAvailable(version) {
+        this.eventsBus.emit('updateNotAvailable', version);
+        this.module.send('onUpdateNotAvailable', version);
+    }
+
+    /**
      * Fires console.warn on the Meteor app side.
      *
      * @param {string} cause - warn message
@@ -669,6 +700,7 @@ export default class HCPClient {
         // No need to redownload the current version.
         if (this.currentAssetBundle.getVersion() === version) {
             this.log.info(`skipping downloading current version: ${version}`);
+            this.notifyUpdateNotAvailable(version);
             return false;
         }
 
@@ -676,6 +708,7 @@ export default class HCPClient {
         if (this.pendingAssetBundle
             && this.pendingAssetBundle.getVersion() === version) {
             this.log.info(`skipping downloading pending version: ${version}`);
+            this.notifyUpdateNotAvailable(version);
             return false;
         }
 

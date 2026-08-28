@@ -436,6 +436,43 @@ showing anything to the user.
 > only refuses a *download*: a bundle that a pre-gate shell already fetched stays in `versions/` and
 > is still loaded at the next launch. It is a forward guard, not an eviction.
 
+### Update-check lifecycle and timeouts
+
+Every update check ends in exactly one observable outcome, so a wedged check can never look like a
+healthy idle app:
+
+```
+onUpdateCheckStarted(rootUrl)
+   |-- onError(cause)                                    the check or the download failed
+   |-- onUpdateNotAvailable(version)                     the server's version is one we already hold
+   |-- onNativeUpdateRequired({version, required, installed})
+   `-- onDownloadStarted(bytesTotal)
+          `-- onDownloadProgress(bytesTransferred, bytesTotal)   once per verified+written asset
+                 `-- onNewVersionReady(version)
+```
+
+`onNewVersionReady` also arrives with no download events at all when the offered version needs no
+transfer — it is the shell's own initial bundle, or one already sitting in `versions/`.
+
+Register any of them the same way as `onNewVersionReady`:
+
+```js
+WebAppLocalServer.onUpdateCheckStarted((rootUrl) => { /* show a spinner */ });
+WebAppLocalServer.onUpdateNotAvailable((version) => { /* hide it */ });
+```
+
+Two watchdogs stop a check wedging silently, both configurable in `settings.json`:
+
+| Field | Default | What it bounds |
+|---|---|---|
+| `hcpRequestTimeout` | `30000` | Total time for the manifest fetch. A server that accepts the connection and never answers used to hang the check forever. |
+| `hcpStallTimeout` | `300000` | How long the bundle download may go **without a single asset completing** before it is cancelled and reported as an error. |
+
+`hcpStallTimeout` is an inactivity budget, not a total download time — it is re-armed by every
+completed asset, so a slow but progressing download is never killed. Neither timeout blacklists
+anything, so the next check (the bundled renderer bootstrap polls every 10 minutes) simply retries,
+reusing whatever was already fetched.
+
 ---
 
 ## `Meteor.isDesktop`

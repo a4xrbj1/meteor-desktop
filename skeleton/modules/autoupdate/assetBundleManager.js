@@ -16,7 +16,9 @@ try {
     // Falls back to fs-plus outside Electron.
 }
 
-const { rimrafWithRetries, modernUserAgent } = utils;
+const {
+    rimrafWithRetries, modernUserAgent, DEFAULT_HCP_REQUEST_TIMEOUT, DEFAULT_HCP_STALL_TIMEOUT
+} = utils;
 
 class AssetBundleManager {
     /**
@@ -24,7 +26,7 @@ class AssetBundleManager {
      * @param {object}      configuration      - Configuration object.
      * @param {AssetBundle} initialAssetBundle - Parent asset bundle.
      * @param {string}      versionsDirectory  - Path to versions dir.
-     * @param {Object}      appSettings        - Settings from desktop.json.
+     * @param {Object}      appSettings        - The app's built .desktop/settings.json.
      * @constructor
      */
     constructor(
@@ -85,8 +87,14 @@ class AssetBundleManager {
 
         this.log.info(`trying to query ${manifestUrl}`);
 
+        // A fetch with no timeout is how HCP wedges silently: a server that accepts the connection
+        // and never answers leaves the check hanging forever, emitting nothing (seed
+        // meteor-desktop-5aa1). The abort surfaces in the .catch below as an ordinary didFail, so
+        // the renderer hears about it and the next 10-minute poll retries — nothing is blacklisted
+        // on an error path (the only writer of blacklistedVersions is the startup-timer revert).
         this.httpClient(manifestUrl, {
-            headers: { Connection: 'close', 'User-Agent': modernUserAgent }
+            headers: { Connection: 'close', 'User-Agent': modernUserAgent },
+            signal: AbortSignal.timeout(this.resolveTimeout('hcpRequestTimeout', DEFAULT_HCP_REQUEST_TIMEOUT))
         })
             .then((response) => Promise.all([response, response.text()]))
             .then(([response, body]) => {
@@ -224,6 +232,20 @@ class AssetBundleManager {
             }
         );
         return Promise.all(promises);
+    }
+
+    /**
+     * Reads a network-tuning value from the app's desktop settings, falling back to the default.
+     *
+     * @param {String} name          - Field name in settings.json.
+     * @param {Number} defaultValue  - Value to use when the field is absent or not a number.
+     *
+     * @returns {Number} - The timeout in milliseconds.
+     * @private
+     */
+    resolveTimeout(name, defaultValue) {
+        const configured = this.appSettings && this.appSettings[name];
+        return typeof configured === 'number' && configured > 0 ? configured : defaultValue;
     }
 
     /**
@@ -401,8 +423,52 @@ class AssetBundleManager {
             missingAssets
         );
 
+        // Stable handle for the watchdog: the success callback below nulls the `let`, and the timer
+        // still has to be able to cancel the downloader it was armed for.
+        const downloader = assetBundleDownloader;
+        const stallTimeout = this.resolveTimeout('hcpStallTimeout', DEFAULT_HCP_STALL_TIMEOUT);
+
+        // Download stall watchdog (seed meteor-desktop-5aa1). Re-armed on every completed asset, so
+        // it measures "nothing finished in stallTimeout with 6 assets in flight" rather than total
+        // download time — a slow but progressing download is never killed. Without it a hung asset
+        // fetch leaves the queue undrained forever: onFinished never fires, no further event is
+        // emitted, and the renderer sits on a dead progress bar until the user restarts.
+        //
+        // The handle is a CLOSURE variable, not a field on the manager, because there can be more
+        // than one download in flight: `this.assetBundleDownloader` is never assigned (seed
+        // meteor-desktop-912a), so `checkForUpdates`'s "already downloading" guard is dead and a
+        // poll landing mid-download starts a second one. A single manager-wide slot would let each
+        // download disarm the other's watchdog — and any unrelated `didFail`, such as a concurrent
+        // poll's manifest fetch failing, would disarm it too. Then the very wedge this exists to
+        // catch would go uncaught, exactly when the link is slow enough for polls to overlap.
+        /** @type {NodeJS.Timeout|null} */
+        let stallTimer = null;
+        const clearStallTimer = () => {
+            if (stallTimer !== null) {
+                clearTimeout(stallTimer);
+                stallTimer = null;
+            }
+        };
+        const armStallTimer = () => {
+            clearStallTimer();
+            stallTimer = setTimeout(() => {
+                stallTimer = null;
+                // cancel() ends the queue but cannot abort requests already in flight. What stops
+                // a late one from reaching onFinished after we have failed — and the renderer
+                // hearing "download stalled" and then "new version ready" for the same download —
+                // is the cancelInvoked guard at the top of the downloader's onResponse. One
+                // mechanism, at the source, rather than a second one here.
+                downloader.cancel();
+                this.didFail(
+                    `download of version ${assetBundle.getVersion()} stalled: `
+                    + `no asset completed in ${stallTimeout}ms`
+                );
+            }, stallTimeout);
+        };
+
         assetBundleDownloader.setCallbacks(
             () => {
+                clearStallTimer();
                 assetBundleDownloader = null;
                 try {
                     this.moveDownloadedAssetBundleIntoPlace(assetBundle);
@@ -411,8 +477,12 @@ class AssetBundleManager {
                     this.didFail(e);
                 }
             },
-            (cause) => this.didFail(cause),
+            (cause) => {
+                clearStallTimer();
+                this.didFail(cause);
+            },
             (bytesTransferred, bytesTotal) => {
+                armStallTimer();
                 if (this.callback !== null && this.callback.onDownloadProgress) {
                     this.callback.onDownloadProgress(bytesTransferred, bytesTotal);
                 }
@@ -424,6 +494,7 @@ class AssetBundleManager {
         if (this.callback !== null && this.callback.onDownloadStarted) {
             this.callback.onDownloadStarted(assetBundleDownloader.bytesTotal);
         }
+        armStallTimer();
         assetBundleDownloader.resume();
     }
 

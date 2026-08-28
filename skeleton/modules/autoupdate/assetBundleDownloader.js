@@ -128,6 +128,17 @@ export default class AssetBundleDownloader {
          * @param {Buffer} body - Body of downloaded the file.
          */
         function onResponse(asset, response, body) {
+            // A cancelled download must stay cancelled. cancel() ends the queue but cannot abort
+            // requests already in flight, and this handler both writes to disk and — when the
+            // in-flight assets happen to be the last of missingAssets — calls onFinished. Without
+            // this guard a download that already failed (an asset 503, or the stall watchdog in
+            // assetBundleManager) can still report success afterwards, so the consumer receives an
+            // error and then onNewVersionReady for the same download and reloads onto it. didFail
+            // below has always self-guarded on cancelInvoked; the success path never did.
+            if (self.cancelInvoked) {
+                return;
+            }
+
             const fileContents = body;
             self.assetsDownloading.splice(self.assetsDownloading.indexOf(asset), 1);
 

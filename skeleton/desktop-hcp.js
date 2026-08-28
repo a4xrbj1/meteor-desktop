@@ -11,6 +11,8 @@ WebAppLocalServer = {
     onDownloadStartedCallback: null,
     onDownloadProgressCallback: null,
     onNativeUpdateRequiredCallback: null,
+    onUpdateCheckStartedCallback: null,
+    onUpdateNotAvailableCallback: null,
 
     startupDidComplete(callback) {
         this.onVersionsCleanedUpCallback = callback;
@@ -34,6 +36,19 @@ WebAppLocalServer = {
 
     onDownloadProgress(callback) {
         this.onDownloadProgressCallback = callback;
+    },
+
+    // Check lifecycle (seed meteor-desktop-5aa1). Every check now ends in exactly one observable
+    // outcome: onUpdateCheckStarted, then one of onError / onUpdateNotAvailable /
+    // onNativeUpdateRequired / onDownloadStarted -> onDownloadProgress -> onNewVersionReady. The
+    // window between "asked" and "downloading" used to emit nothing, so a wedged check looked
+    // exactly like a healthy idle app.
+    onUpdateCheckStarted(callback) {
+        this.onUpdateCheckStartedCallback = callback;
+    },
+
+    onUpdateNotAvailable(callback) {
+        this.onUpdateNotAvailableCallback = callback;
     },
 
     // Native-vs-JS update split (seed meteor-desktop-0a0e). Fires when the desktop side refused a
@@ -84,6 +99,18 @@ Desktop.on('autoupdate', 'onDownloadStarted', (event, bytesTotal) => {
 Desktop.on('autoupdate', 'onDownloadProgress', (event, bytesTransferred, bytesTotal) => {
     if (WebAppLocalServer.onDownloadProgressCallback) {
         WebAppLocalServer.onDownloadProgressCallback(bytesTransferred, bytesTotal);
+    }
+});
+
+Desktop.on('autoupdate', 'onUpdateCheckStarted', (event, rootUrl) => {
+    if (WebAppLocalServer.onUpdateCheckStartedCallback) {
+        WebAppLocalServer.onUpdateCheckStartedCallback(rootUrl);
+    }
+});
+
+Desktop.on('autoupdate', 'onUpdateNotAvailable', (event, version) => {
+    if (WebAppLocalServer.onUpdateNotAvailableCallback) {
+        WebAppLocalServer.onUpdateNotAvailableCallback(version);
     }
 });
 
