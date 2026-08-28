@@ -1,3 +1,12 @@
+## Unreleased
+
+### Fixed
+
+* **`just-run` launches again (seed `meteor-desktop-86d2`).** `MeteorDesktop.justRun()` called `this.electron.run()` without ever initialising the `Electron` instance, so `this.electron` (the resolved dependency, set by `Electron.init()`) was `undefined` and every invocation died with `TypeError: Cannot read properties of undefined (reading 'dependency')` at `lib/electron.js:37`. The `run` and `build` paths were unaffected because `electronApp.build()` awaits `electronApp.init()`, which is the only caller of `electron.init()`. `justRun()` is now `async` and awaits `this.electron.init()` first; scaffolding is deliberately not run, since `just-run` is documented as an alias for `electron .` in an existing `.meteor/desktop-build`.
+* **`just-run` failures now exit cleanly with code 1** instead of crashing as an unhandled rejection: `lib/bin/cli.js`'s handler fired the (now-async) call unawaited, so nothing reported the error. It now `.catch()`es, prints and exits 1.
+* **`Electron.run()` handles the child's `error` event.** With `just-run` reachable for the first time, `just-run` in an app that was never built spawns into a nonexistent `.meteor/desktop-build` and emits `ENOENT` asynchronously — an unhandled `'error'` event, i.e. a bare stack. It now names the missing build dir and the real `spawn` error, and sets `process.exitCode = 1` rather than calling `process.exit()`, which would truncate the message on a piped stdout — the scripted smoke-launch case `just-run` exists for.
+* Covered by two new tests, both inversion-checked and both mock-free: `tests/unit/index.test.js` asserts `run()` observes a completed `init()` (removing the `await` fails it), and `tests/unit/electron.test.js` spawns into a genuinely nonexistent build dir so the real `ENOENT` reaches the real handler (removing it fails with the uncaught error it used to produce).
+
 ## v6.1.0 <sup>28.08.2026</sup>
 
 **Dropped `winston` from the skeleton — the logger is now ~200 lines with zero dependencies (seed `meteor-desktop-f570`).** `skeleton/loggerManager.js` was a thin wrapper over `winston@3.13.0` — **1.4 MB and 11 transitive dependencies installed into every consumer's `.meteor/desktop-build`** — to obtain one console sink, one 5 MB x 5 rotating file sink, and a name -> logger registry. Worse, the wrapper had been written against **winston 2** and never migrated, so it was paying that cost for behaviour it was not getting. Every claim below is measured against a real 4.1 MB production `run.log`, not inferred:
