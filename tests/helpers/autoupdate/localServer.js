@@ -63,15 +63,14 @@ export function setUpLocalServer(mainPath, parentPath) {
                 }
             });
             localServer.setCallbacks(() => reject(), onServerReady, onServerReady);
-            // @ts-expect-error init(assetBundle, desktopPath, restart) — extra trailing arg (seed meteor-desktop-c1f9)
-            localServer.init(assetBundle, '', false, false);
+            localServer.init(assetBundle, '', false);
         });
     }
     return new Promise((promiseResolve, promiseReject) => {
         resolve = promiseResolve;
         reject = promiseReject;
         localServer.setCallbacks(() => reject(), onServerReady, onServerReady);
-        localServer.init(assetBundle, '', true, false);
+        localServer.init(assetBundle, '', true);
     });
 }
 

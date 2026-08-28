@@ -29,13 +29,15 @@ function exists(checkPath) {
  * It has a hardcoded port set to 3788.
  *
  * @param {Object} log - Logger instance.
- * @param app
  *
- * @property {Array} errors
  * @constructor
  */
 export default class MeteorServer {
-    constructor() {
+    /**
+     * @param {Object} log - Logger instance, used when serving a parent bundle.
+     */
+    constructor(log) {
+        this.log = log;
         this.httpServerInstance = null;
         this.server = null;
         this.receivedRequests = [];
@@ -144,7 +146,6 @@ export default class MeteorServer {
             {});
 
         if (parentServerPath) {
-            // @ts-expect-error MeteorServer ctor never assigns this.log — latent drift (seed meteor-desktop-c1f9)
             this.log.info('use ', parentServerPath);
 
             // Server files from the parent directory as the main bundle has only changed files.
@@ -200,7 +201,6 @@ export default class MeteorServer {
 export function serveVersion(version) {
     if (!meteorServer) {
         return new Promise((resolve, reject) => {
-            // @ts-expect-error MeteorServer ctor takes 0 args; logger silently ignored (seed meteor-desktop-c1f9)
             meteorServer = new MeteorServer({
                 info() {
                 },
@@ -219,8 +219,7 @@ export function serveVersion(version) {
             }
 
             meteorServer.setCallbacks(onStartupFailed, onServerReady, onServerRestarted);
-            // @ts-expect-error init(serverPath, parentServerPath, restart) — trailing args omitted (seed meteor-desktop-c1f9)
-            meteorServer.init(path.join(paths.fixtures.downloadableVersions, version));
+            meteorServer.init(path.join(paths.fixtures.downloadableVersions, version), undefined, false);
         });
     }
     meteorServer.init(path.join(paths.fixtures.downloadableVersions, version), undefined, true);

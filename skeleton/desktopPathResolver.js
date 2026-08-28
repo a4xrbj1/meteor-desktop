@@ -39,43 +39,6 @@ export default class DesktopPathResolver {
     }
 
     /**
-     * Reads meteor app version from the initial asset bundle.
-     * Falls back to the unpacked meteor/ directory when meteor.asar does not exist.
-     * When program.json has no version field (Meteor 3.x), derives a stable version
-     * from a SHA-256 hash of the manifest file content.
-     * @returns {string|undefined}
-     */
-    static readInitialAssetBundleVersion() {
-        const { manifestPath } = DesktopPathResolver.getInitialBundlePaths();
-
-        let content;
-        try {
-            content = fs.readFileSync(manifestPath, 'utf-8');
-        } catch {
-            return undefined;
-        }
-
-        let parsed = {};
-        try {
-            parsed = JSON.parse(content);
-        } catch {
-            // fall through
-        }
-
-        if (parsed.version != null) {
-            return parsed.version;
-        }
-
-        // Meteor 3.x omits version; derive stable version from manifest content hash.
-        const derivedHash = crypto.createHash('sha256').update(content).digest('hex').substring(0, 40);
-        console.warn(
-            `[DesktopPathResolver] no version in manifest at ${manifestPath}`
-            + ` — using derived hash version: ${derivedHash}`
-        );
-        return derivedHash;
-    }
-
-    /**
      * Reads a stable signature for the embedded bootstrap state.
      * It covers the files that decide startup semantics:
      * - meteor program.json
