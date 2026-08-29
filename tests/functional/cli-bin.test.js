@@ -54,21 +54,39 @@ describe('cli binary entry (.bin symlink)', () => {
         }
     });
 
-    // The behavioural contract the whole seed is about: when a command fails, the shell hears
-    // about it. This does not care WHICH internal step failed, which is the point — it covers the
-    // reportAndExit plumbing on a command that reaches it, without needing a real
-    // electron-packager run. A .meteor dir gets past the isMeteorApp gate; the missing package.json
-    // then makes the action reject. Inversion: drop `.catch(reportAndExit)` from runPackager and
-    // the rejection becomes an unhandled rejection — still non-zero on Node 24, but remove the
-    // handler AND Node's default and the status is 0.
-    it('exits non-zero when an action rejects rather than reporting success', () => {
+    // The behavioural contract the whole seed is about: when a command fails part-way, the shell
+    // hears about it rather than seeing a 0. A .meteor dir gets past the isMeteorApp gate, then
+    // the missing package.json makes `getDependency` bail. This used to drive `package`, which was
+    // removed with electron-packager (seed meteor-desktop-a493); `just-run` fails at the same
+    // point for the same reason. Inversion: make that guard `process.exit()` instead of
+    // `process.exit(1)` and the status is 0.
+    // NOT covered here, and worth knowing: this path exits from inside `getDependency`, so it does
+    // NOT exercise the CLI's `reportAndExit` handler, despite what this comment used to claim.
+    it('exits non-zero when a command fails before doing its work', () => {
         const halfAnApp = fs.mkdtempSync(path.join(os.tmpdir(), 'md-half-app-'));
         fs.mkdirSync(path.join(halfAnApp, '.meteor'));
         try {
-            const r = runViaBinSymlink(['package'], halfAnApp);
+            const r = runViaBinSymlink(['just-run'], halfAnApp);
             expect(r.status).to.not.equal(0);
         } finally {
             fs.rmSync(halfAnApp, { recursive: true, force: true });
+        }
+    });
+
+    // The `package` command was removed with electron-packager (seed meteor-desktop-a493), but it
+    // cannot simply vanish: `run [ddp_url]` is commander's default command, so a bare `package`
+    // would be swallowed as a ddp_url and the app would launch against a nonsense URL. This drives
+    // the real .bin symlink, i.e. exactly what `npm run desktop -- package` reaches. Inversion:
+    // delete the tombstone from registerCommands and the status is 0.
+    it('refuses the removed `package` command instead of treating it as a ddp_url', () => {
+        const notAnApp = fs.mkdtempSync(path.join(os.tmpdir(), 'md-removed-pkg-'));
+        fs.mkdirSync(path.join(notAnApp, '.meteor'));
+        try {
+            const r = runViaBinSymlink(['package'], notAnApp);
+            expect(r.status).to.equal(1);
+            expect(`${r.stdout}${r.stderr}`).to.contain('`package` command was removed');
+        } finally {
+            fs.rmSync(notAnApp, { recursive: true, force: true });
         }
     });
 

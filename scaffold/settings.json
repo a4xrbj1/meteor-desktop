@@ -81,21 +81,5 @@
                 "height": 300
             }
         }
-    },
-    "packagerOptions": {
-        "icon": ".desktop/assets/meteor.ico",
-        "_osx": {
-            "icon": ".desktop/assets/meteor.icns"
-        },
-        "appVersion": "@version",
-        "buildVersion": "@version",
-        "appCopyright": "Copyright 2026 My Company - All rights reserved.",
-        "win32metadata": {
-            "CompanyName": "My Company",
-            "FileDescription": "MyMeteorApp",
-            "OriginalFilename": "MyMeteorApp.exe",
-            "ProductName": "MyMeteorApp",
-            "InternalName": "MyMeteorApp.exe"
-        }
     }
 }

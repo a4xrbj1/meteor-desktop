@@ -29,7 +29,6 @@ const route = (args) => {
         build: make('build'),
         buildInstaller: make('build-installer'),
         justRun: make('just-run'),
-        runPackager: make('package'),
         initTestsSupport: make('init-tests-support')
     });
     program.exitOverride();

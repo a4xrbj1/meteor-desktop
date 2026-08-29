@@ -70,7 +70,6 @@ Usage: npm run desktop -- [command] [options]
     build [ddp_url]            builds your desktop app
     build-installer [ddp_url]  creates the installer
     just-run                   alias for running `electron .` in `.meteor/desktop-build`
-    package [ddp_url]          runs electron packager
     init-tests-support         prepares project for running functional tests of desktop app
 
   Options:
@@ -85,7 +84,7 @@ Usage: npm run desktop -- [command] [options]
     -i, --ignore-stderr [string]          only with -b, strings that when found will not terminate meteor build
     --meteor-settings <path>              only with -b, adds --settings options to meteor
     --prod-debug                          forces adding dev tools to a production build
-    --ia32                                generate 32bit installer/package
+    --ia32                                generate 32bit installer
     --all-archs                           generate 32bit and 64bit installers
     --win                                 generate Windows installer
     --linux                               generate Linux installer
@@ -98,7 +97,7 @@ Usage: npm run desktop -- [command] [options]
               this will also work with -b
 ```
 #### `--build-meteor`
-If you just want to build the desktop app, package it or build installer without running the
+If you just want to build the desktop app or build the installer without running the
 `Meteor` project separately you can just use `-b` and all will be done automatically - this is useful when
 for example building on a CI etc.
 
@@ -138,7 +137,6 @@ Documentation
   * [Native modules support](#native-modules-support)
   * [Testing desktop app and modules](#testing-desktop-app-and-modules)
   * [MD_LOG_LEVEL](#md_log_level)
-  * [Packaging](#packaging)
   * [Building installer](#building-installer)
     * [Building for linux](#building-for-linux)
     * [Building for Windows Store (AppX)](#building-for-windows-store-appx)
@@ -257,7 +255,6 @@ field|description
 `packageJsonFields`|fields to add to the generated `package.json` in your desktop app
 `builderOptions`|[`electron-builder`](https://github.com/electron-userland/electron-builder) [options](https://github.com/electron-userland/electron-builder/wiki/Options)
 `builderCliOptions`|specify additional electron-builder CLI options e.g for [publishing artifacts](https://github.com/electron-userland/electron-builder/wiki/Publishing-Artifacts)
-`packagerOptions`|[`electron-packager`](https://github.com/electron-userland/electron-packager) [options](https://github.com/electron-userland/electron-packager/blob/master/docs/api.md)
 `extract`|array containing dependencies that should not be packed into asar (should not be needed as there is an automatic algorithm that will exclude all dependencies containing binary files)
 
 ##### Applying different window options for different OS
@@ -594,14 +591,6 @@ Check the scaffold test files for usage examples.
 `ALL` by default but you can change it to any of `INFO, WARN, ERROR, DEBUG, VERBOSE, TRACE`. You can also
 select multiple levels joining them with a comma, for example: `INFO,WARN`.
 
-## Packaging
-
-`npm run desktop -- package <ddp-url>`
-
-This produces a package using [`electron-packager`](https://github.com/electron-userland/electron-packager).  
-Package is produced and saved in `.desktop-package` directory. You can pass options via `packagerOptions` in
-`settings.json`.
-
 ## Building installer
 
 `npm run desktop -- build-installer <ddp-url>`
@@ -614,9 +603,6 @@ current platform. If at least one the platform is specified, the current platfor
 added automatically. So if you want to build Windows and Mac at the same time, being on Mac,
 you need to pass `--win --mac`, not only `--win`. To check what targets you can build on certain platform and what does it require
 check [Multi-Platform-Build](https://github.com/electron-userland/electron-builder/wiki/Multi-Platform-Build)
-
-Please note that `electron-builder` does not use `electron-packager` to create a package. So the
-options from `packagerOptions` are not taken into account.
 
 ##### Building for linux
 Currently there are some defaults provided only for `Windows` and `Mac`. If you want to build for
