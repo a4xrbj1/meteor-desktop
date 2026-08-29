@@ -10,6 +10,18 @@
   * **Note for consumers on a caret range.** By semver this is a major, which means a `^7` dependant does *not* pick it up and keeps the auto-install hazard. The counter-argument is the paragraph above — nothing can be using the command successfully — so releasing it as a minor is defensible if you want the fix to reach carets without a dependant-side diff. Decide before publishing — and if you ship it as a minor, retitle this section, because `### Breaking` is then false as written.
   * Not touched: `tests/fixtures/.desktop/settings.json` still carries a `packagerOptions` key. It is inert input to the settings-hash tests, and removing it would move a golden hash for no behavioural gain.
 
+### Changed
+
+* **The recommended dependency pins in `lib/defaultDependencies.js` are refreshed to what a consumer actually runs**: `electron` `42.5.2` → `42.9.3`, `electron-builder` and `app-builder-lib` `26.9.0` → `26.15.3`. All three were stale against `frontend`, and `getDependency` warns on every mismatch, so a real `npm run desktop build` printed three false "be sure to report that when submitting issues" lines per run — measured in the e2e harness's own desktop build on 2026-08-29:
+  ```
+  WARN  index:  you are using a electron@42.9.3 while the recommended version is 42.5.2, ...
+  WARN  index:  you are using a electron-builder@26.15.3 while the recommended version is 26.9.0, ...
+  WARN  index:  you are using a app-builder-lib@26.15.3 while the recommended version is 26.9.0, ...
+  ```
+  * **This is not a version bump of anything installed here.** These values are the pin `getDependency` uses when the name is *absent* from the consumer's `package.json` — see `lib/index.js#getDependency`, which auto-installs at that exact pin. `frontend` declares all three, so nothing about its build changes; what changes is the version a *fresh* consumer receives, and the disappearance of three spurious warnings.
+  * Publish dates checked 2026-08-29, all well outside the 7-day quarantine: `electron@42.9.3` 2026-08-18 (11d), `electron-builder@26.15.3` and `app-builder-lib@26.15.3` both 2026-06-09 (81d).
+  * Flagged, not fixed (it changes nothing while both values are equal): `lib/electronBuilder.js:52` resolves **app-builder-lib** using `defaultDependencies['electron-builder']` rather than its own key.
+
 ## v7.0.0 <sup>28.08.2026</sup>
 
 > **This release also contains everything listed under `v6.1.0` below, which was written but never
