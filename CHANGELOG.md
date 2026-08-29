@@ -1,4 +1,4 @@
-## Unreleased
+## v8.0.0 <sup>30.08.2026</sup>
 
 ### Breaking
 
@@ -7,7 +7,7 @@
   * **The command could not have worked for anyone.** `runPackager` wrapped the packager in `new Promise((resolve, reject) => this.packager(args, cb))`, but `electron-packager` has been promise-only since v13; 17.1.2's entry point is `module.exports = async function packager (opts)` — one parameter, no callback (verified by unpacking the published tarball). The second argument was ignored, the returned promise dropped, and the outer promise never settled. Worse, `packageApp` renames the consumer's `node_modules` aside *before* the call and renames it back in a `finally` that the never-settling `await` never reaches. So the command hung forever with the app's `node_modules` moved. That is why this removal is breaking on paper only: there is no working usage to break.
   * **`package` is kept as a tombstone that exits `1` with a pointer to `build-installer`, rather than deleted outright.** `run [ddp_url]` is commander's default command, so a removed verb is swallowed as a `ddp_url` and the app launches against a nonsense URL — a refusal reported as success, the exact shape seed `meteor-desktop-a8f8` spent a release removing. A functional test drives the real `.bin` symlink (what `npm run desktop -- package` actually reaches) and asserts the exit code and the message; inversion-checked by deleting the tombstone.
   * `--ia32`'s help text drops its `/package` half. The option stays: `lib/electronBuilder.js` and `lib/electronApp.js` still read it.
-  * **Note for consumers on a caret range.** By semver this is a major, which means a `^7` dependant does *not* pick it up and keeps the auto-install hazard. The counter-argument is the paragraph above — nothing can be using the command successfully — so releasing it as a minor is defensible if you want the fix to reach carets without a dependant-side diff. Decide before publishing — and if you ship it as a minor, retitle this section, because `### Breaking` is then false as written.
+  * **Shipped as a MAJOR, decided 2026-08-30.** The alternative was a minor, so that `frontend`'s `^7.0.0` would pick the fix up with no dependant-side diff. Rejected: the release deletes a public CLI command and a public API method, and a version number that says otherwise is a lie told to every consumer to save one line in the only consumer we have. `frontend` is the sole dependant in this workspace (`/usr/bin/grep -rn '"@a4xrbj1/meteor-desktop"' --include=package.json`), so its range moves to `^8.0.0` in the same session as the publish.
   * Not touched: `tests/fixtures/.desktop/settings.json` still carries a `packagerOptions` key. It is inert input to the settings-hash tests, and removing it would move a golden hash for no behavioural gain.
 
 ### Changed
