@@ -179,6 +179,29 @@ Desktop.send('dummyModule', 'setRendererReference');
         }
     };
 
+    // A loopback ROOT_URL means a dev `meteor run` or an e2e harness: the served bundle version
+    // can never equal the one baked into the asar, so every automatic check downloads a bundle
+    // that the shell's own verifyRuntimeConfig then refuses ("ROOT_URL in downloaded asset bundle
+    // would change current ROOT_URL to localhost") — the served host and the baked ddp_url are
+    // different spellings of loopback. Futile by construction, so do not start the timer.
+    //
+    // Prod is untouched: a release passes an explicit ddp_url, which lib/meteorApp.js writes into
+    // runtimeConfig.ROOT_URL, so this reads the real host and returns false.
+    const isLoopbackRootUrl = () => {
+        try {
+            // Cast: Meteor injects __meteor_runtime_config__ inline in index.html, so it is not
+            // on the DOM lib's Window type.
+            const rootUrl = (/** @type {any} */ (window).__meteor_runtime_config__ || {}).ROOT_URL || '';
+            const host = new URL(rootUrl).hostname;
+            // WHATWG URL always serializes an IPv6 hostname bracketed, so the bare '::1' form is
+            // unreachable here (and is not even a parseable URL) — no branch for it.
+            return host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+        } catch (e) {
+            console.warn('[meteor-desktop] HCP loopback check failed, assuming non-loopback', e);
+            return false;
+        }
+    };
+
     const start = () => {
         // CONFIRM STARTUP (seed meteor-desktop-hcp-brick). We are inside
         // Meteor.startup, so this bundle's JS executed successfully → this version
@@ -221,6 +244,22 @@ Desktop.send('dummyModule', 'setRendererReference');
 
         // DOWNLOAD trigger: check now and on a periodic poll. The desktop side
         // no-ops when the served manifest version equals the current bundle.
+        //
+        // GATE ONLY THESE TWO LINES — never return early from the top of start(). The three
+        // registrations above are required in every environment: without startupDidComplete() the
+        // shell never records a last-known-good version and loops reset -> 5-min timeout -> revert
+        // forever (the stuck-splash brick, seed meteor-desktop-hcp-brick).
+        //
+        // checkForUpdates() itself stays callable, which is deliberate: it is the public API, and
+        // e2e/tests/electron-hcp-download-progress.spec.js drives it directly to exercise the
+        // download/overlay/dismissal path on purpose. Gating the timer removes the futile
+        // automatic churn without removing the only harness that covers that path (seed e2e-5c54).
+        if (isLoopbackRootUrl()) {
+            console.log('[meteor-desktop] HCP automatic update checks disabled: ROOT_URL is loopback '
+                + '(dev/e2e), where the served bundle never matches the packaged one. '
+                + 'WebAppLocalServer.checkForUpdates() still works if called directly.');
+            return;
+        }
         requestCheck();
         setInterval(requestCheck, CHECK_INTERVAL_MS);
     };
