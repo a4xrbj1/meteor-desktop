@@ -717,4 +717,31 @@ describe('AssetBundleManager', () => {
             expect(stalls.some((cause) => cause.includes('version v3'))).to.be.true();
         });
     });
+
+    describe('#moveDownloadedAssetBundleIntoPlace leftover version dir (seed meteor-desktop-e93c)', () => {
+        // `renameSync` onto a non-empty directory throws for good and nothing else ever clears the
+        // leftover, so HCP wedges on this version forever. Inversion, run 2026-08-31: dropping the
+        // `existsSync`/`rmSync` guard from `moveDownloadedAssetBundleIntoPlace` fails this with
+        // "ENOTEMPTY: directory not empty, rename ... Downloading -> ... newversion".
+        //
+        // ponytail: only the non-empty case is asserted, because it is the only one that can be
+        // inverted HERE. POSIX rename onto an EMPTY directory succeeds, so a test for that passes
+        // with and without the guard on macOS - coverage in appearance only. Windows fails it with
+        // EPERM/EEXIST; that divergence is recorded in the comment on the guard itself, and belongs
+        // in a Windows run rather than in a test that cannot fail on the machine running it.
+        it('replaces a half-deleted leftover directory instead of wedging on it', () => {
+            const { manager, downloadBundle } = build({});
+            const leftover = path.join(versionsDir, 'newversion');
+            fs.mkdirSync(leftover, { recursive: true });
+            fs.writeFileSync(path.join(leftover, 'program.json'), '{ truncated');
+
+            manager.moveDownloadedAssetBundleIntoPlace(downloadBundle);
+
+            expect(manager.downloadedAssetBundlesByVersion.newversion).to.equal(downloadBundle);
+            expect(fs.existsSync(path.join(versionsDir, 'Downloading'))).to.be.false();
+            // The downloaded bundle's own program.json is in place, not the truncated leftover's.
+            const moved = fs.readFileSync(path.join(leftover, 'program.json'), 'utf8');
+            expect(JSON.parse(moved).version).to.equal('newversion');
+        });
+    });
 });

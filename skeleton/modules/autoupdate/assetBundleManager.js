@@ -677,6 +677,33 @@ class AssetBundleManager {
     moveDownloadedAssetBundleIntoPlace(assetBundle) {
         const version = assetBundle.getVersion();
         const versionDirectory = path.join(this.versionsDirectory, version);
+        // A leftover directory under this version's name makes `renameSync` throw for good -
+        // ENOTEMPTY on POSIX, EPERM or EEXIST on Windows even when the leftover is empty - and
+        // nothing else ever clears it, so every later check re-downloads the bundle and dies on this
+        // same line. Two producers put one there, both in this file: `loadDownloadedAssetBundles`
+        // leaves a directory that would not construct on disk ("broken version in directory"), and a
+        // prune that exhausts its retries still drops the in-memory record in
+        // `removeAllDownloadedAssetBundlesExceptForVersion`, leaving a half-deleted tree. A version
+        // is a content hash, so a deploy rollback re-serves the same name and walks into it.
+        //
+        // Plain `rmSync`, not `rimrafWithRetries`, because this must stay synchronous: the caller's
+        // `try`/`catch` is what routes a failure here to `didFail`, and an async throw would escape
+        // it, letting `didFinishDownloadingAssetBundle` run before the move had happened.
+        //
+        // ponytail: ONE attempt, and an external lock is accepted rather than retried. This process
+        // cannot be the locker - `localServer` serves exactly one `assetBundle` plus that bundle's
+        // parent, and this line is only reached for a version that is neither the initial bundle's
+        // nor in `downloadedAssetBundlesByVersion` - so the only thing that can block the removal is
+        // an external transient holder (a Windows indexer, an AV scanner). Retrying that
+        // synchronously would mean busy-waiting the MAIN process, since Node has no synchronous
+        // sleep: a frozen window in exchange for clearing a stale directory a few hundred ms sooner.
+        // So a locked leftover throws, reaches `didFail`, and the next scheduled check tries again.
+        // Recovery is deferred by one poll interval, not lost - which is the whole difference from
+        // the permanent wedge this guard removes.
+        if (originalFs.existsSync(versionDirectory)) {
+            this.log.warn(`removing leftover directory for version ${version} before moving the download into place`);
+            originalFs.rmSync(versionDirectory, { recursive: true, force: true });
+        }
         originalFs.renameSync(this.downloadDirectory, versionDirectory);
         assetBundle.didMoveToDirectoryAtUri(versionDirectory);
         this.downloadedAssetBundlesByVersion[version] = assetBundle;
