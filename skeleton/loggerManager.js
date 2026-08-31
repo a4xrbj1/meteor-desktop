@@ -33,7 +33,8 @@ import fs from 'fs';
  *     matches `"message":"(saving \/|making bundle object|...)`) to drop hot-code-push churn before
  *     uploading. Prefixing the message — the very thing the dead `filters` line tried to do — would
  *     silently break that filter and flood every uploaded crash report with asset noise. The entity
- *     goes in its own trailing field instead, where it is visible and harmless.
+ *     goes in its own trailing field instead, where it is visible and harmless. `time` was added
+ *     later (seed meteor-desktop-1a97) and is trailing for exactly the same reason.
  *   - `userDataDir/run.log` at 5 MB with 5 archives, and one `<entityName>.log` per module/plugin.
  *   - `getMainLogger()`, `configureLogger(name)` and `logger.getLoggerFor(sub)`.
  *
@@ -288,8 +289,15 @@ export default class LoggerManager {
         LEVELS.forEach((level) => {
             logger[level] = function writeRecord(...args) {
                 const message = args.map(renderArgument).join(' ');
-                // Key order matters: consumers grep run.log for `"message":"<text>` (see the header).
-                const line = JSON.stringify({ level, message, entity: entityName });
+                // Key order matters: consumers grep run.log for `"message":"<text>` (see the header),
+                // so `time` goes at the END, for the same reason `entity` does. ISO-8601 rather than
+                // epoch millis because a partly-upgraded install has BOTH the old plain-text winston
+                // lines and these JSON ones in one run.log, and a human scanning it should see a
+                // date in both halves rather than an opaque integer in one. The two formats are
+                // otherwise nothing alike (seed meteor-desktop-1a97).
+                const line = JSON.stringify({
+                    level, message, entity: entityName, time: new Date().toISOString()
+                });
                 sinks.forEach((sink) => sink.write(line));
                 const target = (level === 'error' || level === 'warn') ? console.error : console.log;
                 target(`[${entityName}] ${message}`);

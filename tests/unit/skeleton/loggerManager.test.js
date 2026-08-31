@@ -69,8 +69,39 @@ describe('LoggerManager', () => {
     describe('the record shape other repos depend on', () => {
         it('writes one JSON record per line with level first and message second', () => {
             loggerManager.getMainLogger().info('hello');
-            expect(raw('run.log').trim().split('\n')).to.have.lengthOf(1);
-            expect(raw('run.log').trim()).to.equal('{"level":"info","message":"hello","entity":"main"}');
+            const line = raw('run.log').trim();
+            expect(line.split('\n')).to.have.lengthOf(1);
+            // Key ORDER is the contract, not merely key presence: the consumer regex below anchors
+            // on `"message":"` immediately following the level, so a reordering that still parsed
+            // to the same object would break it. Asserted explicitly rather than implied by the
+            // string match, so a future field lands in the right place.
+            expect(Object.keys(JSON.parse(line))).to.deep.equal(['level', 'message', 'entity', 'time']);
+            expect(line).to.match(
+                /^\{"level":"info","message":"hello","entity":"main","time":"[^"]+"\}$/
+            );
+        });
+
+        // run.log is the file a consumer's telemetry uploads on a crash or a stuck startup, and it
+        // is the shell's only record of the window lifecycle and the startup timer. Without this
+        // field no duration question can be answered from it at all - which is what happened to
+        // frontend-0144 item (a), "why did the renderer need more than 60 seconds", on a real
+        // end-user report (seed meteor-desktop-1a97).
+        it('timestamps every record in ISO-8601, so a report can answer a duration question', () => {
+            const before = Date.now();
+            loggerManager.getMainLogger().info('first');
+            loggerManager.configureLogger('autoupdate').warn('second');
+            const after = Date.now();
+            const all = [...records('run.log'), ...records('autoupdate.log')];
+            expect(all).to.have.lengthOf(3);
+            all.forEach((record) => {
+                expect(record.time, JSON.stringify(record)).to.be.a('string');
+                // Round-tripping through Date proves it is parseable AND canonical - a non-ISO
+                // string would either fail to parse or re-serialise differently.
+                expect(new Date(record.time).toISOString()).to.equal(record.time);
+                const at = Date.parse(record.time);
+                expect(at).to.be.at.least(before);
+                expect(at).to.be.at.most(after);
+            });
         });
 
         it('leaves the consumer telemetry noise filter matching', () => {
