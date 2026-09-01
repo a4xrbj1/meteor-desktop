@@ -1,4 +1,4 @@
-## Unreleased
+## v8.0.3 <sup>01.09.2026</sup>
 
 ### Fixed
 
