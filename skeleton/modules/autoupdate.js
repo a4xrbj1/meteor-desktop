@@ -174,7 +174,28 @@ export default class HCPClient {
                 // process.noAsar shelljs tried to remove files inside asar instead of just
                 // deleting the archive. `del` also could not delete asar archive. Rimraf is ok
                 // because it accepts custom fs object.
-                originalFs.rmSync(this.versionsDir, { recursive: true, force: true });
+                //
+                // The try/catch is load-bearing. `init` is an eventsBus handler - the constructor
+                // registers it with `on('beforeDesktopJsLoad', this.init.bind(this))` - so an
+                // uncaught throw here escapes that emit during startup, before the desktop JS is
+                // loaded. `force: true` suppresses ENOENT only; EPERM/EBUSY from an open handle
+                // still throws, and that is the ordinary Windows case for a versions dir held by
+                // the local server, an AV scanner or the search indexer. This sweep runs precisely
+                // when the native was just updated, so the failure and the newly-installed binary
+                // would coincide. Failing to clear the store must never stop the app starting.
+                // Seed meteor-desktop-e93c R2.
+                //
+                // ponytail: one attempt, no retry, for the same reason as
+                // `moveDownloadedAssetBundleIntoPlace` - this is the MAIN process and Node has no
+                // synchronous sleep, so retrying here would freeze the window at startup. A
+                // survivor is no longer permanent: `resetConfig` below forgets the downloaded
+                // versions, and that guard now clears a leftover before renaming onto it, so the
+                // dirty store costs one re-download rather than wedging the version for good.
+                try {
+                    originalFs.rmSync(this.versionsDir, { recursive: true, force: true });
+                } catch (e) {
+                    this.log.warn(`error removing versions directory: ${e.message}`);
+                }
                 if (fs.existsSync(this.versionsDir)) {
                     this.log.warn('could not remove versions directory');
                 }

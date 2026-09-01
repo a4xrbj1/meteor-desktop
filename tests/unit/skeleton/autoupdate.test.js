@@ -324,3 +324,70 @@ describe('HCPClient — update-check phase events', () => {
         expect(errors[0][1]).to.include('error querying asset manifest');
     });
 });
+
+describe('HCPClient#initializeAssetBundles — versions-store sweep (seed meteor-desktop-e93c R2)', () => {
+    let warnings;
+    let root;
+    let versionsDir;
+
+    before(() => {
+        HCPClient = require('../../../skeleton/modules/autoupdate.js').default;
+        Module = require('../../../skeleton/modules/module.js').default;
+    });
+
+    after(() => {
+        Module.__setRendererForTest(null);
+    });
+
+    beforeEach(() => {
+        warnings = [];
+        root = fs.mkdtempSync(path.join(os.tmpdir(), 'md-r2-'));
+        // A real bundle on disk: initializeAssetBundles constructs an AssetBundle from it and
+        // reads a signature out of the same two files.
+        fs.mkdirSync(path.join(root, 'initial'), { recursive: true });
+        fs.writeFileSync(path.join(root, 'initial', 'program.json'), manifestJson());
+        fs.writeFileSync(path.join(root, 'initial', 'index.html'), '<html></html>');
+        // A populated versions store for the sweep to attempt.
+        versionsDir = path.join(root, 'store', 'versions');
+        fs.mkdirSync(path.join(versionsDir, 'oldversion'), { recursive: true });
+    });
+
+    afterEach(() => {
+        // Restore write permission first, or the cleanup below hits the same EACCES.
+        try {
+            fs.chmodSync(versionsDir, 0o700);
+        } catch {
+            // Already writable — the permission test did not run or already restored it.
+        }
+        fs.rmSync(root, { recursive: true, force: true });
+    });
+
+    it('survives a versions dir it cannot remove, instead of throwing out of startup', () => {
+        // A REAL EACCES, not a stub: dropping write permission on the versions dir makes the
+        // recursive rmSync fail on its first child. That is the POSIX stand-in for the Windows
+        // EPERM/EBUSY this guard exists for, where an AV scanner, the search indexer or the local
+        // server holds a handle. init() is registered on the eventsBus as the beforeDesktopJsLoad
+        // handler, so an uncaught throw here escapes the emit and takes startup with it — and this
+        // sweep runs only when the native was just updated, so it would land on the new binary.
+        fs.chmodSync(versionsDir, 0o500);
+        const { client } = makeClient('5.3.0', warnings, {
+            bundleStorePath: path.join(root, 'store'),
+            initialBundlePath: path.join(root, 'initial')
+        });
+
+        expect(() => client.initializeAssetBundles()).to.not.throw();
+
+        const logged = warnings.join('\n');
+        expect(logged).to.include('error removing versions directory');
+        expect(logged).to.include('could not remove versions directory');
+        // The store really did survive, which proves the sweep failed rather than quietly
+        // succeeding and making the assertions above vacuous.
+        expect(fs.existsSync(path.join(versionsDir, 'oldversion'))).to.be.true();
+        // The property the catch actually rests on, pinned so a future reorder cannot quietly
+        // break it: resetConfig() runs unconditionally AFTER the sweep, so a surviving directory
+        // is never resurrected - bundle selection below branches entirely on lastDownloadedVersion
+        // and falls back to the initial bundle when it is null. Without this the test would stay
+        // green while stale-bundle resurrection became real again. Review finding S1.
+        expect(client.config.lastDownloadedVersion).to.be.null();
+    });
+});
