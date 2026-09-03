@@ -230,6 +230,28 @@ describe('AssetBundleManager', () => {
         });
     });
 
+    describe('#checkForUpdates request headers', () => {
+        // seed meteor-desktop-4d13, the twin of the assertion in assetBundleDownloader.test.js.
+        // Connection: close leaves undici's parser with shouldKeepAlive false, the sole gate on
+        // its three `parser.finish()` call sites; finish() asserts !paused and the parser IS
+        // paused on body backpressure, so a socket dying mid-response throws an AssertionError
+        // out of the socket's 'error' listener, past every .catch, into the main process.
+        it('does not send Connection: close on the manifest request', async () => {
+            const { manager } = build({ hcpRequestTimeout: 200 });
+            const seen = [];
+            manager.httpClient = (requestUrl, options) => {
+                seen.push(options);
+                return Promise.reject(new Error('stop after capturing the request'));
+            };
+
+            manager.checkForUpdates('http://127.0.0.1:1/');
+
+            await waitFor(() => seen.length === 1);
+            expect(seen[0].headers).to.not.have.property('Connection');
+            expect(seen[0].headers['User-Agent']).to.match(/ Chrome\/\d[\d.]* /);
+        });
+    });
+
     describe('#downloadAssetBundle stall watchdog', () => {
         // The e490 production symptom: a download that emits nothing and never ends, leaving the
         // user on a dead progress bar until they restart. Inversion: delete the armStallTimer()

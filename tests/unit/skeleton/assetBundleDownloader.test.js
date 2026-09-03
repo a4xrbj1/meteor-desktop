@@ -192,7 +192,12 @@ describe('AssetBundleDownloader request headers', () => {
 
         expect(requests).to.have.lengthOf(1);
         expect(requests[0].headers['User-Agent']).to.match(/ Chrome\/\d[\d.]* /);
-        expect(requests[0].headers.Connection).to.equal('close');
+        // seed meteor-desktop-4d13: this used to assert Connection: close. A close-delimited
+        // response leaves undici's parser with shouldKeepAlive false, which is the sole gate on
+        // its three `parser.finish()` call sites — and finish() asserts !paused, while the parser
+        // IS paused on body backpressure. A socket dying mid-asset then throws an AssertionError
+        // out of the socket's 'error' listener, past every .catch, and crashes the main process.
+        expect(requests[0].headers).to.not.have.property('Connection');
     });
 });
 

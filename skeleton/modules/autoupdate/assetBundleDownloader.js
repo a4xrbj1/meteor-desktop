@@ -212,8 +212,22 @@ export default class AssetBundleDownloader {
                 self.assetsDownloading.push(asset);
                 const downloadUrl = self.downloadUrlForAsset(asset);
                 self.queue.push((callback) => {
+                    // NO `Connection: close`. It looks harmless and it crashes the app. A
+                    // close-delimited response leaves undici's parser with shouldKeepAlive false,
+                    // and all three of its `parser.finish()` call sites are gated on exactly that
+                    // (client-h1.js:931, :952, :969). finish() opens with `assert(!this.paused)`,
+                    // and the parser IS paused whenever llhttp returned PAUSED on body backpressure
+                    // — routine on a multi-MB asset. So a socket that dies mid-body makes
+                    // onHttpSocketError call finish() on a paused parser and throw an
+                    // AssertionError from inside the socket's own 'error' listener, OUTSIDE this
+                    // promise chain, where the .catch below cannot see it. It reaches the process
+                    // as an uncaughtException and the app shows "Application encountered an error".
+                    // Measured on a customer's win32 client 2026-09-03 (seed meteor-desktop-4d13).
+                    // Keep-alive is the HTTP/1.1 default, it is what the renderer already uses for
+                    // these same assets, and it keeps shouldKeepAlive true so the branch is never
+                    // taken — the socket error then rejects the fetch normally, into onFailure.
                     self.httpClient(downloadUrl, {
-                        headers: { Connection: 'close', 'User-Agent': modernUserAgent }
+                        headers: { 'User-Agent': modernUserAgent }
                     })
                         .then((response) => Promise.all([response, response.arrayBuffer()]))
                         .then(([response, arrayBuffer]) => {

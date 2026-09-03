@@ -1,3 +1,13 @@
+## Unreleased
+
+### Fixed
+
+* **A network drop during an HCP download no longer crashes the main process** (seed `meteor-desktop-4d13`). Both HCP requests sent `Connection: close` — `assetBundleDownloader.js` per asset and `assetBundleManager.js` for the manifest. A close-delimited response leaves undici's parser with `shouldKeepAlive` false, and that flag is the sole gate on all three of its `parser.finish()` call sites (`client-h1.js` `onHttpSocketError`, `onHttpSocketEnd`, `onHttpSocketClose`). `finish()` opens with `assert(!this.paused)`, and the parser IS paused whenever llhttp returned `PAUSED` on body backpressure — routine on a multi-MB asset. So a socket dying mid-body threw an `AssertionError` from inside the socket's own `error` listener, **outside** the fetch promise chain, where the existing `.catch(onFailure)` could not see it. It reached the process as an `uncaughtException`; in a consumer that installs its own handler this surfaces to the user as an application-crash dialog. The header is removed from both requests.
+  * **Measured on a real customer's Windows client, 2026-09-03** (app 5.3.0, skeleton 6.0.30, win32 10.0.26200), not deduced from a test. The uploaded `run.log` ends with `started downloading asset bundle (5478230 bytes)`, then `error querying asset manifest ...: fetch failed` and `error downloading asset: packages/modules.js: TypeError: terminated`, and the crash report carries `AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value: assert(!this.paused) at Parser.finish (node:internal/deps/undici/undici:7380:9) at TLSSocket.onHttpSocketError`. The app was up and in use at the time, so this is not a startup failure.
+  * **The header bought nothing.** Nothing in this repo documents why it was there; it arrived wholesale in release commit `e67b766` (4.0.2). Keep-alive is the HTTP/1.1 default and is what the renderer already uses for these same assets, and seed `meteor-desktop-3669` measured production serving 151-way and 285-way concurrent bursts of this exact request shape.
+  * **This narrows the window, it does not seal it.** `shouldKeepAlive` also goes false when the *server* elects to close — Node's `keepAliveTimeout`, `maxRequestsPerSocket`, an ingress recycling a connection — so the assertion path remains reachable, just rarely, instead of on every single response. Closing it entirely needs a fix in undici, not here.
+  * Both call sites are pinned by a test asserting the absence of the header, each inversion-verified: restoring `Connection: 'close'` fails exactly that test in each file. 321 passing, eslint and tsc clean.
+
 ## v8.0.3 <sup>01.09.2026</sup>
 
 ### Fixed

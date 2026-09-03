@@ -182,7 +182,10 @@ class AssetBundleManager {
         // the renderer hears about it and the next 10-minute poll retries — nothing is blacklisted
         // on an error path (the only writer of blacklistedVersions is the startup-timer revert).
         this.httpClient(manifestUrl, {
-            headers: { Connection: 'close', 'User-Agent': modernUserAgent },
+            // No `Connection: close` — see the comment on the same header in
+            // assetBundleDownloader.js: it puts undici's parser into the shouldKeepAlive-false
+            // state whose error path asserts on a paused parser and crashes the main process.
+            headers: { 'User-Agent': modernUserAgent },
             signal: AbortSignal.timeout(this.resolveTimeout('hcpRequestTimeout', DEFAULT_HCP_REQUEST_TIMEOUT))
         })
             .then((response) => Promise.all([response, response.text()]))
