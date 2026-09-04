@@ -13,15 +13,96 @@ const { modernUserAgent } = utils;
 // yourdna.family bundle is a 285-request simultaneous burst at the Meteor server. Measured against
 // production 2026-08-18, replaying this downloader's exact request shape — 5x sequential, 20 and 80
 // concurrent were 100% 200, and the third consecutive 151-way burst returned 103x 200 and 48x 503.
-// One shed asset fails the WHOLE bundle (verifyResponse -> didFail), and the app then stays on its
-// baked bundle, because the reload is gated on `onNewVersionReady`, which a failed download never
-// fires — so the user silently never receives the update. Seed meteor-desktop-3669. The staging half
-// of the same bug was frontend-a312, seen there as a 429 and fixed only on the server side, which is
+// A shed asset is now retried (MAX_ASSET_RETRIES below, seed meteor-desktop-686f) rather than
+// failing the whole bundle outright, but the cap is still what stops the server shedding in the
+// first place — retrying into an overloaded server is not a substitute for not overloading it.
+// Seed meteor-desktop-3669. The staging half of the same bug was frontend-a312, seen there as a 429 and fixed only on the server side, which is
 // why it resurfaced on production as a 503.
 //
 // 6 is deliberately far below the measured breaking point rather than just under it: the probe had
 // the server to itself, real clients share it with live users and with each other.
 const DOWNLOAD_CONCURRENCY = 6;
+
+// Per-asset retry (seed meteor-desktop-686f). Before this, ONE shed asset failed the WHOLE bundle:
+// onFailure -> didFail -> cancel, and the app then silently stayed on its baked bundle because the
+// reload is gated on `onNewVersionReady`, which a failed download never fires. With ~200 assets per
+// bundle, one transient failure somewhere in the set is close to certain over time, and each one
+// discarded every correctly downloaded megabyte alongside it — that is what turned frontend-1343
+// from a bandwidth problem into a months-long outage of the HCP channel.
+//
+// 3 retries at 500/1000/2000ms is at most 3.5s of extra wall clock per asset, well inside the 300s
+// stall watchdog in assetBundleManager, which is re-armed on every COMPLETED asset and so is not
+// consumed by a retrying neighbour.
+const MAX_ASSET_RETRIES = 3;
+const RETRY_BASE_DELAY_MS = 500;
+
+// NOT retried, deliberately: a 404, a 403 or an sri mismatch is the server's settled answer, so
+// retrying only delays a failure that is already correct. Retry buys nothing and costs the user
+// seconds on every asset of a genuinely broken bundle.
+const isTransientStatus = function (status) {
+    return status >= 500 || status === 408 || status === 429;
+};
+
+const delay = function (ms) {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms);
+    });
+};
+
+/**
+ * Performs one asset request, normalising a thrown network error into a returned outcome so the
+ * retry loop has a single shape to branch on.
+ *
+ * NO `Connection: close` header. It looks harmless and it crashes the app. A close-delimited
+ * response leaves undici's parser with shouldKeepAlive false, and all three of its
+ * `parser.finish()` call sites are gated on exactly that (client-h1.js:931, :952, :969).
+ * finish() opens with `assert(!this.paused)`, and the parser IS paused whenever llhttp returned
+ * PAUSED on body backpressure — routine on a multi-MB asset. So a socket that dies mid-body makes
+ * onHttpSocketError call finish() on a paused parser and throw an AssertionError from inside the
+ * socket's own 'error' listener, OUTSIDE this promise chain, where no `.catch` can see it. It
+ * reaches the process as an uncaughtException and the app shows "Application encountered an
+ * error". Measured on a customer's win32 client 2026-09-03 (seed meteor-desktop-4d13). Keep-alive
+ * is the HTTP/1.1 default, it is what the renderer already uses for these same assets, and it
+ * keeps shouldKeepAlive true so the branch is never taken — the socket error then rejects the
+ * fetch normally, and is returned here as a retryable outcome.
+ *
+ * @param {function} httpClient  - `fetch` implementation.
+ * @param {string}   downloadUrl - Url of the asset.
+ *
+ * @returns {Promise<Object>} - `{ response, body, error }`, exactly one of response/error set.
+ */
+const fetchAssetOnce = async function (httpClient, downloadUrl) {
+    try {
+        const response = await httpClient(downloadUrl, {
+            headers: { 'User-Agent': modernUserAgent }
+        });
+
+        // The body is read ONLY for a response that could actually be kept. A server shedding
+        // load can send 503 headers and then stall streaming its error body, and awaiting
+        // arrayBuffer() there would hang until the 300s stall watchdog killed the whole bundle —
+        // precisely the case the retry exists for. `verifyResponse` rejects every non-200 on the
+        // status alone, so its body is never needed. (Adversarial review finding P2.)
+        if (response.status !== 200) {
+            // Cancel the body rather than leave it dangling. undici holds the connection open
+            // until a response body is consumed OR cancelled, so with 6 assets in flight against
+            // a shedding server the unread error bodies would pin every socket and the retries
+            // would queue behind them until the stall watchdog failed the bundle — reintroducing
+            // the failure the early return above exists to avoid. Fire-and-forget: nothing waits
+            // on the cancellation, and a rejection (an already-errored stream) is not a reason to
+            // fail the asset. (Adversarial review finding P1.)
+            const stream = response.body;
+            if (stream && typeof stream.cancel === 'function') {
+                stream.cancel().catch(() => {});
+            }
+            return { response, body: Buffer.alloc(0), error: null };
+        }
+
+        const body = Buffer.from(await response.arrayBuffer());
+        return { response, body, error: null };
+    } catch (error) {
+        return { response: null, body: null, error };
+    }
+};
 
 const require = createRequire(import.meta.url);
 
@@ -74,6 +155,11 @@ export default class AssetBundleDownloader {
         this.bytesTotal = missingAssets.reduce((sum, asset) => sum + (asset.entrySize || 0), 0);
         this.bytesTransferred = 0;
         this.cancelInvoked = false;
+
+        // Instance fields rather than bare constants so a test can drive the retry path without
+        // waiting out the real backoff.
+        this.maxAssetRetries = MAX_ASSET_RETRIES;
+        this.retryBaseDelayMs = RETRY_BASE_DELAY_MS;
 
         this.queue = new Queue({ concurrency: DOWNLOAD_CONCURRENCY });
     }
@@ -207,35 +293,62 @@ export default class AssetBundleDownloader {
             }
         }
 
+        /**
+         * Fetches one asset, retrying transient failures before the whole bundle is given up on.
+         *
+         * @param {Asset}  asset       - Asset to download.
+         * @param {string} downloadUrl - Url of the asset.
+         *
+         * @returns {Promise<void>}
+         */
+        async function downloadAsset(asset, downloadUrl) {
+            let lastCause = null;
+
+            for (let attempt = 0; attempt <= self.maxAssetRetries; attempt += 1) {
+                if (self.cancelInvoked) {
+                    return;
+                }
+
+                if (attempt > 0) {
+                    // eslint-disable-next-line no-await-in-loop
+                    await delay(self.retryBaseDelayMs * (2 ** (attempt - 1)));
+                    if (self.cancelInvoked) {
+                        return;
+                    }
+                    self.log.warn(
+                        `retrying ${asset.urlPath} (attempt ${attempt + 1} of `
+                        + `${self.maxAssetRetries + 1}) after: ${lastCause}`
+                    );
+                }
+
+                // eslint-disable-next-line no-await-in-loop
+                const { response, body, error } = await fetchAssetOnce(self.httpClient, downloadUrl);
+
+                if (error !== null) {
+                    lastCause = error;
+                } else if (isTransientStatus(response.status)) {
+                    lastCause = `non-success status code ${response.status}`;
+                } else {
+                    // Everything else — including a 404 and a body that will fail sri — is the
+                    // server's settled answer. onResponse verifies it and fails the bundle if bad.
+                    onResponse(asset, response, body);
+                    return;
+                }
+            }
+
+            onFailure(asset, `${lastCause} (gave up after ${self.maxAssetRetries + 1} attempts)`);
+        }
+
         this.missingAssets.forEach((asset) => {
             if (!~self.assetsDownloading.indexOf(asset)) {
                 self.assetsDownloading.push(asset);
                 const downloadUrl = self.downloadUrlForAsset(asset);
                 self.queue.push((callback) => {
-                    // NO `Connection: close`. It looks harmless and it crashes the app. A
-                    // close-delimited response leaves undici's parser with shouldKeepAlive false,
-                    // and all three of its `parser.finish()` call sites are gated on exactly that
-                    // (client-h1.js:931, :952, :969). finish() opens with `assert(!this.paused)`,
-                    // and the parser IS paused whenever llhttp returned PAUSED on body backpressure
-                    // — routine on a multi-MB asset. So a socket that dies mid-body makes
-                    // onHttpSocketError call finish() on a paused parser and throw an
-                    // AssertionError from inside the socket's own 'error' listener, OUTSIDE this
-                    // promise chain, where the .catch below cannot see it. It reaches the process
-                    // as an uncaughtException and the app shows "Application encountered an error".
-                    // Measured on a customer's win32 client 2026-09-03 (seed meteor-desktop-4d13).
-                    // Keep-alive is the HTTP/1.1 default, it is what the renderer already uses for
-                    // these same assets, and it keeps shouldKeepAlive true so the branch is never
-                    // taken — the socket error then rejects the fetch normally, into onFailure.
-                    self.httpClient(downloadUrl, {
-                        headers: { 'User-Agent': modernUserAgent }
-                    })
-                        .then((response) => Promise.all([response, response.arrayBuffer()]))
-                        .then(([response, arrayBuffer]) => {
-                            onResponse(asset, response, Buffer.from(arrayBuffer));
-                            callback();
-                        })
+                    downloadAsset(asset, downloadUrl)
                         .catch((error) => {
                             onFailure(asset, error);
+                        })
+                        .then(() => {
                             callback();
                         });
                 });

@@ -239,3 +239,159 @@ describe('AssetBundleDownloader download concurrency', () => {
         expect(downloader.missingAssets).to.have.lengthOf(40);
     });
 });
+
+describe('AssetBundleDownloader per-asset retry', () => {
+    before(() => {
+        AssetBundleDownloader = require('../../../skeleton/modules/autoupdate/assetBundleDownloader.js').default;
+    });
+
+    // Builds a response stub good enough for verifyResponse + onResponse.
+    const fakeResponse = (status, body) => ({
+        status,
+        headers: { get: () => null },
+        arrayBuffer: () => Promise.resolve(
+            body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength)
+        )
+    });
+
+    // Drives a downloader to completion (success or failure) with the backoff turned down so the
+    // test does not sit through the real 500/1000/2000ms.
+    const runDownload = (httpClient, assets) => {
+        const downloader = makeDownloader();
+        downloader.retryBaseDelayMs = 1;
+        downloader.missingAssets = assets;
+        downloader.httpClient = httpClient;
+        return new Promise((resolve) => {
+            downloader.setCallbacks(
+                () => resolve({ finished: true, cause: null }),
+                (cause) => resolve({ finished: false, cause })
+            );
+            downloader.resume();
+        });
+    };
+
+    // seed meteor-desktop-686f. ONE shed asset used to fail the entire bundle: onFailure ->
+    // didFail -> cancel, and the app then silently stayed on its baked bundle because the reload
+    // is gated on onNewVersionReady. A 503 under load is transient — the whole point of retrying.
+    // Inversion: drop the retry loop and requests.length is 1.
+    it('retries a transient 503 rather than discarding the bundle', async () => {
+        let requests = 0;
+        const httpClient = () => {
+            requests += 1;
+            return Promise.resolve(fakeResponse(503, Buffer.alloc(0)));
+        };
+
+        const result = await runDownload(httpClient, [{ filePath: 'a.js', urlPath: '/a.js', hash: null }]);
+
+        expect(requests).to.equal(4);
+        expect(result.finished).to.be.false();
+        expect(result.cause).to.contain('gave up after 4 attempts');
+    });
+
+    // The other half of the same rule: a 404 is the server's settled answer, so retrying only
+    // delays a failure that is already correct. Inversion: retry every status and requests is 4.
+    it('does not retry a terminal 404', async () => {
+        let requests = 0;
+        const httpClient = () => {
+            requests += 1;
+            return Promise.resolve(fakeResponse(404, Buffer.alloc(0)));
+        };
+
+        const result = await runDownload(httpClient, [{ filePath: 'a.js', urlPath: '/a.js', hash: null }]);
+
+        expect(requests).to.equal(1);
+        expect(result.finished).to.be.false();
+        expect(result.cause).to.contain('non-success status code 404');
+    });
+
+    // A dropped socket is the other transient class (seed meteor-desktop-4d13 is exactly this
+    // shape on win32). It must be retried, not treated as a verdict on the bundle.
+    it('retries a socket error', async () => {
+        let requests = 0;
+        const httpClient = () => {
+            requests += 1;
+            return Promise.reject(new Error('socket hang up'));
+        };
+
+        const result = await runDownload(httpClient, [{ filePath: 'a.js', urlPath: '/a.js', hash: null }]);
+
+        expect(requests).to.equal(4);
+        expect(result.cause).to.contain('socket hang up');
+        expect(result.cause).to.contain('gave up after 4 attempts');
+    });
+
+    // Adversarial review finding P2. A server shedding load can send 503 headers and then stall on
+    // the error body. Reading the body before classifying the status hangs there until the 300s
+    // stall watchdog kills the whole bundle — the exact case the retry exists for. Inversion:
+    // await arrayBuffer() unconditionally and this test times out instead of passing.
+    it('retries a transient status without waiting for its body', async () => {
+        let requests = 0;
+        const httpClient = () => {
+            requests += 1;
+            return Promise.resolve({
+                status: 503,
+                headers: { get: () => null },
+                arrayBuffer: () => new Promise(() => {})
+            });
+        };
+
+        const result = await runDownload(httpClient, [{ filePath: 'a.js', urlPath: '/a.js', hash: null }]);
+
+        expect(requests).to.equal(4);
+        expect(result.cause).to.contain('gave up after 4 attempts');
+    });
+
+    // Adversarial review finding P1, the consequence of P2's early return. undici holds the
+    // connection until a body is consumed or cancelled, so skipping the read without cancelling
+    // would pin a socket per shed asset and the retries would queue behind them — the same stall
+    // the early return exists to avoid. Inversion: drop the cancel() call and cancelled is 0.
+    it('releases the connection of a response it refuses to read', async () => {
+        let cancelled = 0;
+        const httpClient = () => Promise.resolve({
+            status: 503,
+            headers: { get: () => null },
+            body: {
+                cancel: () => {
+                    cancelled += 1;
+                    return Promise.resolve();
+                }
+            },
+            arrayBuffer: () => new Promise(() => {})
+        });
+
+        await runDownload(httpClient, [{ filePath: 'a.js', urlPath: '/a.js', hash: null }]);
+
+        expect(cancelled).to.equal(4);
+    });
+
+    // The property that actually matters: a bundle SURVIVES a transient failure. Without the retry
+    // this same sequence ends in didFail and the correctly downloaded bytes are thrown away.
+    it('completes the bundle when a transient failure is followed by a success', async () => {
+        const os = require('os');
+        const path = require('path');
+        const fs = require('fs');
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'abd-retry-'));
+        const file = path.join(dir, 'a.css');
+        const payload = Buffer.from('body{}');
+
+        let requests = 0;
+        const httpClient = () => {
+            requests += 1;
+            return Promise.resolve(fakeResponse(requests === 1 ? 503 : 200, payload));
+        };
+
+        const result = await runDownload(httpClient, [{
+            filePath: 'a.css',
+            urlPath: '/a.css',
+            fileType: 'css',
+            hash: null,
+            entrySize: payload.length,
+            getFile: () => file
+        }]);
+
+        expect(requests).to.equal(2);
+        expect(result.finished).to.be.true();
+        expect(fs.readFileSync(file, 'utf-8')).to.equal('body{}');
+        fs.rmSync(dir, { recursive: true, force: true });
+    });
+});
