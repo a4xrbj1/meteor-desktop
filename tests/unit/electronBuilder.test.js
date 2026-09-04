@@ -1,9 +1,22 @@
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+
 import * as chai from 'chai';
 
 import InstallerBuilder from '../../lib/electronBuilder.js';
 import meteorDesktop from '../../lib/index.js';
 
-const { describe, it } = global;
+const { describe, it, after } = global;
+
+// Every builderThatFails() call mkdtemps a root; without this they accumulate one per test per run
+// (an adversarial review counted 50 already lying in the tmp root). Torn down at the end rather than
+// per test so a failing assertion still leaves its directory to look at.
+const tempRoots = [];
+
+after(() => {
+    tempRoots.forEach((root) => fs.rmSync(root, { recursive: true, force: true }));
+});
 const { expect } = chai;
 
 /**
@@ -18,12 +31,22 @@ const { expect } = chai;
  * @returns {InstallerBuilder}
  */
 const builderThatFails = function (failWith, failCleanup = false) {
+    // A real directory per call, because the node_modules restore is exercised against the real fs
+    // rather than a stub - fs is stdlib, and a renameSync that actually moves a directory is the
+    // behaviour under test.
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'md-eb-'));
+    tempRoots.push(root);
     const $ = {
         env: {
-            options: { output: '/tmp/md-eb', mac: true },
+            options: { output: root, mac: true },
             paths: {
                 installerDir: 'installer',
-                electronApp: { root: '/tmp/md-eb/app', extractedNodeModules: '/tmp/md-eb/extracted' }
+                electronApp: {
+                    root: path.join(root, 'app'),
+                    extractedNodeModules: path.join(root, 'extracted'),
+                    nodeModules: path.join(root, 'app', 'node_modules'),
+                    tmpNodeModules: path.join(root, 'tmp_node_modules')
+                }
             },
             os: {}
         },
@@ -86,6 +109,88 @@ describe('electronBuilder build', () => {
     // and this fails.
     it('does not fail a successful build when the temp-dir cleanup throws', async () => {
         await builderThatFails(null, true).build();
+    });
+
+    // Seed meteor-desktop-701d. beforeBuild moves the app's node_modules out to tmpNodeModules and
+    // the rename back lives only in afterPack, which a failed electron-builder run never reaches -
+    // observed on the 2026-08-30 signed --mac --win beta run, which died in
+    // WindowsSignAzureManager.initialize and left .meteor/.desktop_node_modules/ behind. Inversion:
+    // remove the finally in build() and the restored assertion fails with the modules still in tmp.
+    it('moves node_modules back when electron-builder fails', async () => {
+        const instance = builderThatFails(new Error('WindowsSignAzureManager: no identity'));
+        const paths = /** @type {any} */ (instance).$.env.paths.electronApp;
+
+        // The app root exists in a real failed build - electron-builder was pointed at it as
+        // directories.app and the scaffold created it - so the restore has somewhere to land.
+        fs.mkdirSync(paths.root, { recursive: true });
+        fs.mkdirSync(paths.tmpNodeModules, { recursive: true });
+        fs.writeFileSync(path.join(paths.tmpNodeModules, 'marker'), 'x');
+        /** @type {any} */ (instance).nodeModulesMovedOut = true;
+
+        let rejectedWith = null;
+        try {
+            await instance.build();
+        } catch (e) {
+            rejectedWith = e;
+        }
+
+        expect(rejectedWith, 'the finally swallowed the build failure').to.be.an('error');
+        expect(fs.existsSync(path.join(paths.nodeModules, 'marker')), 'node_modules was not restored')
+            .to.equal(true);
+        expect(fs.existsSync(paths.tmpNodeModules), 'the modules were left stranded in tmpNodeModules')
+            .to.equal(false);
+    });
+
+    // The other half of seed meteor-desktop-701d, and a regression this fix ITSELF introduced before
+    // an adversarial review reproduced it. moveNodeModulesOut() used to be a
+    // `.catch(e => reject(e)).then(next)` chain, and rejecting the outer promise does NOT stop the
+    // inner chain - so after ANY failure every later step still ran, including the delayed
+    // `removeDir(nodeModules, 1000)`. With the restore added, the sequence became: move-out fails,
+    // build() aborts, the finally puts node_modules back, and a second later that pending removeDir
+    // deletes it. Stranded-but-recoverable turned into deleted.
+    //
+    // Provoked with a real failure and no stubbing: tmpNodeModules is given a parent that does not
+    // exist, so renameSync throws ENOENT while node_modules is still sitting there populated. The
+    // reviewer's own repro drove it through a rejecting wait() instead, which is the same mechanism
+    // one step later but costs 24s here because the real wait() retries six times at 4s.
+    // Inversion: restore the promise chain and this fails - the marker is gone after the delay.
+    it('does not schedule a delayed delete of node_modules after a failed move-out', async () => {
+        const instance = builderThatFails(null);
+        const paths = /** @type {any} */ (instance).$.env.paths.electronApp;
+        paths.tmpNodeModules = path.join(paths.root, 'no-such-parent', 'tmp_node_modules');
+
+        fs.mkdirSync(paths.nodeModules, { recursive: true });
+        fs.writeFileSync(path.join(paths.nodeModules, 'marker'), 'x');
+        /** @type {any} */ (instance).currentContext = { platform: { nodeName: 'darwin' } };
+
+        let rejected = false;
+        try {
+            await instance.moveNodeModulesOut();
+        } catch {
+            rejected = true;
+        }
+
+        expect(rejected, 'the move-out should have failed on the missing parent').to.equal(true);
+        expect(/** @type {any} */ (instance).nodeModulesMovedOut, 'nothing was moved, so the flag must stay false')
+            .to.equal(false);
+
+        // Outlive the removeDir(nodeModules, 1000) that the old chain would have scheduled.
+        await new Promise((resolve) => { setTimeout(resolve, 1300); });
+
+        expect(fs.existsSync(path.join(paths.nodeModules, 'marker')), 'node_modules was deleted by a pending cleanup')
+            .to.equal(true);
+    });
+
+    // The restore must not invent a move that never happened. Its other caller is afterPack, which
+    // REJECTS on a throw rather than swallowing it, and which runs on the success path where the
+    // flag has already been cleared by the restore that just succeeded - so an unconditional
+    // renameSync would fail a build that worked, with an ENOENT on a tmp dir that is correctly
+    // absent. Inversion: delete the `if (!this.nodeModulesMovedOut) return false` guard and this
+    // throws instead of returning false.
+    it('is a no-op, not a throw, when nothing was moved out', () => {
+        const instance = builderThatFails(null);
+
+        expect(instance.restoreNodeModules()).to.equal(false);
     });
 });
 
