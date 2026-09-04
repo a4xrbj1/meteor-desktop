@@ -1,6 +1,6 @@
 {
   "name": "@a4xrbj1/meteor-desktop",
-  "version": "8.0.3",
+  "version": "8.0.4",
   "type": "module",
   "bin": {
     "meteor-desktop": "lib/bin/cli.js"
