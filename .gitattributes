@@ -1,6 +1,10 @@
 .mulch/expertise/*.jsonl merge=union
 
-.seeds/issues.jsonl merge=union
-.seeds/templates.jsonl merge=union
+# .seeds/*.jsonl is deliberately NOT merge=union (seed ai-factory-c283).
+# Its records are rewritten IN PLACE on every status change and description append, and union
+# resolves a hunk both sides touched by keeping BOTH lines, in an order git documents as
+# arbitrary. sd then de-duplicates by id keeping the LAST line, and the next write deletes the
+# other copy for good - measured 2026-09-17, and Octopussy-f0d7 is the incident. A loud conflict
+# here is the cheaper failure. The genuinely append-only stores (mulch expertise, canopy) keep union.
 .canopy/prompts.jsonl merge=union
 .canopy/schemas.jsonl merge=union
