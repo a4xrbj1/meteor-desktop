@@ -5,6 +5,13 @@ on:
       - master
 
 jobs:
+  security:
+    uses: ./.github/workflows/security-candidate.yml
+    permissions:
+      contents: read
+    with:
+      candidate: ${{ github.event.pull_request.head.sha || github.sha }}
+
   build:
     name: Build and Install
     runs-on: ubuntu-latest
