@@ -1,6 +1,6 @@
 {
   "name": "@a4xrbj1/meteor-desktop",
-  "version": "8.0.4",
+  "version": "8.0.5",
   "type": "module",
   "bin": {
     "meteor-desktop": "lib/bin/cli.js"
@@ -74,7 +74,7 @@
   "dependencies": {
     "@babel/core": "7.29.7",
     "@babel/preset-env": "7.29.7",
-    "@electron/asar": "^4.3.0",
+    "@electron/asar": "^4.3.4",
     "commander": "^15.0.0",
     "cross-spawn": "7.0.6",
     "install-local": "^4.1.0",
@@ -112,5 +112,9 @@
   "bugs": {
     "url": "https://github.com/a4xrbj1/meteor-desktop/issues"
   },
-  "homepage": "https://github.com/a4xrbj1/meteor-desktop"
+  "homepage": "https://github.com/a4xrbj1/meteor-desktop",
+  "overrides": {
+    "glob@^13": "^14.0.6",
+    "minimatch@^10": "^11.0.9"
+  }
 }
