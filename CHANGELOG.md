@@ -1,3 +1,12 @@
+## v8.0.5 <sup>25.11.2026</sup>
+
+### Security
+
+* Require `@electron/asar` 4.3.4 or later in the 4.x series for desktop packaging. This raises the minimum versions of its glob and minimatch dependencies.
+* Update the project lockfile and test dependencies to address npm security advisories. Existing projects must update their dependency lockfiles to adopt this release.
+
+* A fresh consumer install with Electron Builder 26.18.0 still reports one moderate minimatch advisory through its build tools (GHSA-g3hv-75wg-m249). Use trusted build inputs.
+
 ## v8.0.4 <sup>04.09.2026</sup>
 
 ### Fixed

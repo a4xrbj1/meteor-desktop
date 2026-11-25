@@ -6,7 +6,15 @@ on:
       - 'v*'
 
 jobs:
+  security:
+    uses: ./.github/workflows/security-candidate.yml
+    permissions:
+      contents: read
+    with:
+      candidate: ${{ github.sha }}
+
   publish:
+    needs: security
     runs-on: ubuntu-latest
     permissions:
       contents: write
